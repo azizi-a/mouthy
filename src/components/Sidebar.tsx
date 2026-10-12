@@ -5,7 +5,6 @@ import {
   FlaskConical,
   History,
   Info,
-  Sparkles,
   SlidersHorizontal,
 } from "lucide-react";
 import MouthyWordmark from "./icons/MouthyWordmark";
@@ -16,7 +15,6 @@ import {
   HistorySettings,
   DebugSettings,
   AboutSettings,
-  PostProcessingSettings,
 } from "./settings";
 
 export type SidebarSection = keyof typeof SECTIONS_CONFIG;
@@ -54,12 +52,6 @@ export const SECTIONS_CONFIG = {
     icon: Cog,
     component: AdvancedSettings,
     enabled: () => true,
-  },
-  postprocessing: {
-    labelKey: "sidebar.postProcessing",
-    icon: Sparkles,
-    component: PostProcessingSettings,
-    enabled: (settings) => settings?.post_process_enabled ?? false,
   },
   debug: {
     labelKey: "sidebar.debug",

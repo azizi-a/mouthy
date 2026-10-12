@@ -9,7 +9,6 @@
   "sidebar": {
     "general": "כללי",
     "advanced": "מתקדם",
-    "postProcessing": "עיבוד משלים",
     "history": "היסטוריה",
     "debug": "ניפוי שגיאות",
     "about": "אודות"
@@ -143,78 +142,6 @@
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
         }
-      },
-      "customWords": {
-        "title": "מילים מותאמות אישית",
-        "description": "עזרו למודלים נתמכים לזהות שמות ומונחים מקצועיים. תיקון בקירוב מוגבל כרגע למילים המשתמשות באותיות A–Z ובמספרים.",
-        "placeholder": "הוסף מילה",
-        "add": "הוסף",
-        "remove": "הסר את {{word}}",
-        "duplicate": "\"{{word}}\" כבר קיימת"
-      },
-      "fillerWordRemoval": {
-        "title": "הסרת מילות מילוי",
-        "description": "מסיר מילות היסוס נפוצות מתמלולים. השבת כדי להשאיר אותן."
-      },
-      "chineseScript": {
-        "title": "כתב סיני",
-        "description": "כותב תמלולים במנדרינית ובקנטונזית בתווים מפושטים או מסורתיים. שפות אחרות נשארות ללא שינוי.",
-        "options": {
-          "asTranscribed": "כפי שתומלל",
-          "simplified": "מפושט",
-          "traditional": "מסורתי"
-        }
-      }
-    },
-    "postProcessing": {
-      "api": {
-        "title": "API (תואם OpenAI)",
-        "provider": {
-          "title": "ספק",
-          "description": "בחר ספק שתואם ל-OpenAI."
-        },
-        "appleIntelligence": {
-          "unavailable": "Apple Intelligence לא זמין במכשיר הזה. נדרש Mac עם Apple Silicon שמריץ macOS Tahoe (26.0) ומעלה, עם Apple Intelligence מופעל בהגדרות המערכת."
-        },
-        "baseUrl": {
-          "title": "כתובת URL בסיסית",
-          "description": "כתובת ה-API הבסיסית עבור הספק הנבחר. רק ספק מותאם אישית ניתן לעריכה.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "מפתח API",
-          "description": "מפתח API עבור הספק הנבחר.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "מודל",
-          "descriptionCustom": "ספק את מזהה המודל שה-endpoint המותאם שלך מצפה לו.",
-          "descriptionDefault": "בחר מודל שהספק הנבחר חושף.",
-          "placeholderWithOptions": "חפש או בחר מודל",
-          "placeholderNoOptions": "הקלד שם מודל",
-          "refreshModels": "רענן מודלים"
-        }
-      },
-      "prompts": {
-        "title": "פרומפט",
-        "selectedPrompt": {
-          "title": "פרומפט נבחר",
-          "description": "בחר תבנית לשיפור התמלול או צור חדשה. השתמש ב-${output} בתוך טקסט הפרומפט כדי להפנות לתמלול שנקלט."
-        },
-        "noPrompts": "אין פרומפטים זמינים",
-        "selectPrompt": "בחר פרומפט",
-        "createNew": "צור פרומפט חדש",
-        "promptLabel": "שם הפרומפט",
-        "promptLabelPlaceholder": "הזן שם לפרומפט",
-        "promptInstructions": "הוראות לפרומפט",
-        "promptInstructionsPlaceholder": "כתוב את ההוראות שירוצו אחרי התמלול. לדוגמה: שפר דקדוק ובהירות עבור הטקסט הבא: ${output}",
-        "promptTip": "טיפ: השתמש ב-<code>${output}</code> כדי להכניס את הטקסט המתומלל לפרומפט שלך.",
-        "updatePrompt": "עדכן פרומפט",
-        "deletePrompt": "מחק פרומפט",
-        "createPrompt": "צור פרומפט",
-        "cancel": "ביטול",
-        "selectToEdit": "בחר פרומפט למעלה כדי לצפות בפרטים שלו ולערוך אותם.",
-        "createFirst": "לחץ על 'צור פרומפט חדש' למעלה כדי ליצור את פרומפט העיבוד הראשון שלך."
       }
     },
     "history": {
@@ -265,10 +192,6 @@
         "weeks2": "אחרי שבועיים",
         "months3": "אחרי 3 חודשים",
         "placeholder": "בחר משך שמירה..."
-      },
-      "postProcessingToggle": {
-        "label": "עיבוד משלים",
-        "description": "הפעל שיפור טקסט מבוסס AI אחרי התמלול"
       },
       "appendTrailingSpace": {
         "label": "הוסף רווח בסוף",

@@ -12,8 +12,6 @@
 //! 2. Add translations to other locale files
 //! 3. Update tray.rs to use the new field (e.g., strings.new_field)
 
-use crate::chinese_script::chinese_script_for_locale;
-use crate::settings::ChineseScript;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
@@ -34,17 +32,31 @@ pub fn get_tray_translations(locale: Option<String>) -> TrayStrings {
     let exact_match = TRANSLATIONS
         .iter()
         .find_map(|(code, strings)| code.eq_ignore_ascii_case(&normalized).then_some(strings));
-    let fallback = match chinese_script_for_locale(&normalized) {
-        Some(ChineseScript::Traditional) => "zh-TW",
-        Some(_) => "zh",
-        None => language,
-    };
+    let fallback = chinese_locale_fallback(&normalized).unwrap_or(language);
 
     exact_match
         .or_else(|| TRANSLATIONS.get(fallback))
         .or_else(|| TRANSLATIONS.get("en"))
         .cloned()
         .expect("English translations must exist")
+}
+
+/// `zh-TW` (Traditional) or `zh` (Simplified) for a lowercase, hyphenated `zh`
+/// or `yue` locale. Cantonese is Traditional unless tagged `Hans`.
+fn chinese_locale_fallback(locale: &str) -> Option<&'static str> {
+    let subtags: Vec<_> = locale.split('-').collect();
+    let is_hant = subtags.contains(&"hant");
+    let is_hans = subtags.contains(&"hans");
+    let is_traditional_region = ["tw", "hk", "mo"]
+        .iter()
+        .any(|region| subtags.contains(region));
+
+    let traditional = match subtags.first().copied() {
+        Some("zh") => is_hant || (!is_hans && is_traditional_region),
+        Some("yue") => !is_hans,
+        _ => return None,
+    };
+    Some(if traditional { "zh-TW" } else { "zh" })
 }
 
 #[cfg(test)]

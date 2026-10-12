@@ -9,7 +9,6 @@
   "sidebar": {
     "general": "Umum",
     "advanced": "Lanjutan",
-    "postProcessing": "Pascaproses",
     "history": "Riwayat",
     "debug": "Debug",
     "about": "Tentang"
@@ -143,78 +142,6 @@
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
         }
-      },
-      "customWords": {
-        "title": "Kata Khusus",
-        "description": "Bantu model yang didukung mengenali nama dan istilah khusus. Koreksi fuzzy saat ini terbatas pada kata yang menggunakan huruf A–Z dan angka.",
-        "placeholder": "Tambahkan kata",
-        "add": "Tambah",
-        "remove": "Hapus {{word}}",
-        "duplicate": "\"{{word}}\" sudah ada"
-      },
-      "fillerWordRemoval": {
-        "title": "Hapus Kata Pengisi",
-        "description": "Menghapus kata pengisi umum dari transkripsi. Nonaktifkan untuk mempertahankannya."
-      },
-      "chineseScript": {
-        "title": "Aksara Tionghoa",
-        "description": "Menulis transkripsi Mandarin dan Kanton dengan aksara Sederhana atau Tradisional. Bahasa lain tidak diubah.",
-        "options": {
-          "asTranscribed": "Sesuai transkripsi",
-          "simplified": "Sederhana",
-          "traditional": "Tradisional"
-        }
-      }
-    },
-    "postProcessing": {
-      "api": {
-        "title": "API (Kompatibel dengan OpenAI)",
-        "provider": {
-          "title": "Penyedia",
-          "description": "Pilih penyedia yang kompatibel dengan OpenAI."
-        },
-        "appleIntelligence": {
-          "unavailable": "Apple Intelligence tidak tersedia di perangkat ini. Memerlukan Mac Apple Silicon yang menjalankan macOS Tahoe (26.0) atau yang lebih baru dengan Apple Intelligence diaktifkan di Pengaturan Sistem."
-        },
-        "baseUrl": {
-          "title": "URL Dasar",
-          "description": "URL dasar API untuk penyedia yang dipilih. Hanya penyedia kustom yang dapat diedit.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "Kunci API",
-          "description": "Kunci API untuk penyedia yang dipilih.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "Model",
-          "descriptionCustom": "Masukkan pengenal model yang diharapkan oleh endpoint kustom Anda.",
-          "descriptionDefault": "Pilih model yang disediakan oleh penyedia yang dipilih.",
-          "placeholderWithOptions": "Cari atau pilih model",
-          "placeholderNoOptions": "Ketik nama model",
-          "refreshModels": "Segarkan model"
-        }
-      },
-      "prompts": {
-        "title": "Prompt",
-        "selectedPrompt": {
-          "title": "Prompt Terpilih",
-          "description": "Pilih templat untuk menyempurnakan transkripsi atau buat yang baru. Gunakan ${output} dalam teks prompt untuk merujuk ke hasil transkripsi."
-        },
-        "noPrompts": "Tidak ada prompt yang tersedia",
-        "selectPrompt": "Pilih prompt",
-        "createNew": "Buat Prompt Baru",
-        "promptLabel": "Label Prompt",
-        "promptLabelPlaceholder": "Masukkan nama prompt",
-        "promptInstructions": "Instruksi Prompt",
-        "promptInstructionsPlaceholder": "Tulis instruksi yang dijalankan setelah transkripsi. Contoh: Perbaiki tata bahasa dan kejelasan teks berikut: ${output}",
-        "promptTip": "Tips: Gunakan <code>${output}</code> untuk menyisipkan teks hasil transkripsi ke prompt Anda.",
-        "updatePrompt": "Perbarui Prompt",
-        "deletePrompt": "Hapus Prompt",
-        "createPrompt": "Buat Prompt",
-        "cancel": "Batal",
-        "selectToEdit": "Pilih prompt di atas untuk melihat dan mengedit detailnya.",
-        "createFirst": "Klik 'Buat Prompt Baru' di atas untuk membuat prompt pascaproses pertama Anda."
       }
     },
     "history": {
@@ -271,10 +198,6 @@
         "weeks2": "Setelah 2 minggu",
         "months3": "Setelah 3 bulan",
         "placeholder": "Pilih masa penyimpanan..."
-      },
-      "postProcessingToggle": {
-        "label": "Pascaproses",
-        "description": "Aktifkan penyempurnaan teks berbasis AI setelah transkripsi"
       },
       "appendTrailingSpace": {
         "label": "Tambahkan Spasi di Akhir",

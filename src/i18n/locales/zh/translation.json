@@ -9,7 +9,6 @@
   "sidebar": {
     "general": "通用",
     "advanced": "高级",
-    "postProcessing": "后处理",
     "history": "历史记录",
     "debug": "调试",
     "about": "关于"
@@ -143,78 +142,6 @@
           "superEnter": "Super+回车",
           "ctrlEnter": "Ctrl+回车"
         }
-      },
-      "customWords": {
-        "title": "自定义词汇",
-        "description": "帮助受支持的模型识别名称和专业术语。目前，模糊纠错仅适用于使用 A–Z 字母和数字的词语。",
-        "placeholder": "添加词汇",
-        "add": "添加",
-        "remove": "删除 {{word}}",
-        "duplicate": "\"{{word}}\" 已存在"
-      },
-      "fillerWordRemoval": {
-        "title": "移除语气词",
-        "description": "从转录中移除常见的语气词。关闭此选项即可保留这些词。"
-      },
-      "chineseScript": {
-        "title": "简繁转换",
-        "description": "将普通话和粤语转录输出为简体或繁体中文。其他语言不受影响。",
-        "options": {
-          "asTranscribed": "保持原样",
-          "simplified": "简体",
-          "traditional": "繁体"
-        }
-      }
-    },
-    "postProcessing": {
-      "api": {
-        "title": "API（兼容 OpenAI）",
-        "provider": {
-          "title": "提供商",
-          "description": "选择一个兼容 OpenAI 的提供商。"
-        },
-        "appleIntelligence": {
-          "unavailable": "Apple Intelligence 在此设备上不可用。需要运行 macOS Tahoe（26.0）或更高版本的 Apple Silicon Mac，并在系统设置中启用 Apple Intelligence。"
-        },
-        "baseUrl": {
-          "title": "基础 URL",
-          "description": "所选提供商的 API 基础 URL。仅自定义提供商可编辑。",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API 密钥",
-          "description": "所选提供商的 API 密钥。",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "模型",
-          "descriptionCustom": "提供自定义端点期望的模型标识符。",
-          "descriptionDefault": "选择所选提供商提供的模型。",
-          "placeholderWithOptions": "搜索或选择模型",
-          "placeholderNoOptions": "输入模型名称",
-          "refreshModels": "刷新模型"
-        }
-      },
-      "prompts": {
-        "title": "提示词",
-        "selectedPrompt": {
-          "title": "已选提示词",
-          "description": "选择用于优化转录的模板或创建新模板。在提示词文本中使用 ${output} 来引用捕获的转录。"
-        },
-        "noPrompts": "没有可用的提示词",
-        "selectPrompt": "选择提示词",
-        "createNew": "创建新提示词",
-        "promptLabel": "提示词名称",
-        "promptLabelPlaceholder": "输入提示词名称",
-        "promptInstructions": "提示词指令",
-        "promptInstructionsPlaceholder": "编写转录后要执行的指令。示例：改进以下文本的语法和清晰度: ${output}",
-        "promptTip": "提示：使用 <code>${output}</code> 将转录文本插入到您的提示词中。",
-        "updatePrompt": "更新提示词",
-        "deletePrompt": "删除提示词",
-        "createPrompt": "创建提示词",
-        "cancel": "取消",
-        "selectToEdit": "选择上方的提示词以查看和编辑其详细信息。",
-        "createFirst": "点击上方的「创建新提示词」来创建您的第一个后处理提示词。"
       }
     },
     "history": {
@@ -265,10 +192,6 @@
         "weeks2": "2 周后",
         "months3": "3 个月后",
         "placeholder": "选择保留期限..."
-      },
-      "postProcessingToggle": {
-        "label": "后处理",
-        "description": "启用转录后的 AI 文本优化"
       },
       "appendTrailingSpace": {
         "label": "追加尾部空格",

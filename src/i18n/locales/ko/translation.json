@@ -9,7 +9,6 @@
   "sidebar": {
     "general": "일반",
     "advanced": "고급",
-    "postProcessing": "후처리",
     "history": "히스토리",
     "debug": "디버그",
     "about": "정보"
@@ -143,78 +142,6 @@
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
         }
-      },
-      "customWords": {
-        "title": "사용자 정의 단어",
-        "description": "지원되는 모델이 이름과 전문 용어를 인식하도록 도와줍니다. 퍼지 교정은 현재 A–Z 문자와 숫자를 사용하는 단어로 제한됩니다.",
-        "placeholder": "단어 추가",
-        "add": "추가",
-        "remove": "{{word}} 제거",
-        "duplicate": "\"{{word}}\"이(가) 이미 존재합니다"
-      },
-      "fillerWordRemoval": {
-        "title": "군더더기 표현 제거",
-        "description": "전사에서 흔한 머뭇거림 표현을 제거합니다. 그대로 두려면 이 옵션을 끄세요."
-      },
-      "chineseScript": {
-        "title": "중국어 간체/번체",
-        "description": "표준 중국어와 광둥어 전사를 간체 또는 번체로 표기합니다. 다른 언어는 변경되지 않습니다.",
-        "options": {
-          "asTranscribed": "전사된 그대로",
-          "simplified": "간체",
-          "traditional": "번체"
-        }
-      }
-    },
-    "postProcessing": {
-      "api": {
-        "title": "API (OpenAI 호환)",
-        "provider": {
-          "title": "제공자",
-          "description": "OpenAI 호환 제공자를 선택하세요."
-        },
-        "appleIntelligence": {
-          "unavailable": "이 기기에서는 Apple Intelligence를 사용할 수 없습니다. macOS Tahoe (26.0) 이상을 실행하고 시스템 설정에서 Apple Intelligence가 활성화된 Apple Silicon Mac이 필요합니다."
-        },
-        "baseUrl": {
-          "title": "기본 URL",
-          "description": "선택한 제공자의 API 기본 URL입니다. 사용자 정의 제공자만 편집할 수 있습니다.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API 키",
-          "description": "선택한 제공자의 API 키입니다.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "모델",
-          "descriptionCustom": "사용자 정의 엔드포인트에서 예상하는 모델 식별자를 제공하세요.",
-          "descriptionDefault": "선택한 제공자가 제공하는 모델을 선택하세요.",
-          "placeholderWithOptions": "모델 검색 또는 선택",
-          "placeholderNoOptions": "모델 이름 입력",
-          "refreshModels": "모델 새로고침"
-        }
-      },
-      "prompts": {
-        "title": "프롬프트",
-        "selectedPrompt": {
-          "title": "선택된 프롬프트",
-          "description": "텍스트 변환을 개선하기 위한 템플릿을 선택하거나 새로 만드세요. 프롬프트 텍스트 내에서 ${output}를 사용하여 캡처된 텍스트를 참조하세요."
-        },
-        "noPrompts": "사용 가능한 프롬프트 없음",
-        "selectPrompt": "프롬프트 선택",
-        "createNew": "새 프롬프트 만들기",
-        "promptLabel": "프롬프트 레이블",
-        "promptLabelPlaceholder": "프롬프트 이름 입력",
-        "promptInstructions": "프롬프트 지시사항",
-        "promptInstructionsPlaceholder": "텍스트 변환 후 실행할 지시사항을 작성하세요. 예: 다음 텍스트의 문법과 명확성을 개선하세요: ${output}",
-        "promptTip": "팁: 프롬프트에서 변환된 텍스트를 삽입하려면 <code>${output}</code>을 사용하세요.",
-        "updatePrompt": "프롬프트 업데이트",
-        "deletePrompt": "프롬프트 삭제",
-        "createPrompt": "프롬프트 만들기",
-        "cancel": "취소",
-        "selectToEdit": "세부 정보를 보고 편집하려면 위에서 프롬프트를 선택하세요.",
-        "createFirst": "첫 번째 후처리 프롬프트를 만들려면 위의 '새 프롬프트 만들기'를 클릭하세요."
       }
     },
     "history": {
@@ -265,10 +192,6 @@
         "weeks2": "2주 후",
         "months3": "3개월 후",
         "placeholder": "보관 기간 선택..."
-      },
-      "postProcessingToggle": {
-        "label": "후처리",
-        "description": "텍스트 변환 후 AI 기반 텍스트 개선 활성화"
       },
       "appendTrailingSpace": {
         "label": "끝 공백 추가",

@@ -9,7 +9,6 @@
   "sidebar": {
     "general": "सामान्य",
     "advanced": "ऐडवांस",
-    "postProcessing": "पोस्ट प्रोसेस",
     "history": "इतिहास",
     "debug": "डिबग",
     "about": "के बारे में"
@@ -143,78 +142,6 @@
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
         }
-      },
-      "customWords": {
-        "title": "कस्टम शब्द",
-        "description": "समर्थित मॉडल को नाम और विशेष शब्द पहचानने में मदद करें। फ़ज़ी सुधार फिलहाल A–Z अक्षरों और संख्याओं वाले शब्दों तक सीमित है।",
-        "placeholder": "शब्द जोड़ें",
-        "add": "जोड़ें",
-        "remove": "{{word}} हटाएं",
-        "duplicate": "\"{{word}}\" पहले से मौजूद है"
-      },
-      "fillerWordRemoval": {
-        "title": "फिलर शब्द हटाएं",
-        "description": "ट्रांसक्रिप्शन से आम हिचकिचाहट वाले शब्द हटाता है। उन्हें बनाए रखने के लिए इसे बंद करें।"
-      },
-      "chineseScript": {
-        "title": "चीनी लिपि",
-        "description": "मंदारिन और कैंटोनीज़ ट्रांसक्रिप्शन को सरलीकृत या पारंपरिक अक्षरों में लिखता है। अन्य भाषाएँ अपरिवर्तित रहती हैं।",
-        "options": {
-          "asTranscribed": "जैसा ट्रांसक्राइब हुआ",
-          "simplified": "सरलीकृत",
-          "traditional": "पारंपरिक"
-        }
-      }
-    },
-    "postProcessing": {
-      "api": {
-        "title": "API (OpenAI संगत)",
-        "provider": {
-          "title": "प्रोवाइडर",
-          "description": "कोई OpenAI-संगत प्रोवाइडर चुनें."
-        },
-        "appleIntelligence": {
-          "unavailable": "Apple Intelligence इस डिवाइस पर उपलब्ध नहीं है. इसके लिए macOS Tahoe (26.0) या उसके बाद का वर्शन चलाने वाला Apple Silicon Mac चाहिए, जिसमें System Settings में Apple Intelligence चालू हो."
-        },
-        "baseUrl": {
-          "title": "बेस URL",
-          "description": "चुने गए प्रोवाइडर के लिए API बेस URL. केवल कस्टम प्रोवाइडर में बदलाव किया जा सकता है.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API कुंजी",
-          "description": "चुने गए प्रोवाइडर के लिए API कुंजी.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "मॉडल",
-          "descriptionCustom": "वह मॉडल आईडी डालें जो आपके कस्टम एंडपॉइंट को चाहिए.",
-          "descriptionDefault": "चुने गए प्रोवाइडर का कोई मॉडल चुनें.",
-          "placeholderWithOptions": "मॉडल खोजें या चुनें",
-          "placeholderNoOptions": "मॉडल का नाम लिखें",
-          "refreshModels": "मॉडल रीफ़्रेश करें"
-        }
-      },
-      "prompts": {
-        "title": "प्रॉम्प्ट",
-        "selectedPrompt": {
-          "title": "चुना गया प्रॉम्प्ट",
-          "description": "ट्रांसक्रिप्शन को बेहतर बनाने के लिए कोई टेम्पलेट चुनें या नया बनाएं. प्रॉम्प्ट टेक्स्ट में कैप्चर किए गए ट्रांसक्रिप्ट का इस्तेमाल करने के लिए ${output} लिखें."
-        },
-        "noPrompts": "कोई प्रॉम्प्ट उपलब्ध नहीं है",
-        "selectPrompt": "कोई प्रॉम्प्ट चुनें",
-        "createNew": "नया प्रॉम्प्ट बनाएं",
-        "promptLabel": "प्रॉम्प्ट का लेबल",
-        "promptLabelPlaceholder": "प्रॉम्प्ट का नाम डालें",
-        "promptInstructions": "प्रॉम्प्ट के निर्देश",
-        "promptInstructionsPlaceholder": "ट्रांसक्रिप्शन के बाद चलाने के लिए निर्देश लिखें. उदाहरण: इस टेक्स्ट का व्याकरण और स्पष्टता सुधारें: ${output}",
-        "promptTip": "सुझाव: अपने प्रॉम्प्ट में ट्रांसक्राइब किया गया टेक्स्ट डालने के लिए <code>${output}</code> का इस्तेमाल करें.",
-        "updatePrompt": "प्रॉम्प्ट अपडेट करें",
-        "deletePrompt": "प्रॉम्प्ट हटाएं",
-        "createPrompt": "प्रॉम्प्ट बनाएं",
-        "cancel": "रद्द करें",
-        "selectToEdit": "जानकारी देखने और बदलाव करने के लिए, ऊपर कोई प्रॉम्प्ट चुनें.",
-        "createFirst": "अपना पहला पोस्ट-प्रोसेसिंग प्रॉम्प्ट बनाने के लिए, ऊपर 'नया प्रॉम्प्ट बनाएं' पर क्लिक करें."
       }
     },
     "history": {
@@ -271,10 +198,6 @@
         "weeks2": "2 हफ़्ते बाद",
         "months3": "3 महीने बाद",
         "placeholder": "कितने समय तक रखें, यह चुनें..."
-      },
-      "postProcessingToggle": {
-        "label": "पोस्ट प्रोसेसिंग",
-        "description": "ट्रांसक्रिप्शन के बाद AI की मदद से टेक्स्ट सुधारने की सुविधा चालू करें"
       },
       "appendTrailingSpace": {
         "label": "आखिर में स्पेस जोड़ें",

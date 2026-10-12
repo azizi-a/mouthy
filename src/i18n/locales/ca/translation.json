@@ -9,7 +9,6 @@
   "sidebar": {
     "general": "General",
     "advanced": "Avançat",
-    "postProcessing": "Postprocessament",
     "history": "Historial",
     "debug": "Depuració",
     "about": "Quant a"
@@ -143,78 +142,6 @@
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
         }
-      },
-      "customWords": {
-        "title": "Paraules personalitzades",
-        "description": "Ajudeu els models compatibles a reconèixer noms i termes especialitzats. Actualment, la correcció per similitu es limita a paraules amb lletres de la A a la Z i números.",
-        "placeholder": "Afegiu una paraula",
-        "add": "Afegiu",
-        "remove": "Suprimiu {{word}}",
-        "duplicate": "«{{word}}» ja existeix"
-      },
-      "fillerWordRemoval": {
-        "title": "Elimina les falques",
-        "description": "Elimina les expressions de vacil·lació habituals de les transcripcions. Desactiveu aquesta opció per conservar-les."
-      },
-      "chineseScript": {
-        "title": "Escriptura xinesa",
-        "description": "Escriu les transcripcions en mandarí i cantonès amb caràcters simplificats o tradicionals. Els altres idiomes no es modifiquen.",
-        "options": {
-          "asTranscribed": "Tal com s'ha transcrit",
-          "simplified": "Simplificat",
-          "traditional": "Tradicional"
-        }
-      }
-    },
-    "postProcessing": {
-      "api": {
-        "title": "API (compatible amb OpenAI)",
-        "provider": {
-          "title": "Proveïdor",
-          "description": "Seleccioneu un proveïdor compatible amb OpenAI."
-        },
-        "appleIntelligence": {
-          "unavailable": "L'Apple Intelligence no està disponible en aquest dispositiu. Cal un Mac amb Apple Silicon i macOS Tahoe (26.0) o posterior, amb l'Apple Intelligence activada a la configuració del sistema."
-        },
-        "baseUrl": {
-          "title": "URL de base",
-          "description": "URL de base de l'API del proveïdor seleccionat. Només es pot editar la del proveïdor personalitzat.",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "Clau de l'API",
-          "description": "Clau de l'API del proveïdor seleccionat.",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "Model",
-          "descriptionCustom": "Introduïu l'identificador de model que espera el punt de connexió personalitzat.",
-          "descriptionDefault": "Trieu un model ofert pel proveïdor seleccionat.",
-          "placeholderWithOptions": "Cerqueu o seleccioneu un model",
-          "placeholderNoOptions": "Escriviu el nom d'un model",
-          "refreshModels": "Actualitzeu els models"
-        }
-      },
-      "prompts": {
-        "title": "Indicació",
-        "selectedPrompt": {
-          "title": "Indicació seleccionada",
-          "description": "Seleccioneu una plantilla per millorar les transcripcions o creeu-ne una de nova. Utilitzeu ${output} dins del text de la indicació per fer referència a la transcripció enregistrada."
-        },
-        "noPrompts": "No hi ha indicacions disponibles",
-        "selectPrompt": "Seleccioneu una indicació",
-        "createNew": "Creeu una indicació nova",
-        "promptLabel": "Nom de la indicació",
-        "promptLabelPlaceholder": "Introduïu el nom de la indicació",
-        "promptInstructions": "Instruccions de la indicació",
-        "promptInstructionsPlaceholder": "Escriviu les instruccions que s'executaran després de la transcripció. Exemple: Millora la gramàtica i la claredat del text següol: ${output}",
-        "promptTip": "Consell: utilitzeu <code>${output}</code> per inserir el text transcrit a la indicació.",
-        "updatePrompt": "Actualitzeu la indicació",
-        "deletePrompt": "Suprimiu la indicació",
-        "createPrompt": "Creeu la indicació",
-        "cancel": "Cancel·leu",
-        "selectToEdit": "Seleccioneu una indicació more amunt per veure'n i editar-ne els detalls.",
-        "createFirst": "Feu clic a «Creeu una indicació nova» més amunt per crear la primera indicació de postprocessament."
       }
     },
     "history": {
@@ -271,10 +198,6 @@
         "weeks2": "Al cap de 2 setmanes",
         "months3": "Al cap de 3 mesos",
         "placeholder": "Selecciona el període de conservació..."
-      },
-      "postProcessingToggle": {
-        "label": "Postprocessament",
-        "description": "Activa la millora del text amb IA després de la transcripció"
       },
       "appendTrailingSpace": {
         "label": "Afegiu un espai al final",

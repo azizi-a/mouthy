@@ -9,7 +9,6 @@
   "sidebar": {
     "general": "सामान्य",
     "advanced": "उन्नत",
-    "postProcessing": "पोस्ट प्रोसेस",
     "history": "हिस्ट्री",
     "debug": "डिबग",
     "about": "बारेमा"
@@ -143,78 +142,6 @@
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
         }
-      },
-      "customWords": {
-        "title": "कस्टम शब्दहरू",
-        "description": "समर्थित मोडेलहरूलाई नाम र विशेष शब्दावली चिन्न मद्दत गर्नुहोस्। फजी सुधार हाल A–Z अक्षर र अङ्क प्रयोग भएका शब्दहरूमा मात्र सीमित छ।",
-        "placeholder": "शब्द थप्नुहोस्",
-        "add": "थप्नुहोस्",
-        "remove": "{{word}} हटाउनुहोस्",
-        "duplicate": "\"{{word}}\" पहिले नै छ"
-      },
-      "fillerWordRemoval": {
-        "title": "फिलर शब्दहरू हटाउनुहोस्",
-        "description": "ट्रान्सक्रिप्सनबाट सामान्य हिचकिचाहटका शब्दहरू हटाउँछ। तिनलाई राख्न यो विकल्प बन्द गर्नुहोस्।"
-      },
-      "chineseScript": {
-        "title": "चिनियाँ लिपि",
-        "description": "म्यान्डरिन र क्यान्टोनिज ट्रान्सक्रिप्सनलाई सरलीकृत वा परम्परागत अक्षरमा लेख्छ। अन्य भाषाहरू परिवर्तन हुँदैनन्।",
-        "options": {
-          "asTranscribed": "ट्रान्सक्राइब भए अनुसार",
-          "simplified": "सरलीकृत",
-          "traditional": "परम्परागत"
-        }
-      }
-    },
-    "postProcessing": {
-      "api": {
-        "title": "API (OpenAI अनुकूल)",
-        "provider": {
-          "title": "प्रदायक",
-          "description": "OpenAI-अनुकूल प्रदायक चयन गर्नुहोस्।"
-        },
-        "appleIntelligence": {
-          "unavailable": "यो डिभाइसमा Apple Intelligence उपलब्ध छैन। macOS Tahoe (26.0) वा पछिको संस्करण चलिरहेको र System Settings मा Apple Intelligence सक्षम गरिएको Apple Silicon Mac आवश्यक छ।"
-        },
-        "baseUrl": {
-          "title": "आधार URL",
-          "description": "चयन गरिएको प्रदायकका लागि API आधार URL। कस्टम प्रदायक मात्र सम्पादन गर्न सकिन्छ।",
-          "placeholder": "https://api.openai.com/v1"
-        },
-        "apiKey": {
-          "title": "API कुञ्जी",
-          "description": "चयन गरिएको प्रदायकका लागि API कुञ्जी।",
-          "placeholder": "sk-..."
-        },
-        "model": {
-          "title": "मोडेल",
-          "descriptionCustom": "तपाईंको कस्टम इन्डपोइन्टले अपेक्षा गर्ने मोडेल पहिचानकर्ता दिनुहोस्।",
-          "descriptionDefault": "चयन गरिएको प्रदायकले उपलब्ध गराएको मोडेल छान्नुहोस्।",
-          "placeholderWithOptions": "मोडेल खोज्नुहोस् वा चयन गर्नुहोस्",
-          "placeholderNoOptions": "मोडेलको नाम टाइप गर्नुहोस्",
-          "refreshModels": "मोडेलहरू रिफ्रेस गर्नुहोस्"
-        }
-      },
-      "prompts": {
-        "title": "प्रम्प्ट",
-        "selectedPrompt": {
-          "title": "चयन गरिएको प्रम्प्ट",
-          "description": "ट्रान्सक्रिप्सन परिष्कृत गर्न टेम्प्लेट चयन गर्नुहोस् वा नयाँ बनाउनुहोस्। क्याप्चर गरिएको ट्रान्सक्रिप्ट उल्लेख गर्न प्रम्प्ट टेक्स्टभित्र ${output} प्रयोग गर्नुहोस्।"
-        },
-        "noPrompts": "कुनै प्रम्प्ट उपलब्ध छैन",
-        "selectPrompt": "प्रम्प्ट चयन गर्नुहोस्",
-        "createNew": "नयाँ प्रम्प्ट बनाउनुहोस्",
-        "promptLabel": "प्रम्प्ट लेबल",
-        "promptLabelPlaceholder": "प्रम्प्टको नाम लेख्नुहोस्",
-        "promptInstructions": "प्रम्प्ट निर्देशनहरू",
-        "promptInstructionsPlaceholder": "ट्रान्सक्रिप्सनपछि चलाउने निर्देशनहरू लेख्नुहोस्। उदाहरण: निम्न टेक्स्टको व्याकरण र स्पष्टता सुधार गर्नुहोस्: ${output}",
-        "promptTip": "सुझाव: प्रम्प्टमा ट्रान्सक्राइब गरिएको टेक्स्ट घुसाउन <code>${output}</code> प्रयोग गर्नुहोस्।",
-        "updatePrompt": "प्रम्प्ट अपडेट गर्नुहोस्",
-        "deletePrompt": "प्रम्प्ट मेटाउनुहोस्",
-        "createPrompt": "प्रम्प्ट बनाउनुहोस्",
-        "cancel": "रद्द गर्नुहोस्",
-        "selectToEdit": "विवरण हेर्न र सम्पादन गर्न माथिबाट प्रम्प्ट चयन गर्नुहोस्।",
-        "createFirst": "आफ्नो पहिलो पोस्ट-प्रोसेसिङ प्रम्प्ट बनाउन माथिको 'नयाँ प्रम्प्ट बनाउनुहोस्' क्लिक गर्नुहोस्।"
       }
     },
     "history": {
@@ -271,10 +198,6 @@
         "weeks2": "2 हप्तापछि",
         "months3": "3 महिनापछि",
         "placeholder": "राख्ने अवधि चयन गर्नुहोस्..."
-      },
-      "postProcessingToggle": {
-        "label": "पोस्ट प्रोसेसिङ",
-        "description": "ट्रान्सक्रिप्सनपछि AI-आधारित टेक्स्ट परिष्करण अन गर्नुहोस्"
       },
       "appendTrailingSpace": {
         "label": "अन्त्यमा खाली ठाउँ थप्नुहोस्",
