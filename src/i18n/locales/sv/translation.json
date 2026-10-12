@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "Behörigheter krävs",
-      "description": "Mouthy behöver ett par behörigheter för att fungera korrekt.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Hjälpmedelsåtkomst",
-        "description": "Krävs för att skriva transkriberad text i dina program."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "Bevilja behörighet",
       "waiting": "Väntar...",
@@ -34,7 +34,7 @@
       "title": "Allmänt",
       "shortcut": {
         "title": "Mouthy-kortkommandon",
-        "description": "Konfigurera kortkommandon för att starta tal-till-text-inspelning",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "Laddar kortkommandon...",
         "none": "Inga kortkommandon konfigurerade",
         "notFound": "Kortkommando hittades inte",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "Ljud",
       "outputDevice": {
         "title": "Utmatningsenhet",
-        "description": "Välj din föredragna ljudutmatningsenhet för återkopplingsljud",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Välj utmatningsenhet...",
         "loading": "Laddar..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Overlay",
-          "description": "Välj inspelningsöverlägget: ”Ingen” döljer det, ”Minimal” visar en kompakt indikator, ”Live” visar transkriberingen i realtid medan du talar (endast modeller med streamingstöd — leta efter Streaming-märket i modellväljaren). På Linux rekommenderas ”Ingen”.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Ingen",
             "minimal": "Minimal"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Överlagringsposition",
-          "description": "Visa visuell återkoppling under inspelning och transkription. På Linux rekommenderas 'Ingen'.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "Nederst",
             "top": "Överst"
@@ -135,7 +155,7 @@
         "title": "Tangentbordsdiagnostik",
         "description": "Kontrollerar om tangentbordshändelser når Mouthy. Endast antalet händelser registreras — aldrig vilka tangenter du trycker på.",
         "run": "Kör 10 s diagnostik",
-        "running": "Lyssnar… tryck på ditt kortkommando några gånger (t.ex. Option+Space)",
+        "running": "Lyssnar… tryck på ditt kortkommando några gånger (t.ex. Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "aktiverat",
         "disabled": "inaktiverat",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "Förhandsvisa introduktionen",
-        "description": "Förhandsvisa introduktionsskärmarna utan att ändra behörigheter, modeller eller slutförandestatus",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "Behörigheter",
         "exitButton": "Avsluta förhandsvisning"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Tack till",
-        "ggml": {
-          "title": "ggml",
-          "description": "Högpresterande inferens av OpenAI:s Whisper-modell för automatisk taligenkänning",
-          "details": "Mouthy använder ggml för snabb, lokal tal-till-text-behandling. Tack till det fantastiska arbete som utförts av Georgi Gerganov med medarbetare."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "Inga alternativ hittades"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy behöver behörighet för hjälpmedel för att kunna skriva transkriberad text.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Öppna systeminställningar"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} kanske blockerar 1 kortkommando",

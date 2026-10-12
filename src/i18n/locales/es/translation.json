@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "Permisos requeridos",
-      "description": "Mouthy necesita algunos permisos para funcionar correctamente.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Acceso de accesibilidad",
-        "description": "Necesario para escribir el texto transcrito en tus aplicaciones."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "Conceder permiso",
       "waiting": "Esperando...",
@@ -34,7 +34,7 @@
       "title": "General",
       "shortcut": {
         "title": "Atajos de Mouthy",
-        "description": "Configura atajos de teclado para activar la grabación de voz a texto",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "Cargando atajos...",
         "none": "No hay atajos configurados",
         "notFound": "Atajo no encontrado",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "Sonido",
       "outputDevice": {
         "title": "Dispositivo de salida",
-        "description": "Selecciona tu dispositivo de salida de audio preferido para los sonidos de retroalimentación",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Seleccionar dispositivo de salida...",
         "loading": "Cargando..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Superposición",
-          "description": "Elige la superposición de grabación: Ninguna la oculta, Minimalista muestra una píldora compacta, En vivo muestra la transcripción en tiempo real mientras hablas (solo modelos compatibles con streaming — busca la insignia Streaming en el selector de modelos). En Linux se recomienda 'Ninguna'.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Ninguna",
             "minimal": "Minimalista"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Posición de superposición",
-          "description": "Dónde aparece la superposición en la pantalla durante la grabación y la transcripción.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "Abajo",
             "top": "Arriba"
@@ -135,7 +155,7 @@
         "title": "Diagnóstico del teclado",
         "description": "Comprueba si los eventos de teclado llegan a Mouthy. Solo se registra el número de eventos, nunca qué teclas pulsas.",
         "run": "Ejecutar diagnóstico de 10 s",
-        "running": "Escuchando… pulsa tu atajo varias veces (p. ej. Option+Space)",
+        "running": "Escuchando… pulsa tu atajo varias veces (p. ej. Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "activado",
         "disabled": "desactivado",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "Vista previa de la configuración inicial",
-        "description": "Previsualiza las pantallas de configuración inicial sin cambiar permisos, modelos ni el estado de finalización",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "Permisos",
         "exitButton": "Salir de la vista previa"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Reconocimientos",
-        "ggml": {
-          "title": "ggml",
-          "description": "Biblioteca de tensores de alto rendimiento para inferencia de aprendizaje automático en el dispositivo",
-          "details": "El habla a texto local de Mouthy está construido sobre transcribe.cpp y ggml. Gracias al increíble trabajo de Georgi Gerganov y colaboradores."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "No se encontraron opciones"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy necesita permisos de accesibilidad para escribir texto transcrito.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Abrir Ajustes del Sistema"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} puede estar bloqueando 1 atajo",

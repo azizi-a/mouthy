@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "需要權限",
-      "description": "Mouthy 需要一些權限才能正常運作",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "輔助使用存取",
-        "description": "需要將轉錄文字輸入到您的應用程式中"
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "授予權限",
       "waiting": "等待中...",
@@ -34,7 +34,7 @@
       "title": "一般",
       "shortcut": {
         "title": "Mouthy 快捷鍵",
-        "description": "設定啟動語音轉文字錄製的鍵盤快捷鍵",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "載入快捷鍵中...",
         "none": "未設定快捷鍵",
         "notFound": "未找到快捷鍵",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "聲音",
       "outputDevice": {
         "title": "輸出裝置",
-        "description": "選擇用於聲音回饋的音訊輸出裝置",
+        "description": "Select the audio device that plays speech",
         "placeholder": "選擇輸出裝置...",
         "loading": "載入中..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "懸浮窗",
-          "description": "選擇錄音懸浮窗的樣式：「無」會隱藏懸浮窗，「精簡」顯示小巧的膠囊狀指示，「即時」在您說話時即時顯示轉錄內容（僅限支援串流的模型——請在模型選擇器中尋找「串流」標籤）。在 Linux 上建議選擇「無」",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "無",
             "minimal": "精簡"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "懸浮窗位置",
-          "description": "在錄製和轉錄期間顯示視覺回饋懸浮窗。在 Linux 上建議選擇「無」",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "底部",
             "top": "頂部"
@@ -135,7 +155,7 @@
         "title": "鍵盤診斷",
         "description": "檢查鍵盤事件是否能送達 Mouthy。只會記錄事件數量，絕不記錄您按了哪些按鍵。",
         "run": "執行 10 秒診斷",
-        "running": "正在監聽… 請按幾次您的快捷鍵（例如 Option+Space）",
+        "running": "正在監聽… 請按幾次您的快捷鍵（例如 Option+Escape）",
         "secureInputLabel": "Secure Input",
         "enabled": "已啟用",
         "disabled": "已停用",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "預覽新手引導",
-        "description": "預覽新手引導畫面，而不變更權限、模型或完成狀態",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "權限",
         "exitButton": "結束預覽"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "致謝",
-        "ggml": {
-          "title": "ggml",
-          "description": "針對 OpenAI Whisper 自動語音辨識模型的高效能推理引擎",
-          "details": "Mouthy 使用 ggml 進行快速的本機語音轉文字處理。感謝 Georgi Gerganov 和貢獻者們的傑出工作"
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "未找到選項"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy 需要輔助使用權限才能輸入轉錄的文字",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "開啟系統設定"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} 可能正在阻擋 1 個快捷鍵",

@@ -10,6 +10,8 @@ import { AppLanguageSelector } from "../AppLanguageSelector";
 import { ThemeSelector } from "../ThemeSelector";
 import { LogDirectory } from "../debug";
 
+const ACKNOWLEDGMENTS = ["handy", "kokoro", "rodio"] as const;
+
 export const AboutSettings: React.FC = () => {
   const { t } = useTranslation();
   const [version, setVersion] = useState("");
@@ -61,16 +63,19 @@ export const AboutSettings: React.FC = () => {
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.about.acknowledgments.title")}>
-        <SettingContainer
-          title={t("settings.about.acknowledgments.ggml.title")}
-          description={t("settings.about.acknowledgments.ggml.description")}
-          grouped={true}
-          layout="stacked"
-        >
-          <div className="text-sm text-mid-gray">
-            {t("settings.about.acknowledgments.ggml.details")}
-          </div>
-        </SettingContainer>
+        {ACKNOWLEDGMENTS.map((id) => (
+          <SettingContainer
+            key={id}
+            title={t(`settings.about.acknowledgments.${id}.title`)}
+            description={t(`settings.about.acknowledgments.${id}.description`)}
+            grouped={true}
+            layout="stacked"
+          >
+            <div className="text-sm text-mid-gray">
+              {t(`settings.about.acknowledgments.${id}.details`)}
+            </div>
+          </SettingContainer>
+        ))}
       </SettingsGroup>
     </div>
   );

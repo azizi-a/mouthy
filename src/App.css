@@ -98,13 +98,3 @@
     -webkit-text-stroke: 2px var(--color-text-stroke);
   }
 }
-
-.logo-primary {
-  fill: var(--color-logo-primary);
-}
-
-.logo-stroke {
-  fill: var(--color-logo-stroke);
-  stroke: var(--color-logo-stroke);
-  stroke-width: 1;
-}

@@ -3,6 +3,7 @@ use crate::settings;
 use crate::settings::{OverlayPosition, OverlayStyle};
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 
@@ -29,7 +30,7 @@ use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 #[cfg(target_os = "macos")]
 tauri_panel! {
-    panel!(RecordingOverlayPanel {
+    panel!(OverlayPanel {
         config: {
             can_become_key_window: false,
             is_floating_panel: true
@@ -37,20 +38,23 @@ tauri_panel! {
     })
 }
 
-// Native overlay window size (logical points), shared by every state. It need
-// only be at least as large as the card it hosts (the `--ov-*` vars in
-// RecordingOverlay.css). The card is CSS-anchored flush to the screen edge, so
-// window height doesn't move where the card sits — only OVERLAY_TOP_OFFSET /
-// OVERLAY_BOTTOM_OFFSET do. Keep these in sync with the CSS card geometry.
+const OVERLAY_LABEL: &str = "overlay";
+const OVERLAY_TITLE: &str = "Mouthy Overlay";
+
+// Native overlay window sizes (logical points). Each need only be at least as
+// large as the card it hosts (SpeakingOverlay.css). The card is CSS-anchored
+// flush to the screen edge, so window height doesn't move where the card sits —
+// only OVERLAY_TOP_OFFSET / OVERLAY_BOTTOM_OFFSET do. The window is sized per
+// view rather than to the largest card, because its transparent area still
+// swallows clicks.
 //
 // On Windows the size is additionally multiplied by the accessibility text
 // scale (see windows_text_scale_factor), which WebView2 applies as a zoom.
-//
-// The 40h pill animates width from 172 (--ov-rest-w) to 216 (--ov-work-w) and
-// expands from center, so the window must fit the widest state plus a little
-// slack.
 const OVERLAY_WIDTH: f64 = 256.0;
 const OVERLAY_HEIGHT: f64 = 50.0;
+// Room for a two-line message, the Open Settings button and the close button.
+const OVERLAY_ERROR_WIDTH: f64 = 360.0;
+const OVERLAY_ERROR_HEIGHT: f64 = 60.0;
 
 #[cfg(target_os = "macos")]
 const OVERLAY_TOP_OFFSET: f64 = 46.0;
@@ -360,9 +364,9 @@ fn place_windows_overlay(
     Ok(())
 }
 
-/// Creates the recording overlay window and keeps it hidden by default
+/// Creates the overlay window and keeps it hidden by default
 #[cfg(not(target_os = "macos"))]
-pub fn create_recording_overlay(app_handle: &AppHandle) {
+pub fn create_overlay(app_handle: &AppHandle) {
     // On Linux (Wayland), monitor detection often fails, but we don't need exact coordinates
     // for Layer Shell as we use anchors. On other platforms, we require a monitor.
     #[cfg(not(target_os = "linux"))]
@@ -378,10 +382,10 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
     // LogicalPosition before the overlay is shown.
     let builder = WebviewWindowBuilder::new(
         app_handle,
-        "recording_overlay",
+        OVERLAY_LABEL,
         tauri::WebviewUrl::App("src/overlay/index.html".into()),
     )
-    .title("Recording")
+    .title(OVERLAY_TITLE)
     .resizable(false)
     .inner_size(OVERLAY_WIDTH, OVERLAY_HEIGHT)
     .shadow(false)
@@ -410,23 +414,23 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
                 }
             }
 
-            debug!("Recording overlay window created successfully (hidden)");
+            debug!("Overlay window created (hidden)");
         }
         Err(e) => {
-            debug!("Failed to create recording overlay window: {}", e);
+            debug!("Failed to create overlay window: {}", e);
         }
     }
 }
 
-/// Creates the recording overlay panel and keeps it hidden by default (macOS)
+/// Creates the overlay panel and keeps it hidden by default (macOS)
 #[cfg(target_os = "macos")]
-pub fn create_recording_overlay(app_handle: &AppHandle) {
+pub fn create_overlay(app_handle: &AppHandle) {
     if let Some((x, y)) = calculate_overlay_position(app_handle, OVERLAY_WIDTH, OVERLAY_HEIGHT) {
         // PanelBuilder creates a Tauri window then converts it to NSPanel.
         // The window remains registered, so get_webview_window() still works.
-        match PanelBuilder::<_, RecordingOverlayPanel>::new(app_handle, "recording_overlay")
+        match PanelBuilder::<_, OverlayPanel>::new(app_handle, OVERLAY_LABEL)
             .url(WebviewUrl::App("src/overlay/index.html".into()))
-            .title("Recording")
+            .title(OVERLAY_TITLE)
             .position(tauri::Position::Logical(tauri::LogicalPosition { x, y }))
             .level(PanelLevel::Status)
             .size(tauri::Size::Logical(tauri::LogicalSize {
@@ -450,7 +454,7 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
                 panel.hide();
             }
             Err(e) => {
-                log::error!("Failed to create recording overlay panel: {}", e);
+                log::error!("Failed to create overlay panel: {}", e);
             }
         }
     }
@@ -466,6 +470,14 @@ pub enum OverlayView {
 }
 
 impl OverlayView {
+    /// Logical window size for this view.
+    fn size(&self) -> (f64, f64) {
+        match self {
+            OverlayView::Error { .. } => (OVERLAY_ERROR_WIDTH, OVERLAY_ERROR_HEIGHT),
+            _ => (OVERLAY_WIDTH, OVERLAY_HEIGHT),
+        }
+    }
+
     /// Notices hide themselves; the speaking overlay stays until hidden.
     fn auto_hide(&self) -> Option<Duration> {
         match self {
@@ -500,10 +512,11 @@ pub fn show_overlay(app_handle: &AppHandle, view: OverlayView) {
 }
 
 fn show_overlay_state_on_main(app_handle: &AppHandle, view: OverlayView) {
-    let (width, height) = (OVERLAY_WIDTH, OVERLAY_HEIGHT);
-    if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+    let (width, height) = view.size();
+    if let Some(overlay_window) = app_handle.get_webview_window(OVERLAY_LABEL) {
+        *OVERLAY_SIZE.lock().unwrap_or_else(|e| e.into_inner()) = (width, height);
         // Invalidate any delayed hide still in flight from a previous session
-        // (see `hide_recording_overlay`).
+        // (see `hide_overlay`).
         let shown_at = OVERLAY_SHOW_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
 
         #[cfg(target_os = "linux")]
@@ -547,7 +560,7 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, view: OverlayView) {
                 if let Err(error) =
                     place_windows_overlay(app_handle, &overlay_window, width, height)
                 {
-                    log::error!("Failed to place recording overlay: {error}");
+                    log::error!("Failed to place overlay: {error}");
                 }
                 set_pos_started.elapsed()
             };
@@ -565,7 +578,7 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, view: OverlayView) {
             // boundary, and tao's WM_DPICHANGED reflow clobbers the first placement.
             #[cfg(target_os = "windows")]
             if let Err(error) = place_windows_overlay(app_handle, &overlay_window, width, height) {
-                log::error!("Failed to re-assert recording overlay position: {error}");
+                log::error!("Failed to re-assert overlay position: {error}");
             }
 
             log::debug!(
@@ -585,7 +598,7 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, view: OverlayView) {
             std::thread::spawn(move || {
                 std::thread::sleep(delay);
                 if OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst) == shown_at {
-                    hide_recording_overlay(&handle);
+                    hide_overlay(&handle);
                 }
             });
         }
@@ -601,7 +614,8 @@ pub fn update_overlay_position(app_handle: &AppHandle) {
 }
 
 fn update_overlay_position_on_main(app_handle: &AppHandle) {
-    if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+    if let Some(overlay_window) = app_handle.get_webview_window(OVERLAY_LABEL) {
+        let (width, height) = *OVERLAY_SIZE.lock().unwrap_or_else(|e| e.into_inner());
         #[cfg(target_os = "linux")]
         if LAYER_SHELL_ACTIVE.load(Ordering::SeqCst) {
             let position = settings::get_settings(app_handle).overlay_position;
@@ -613,17 +627,13 @@ fn update_overlay_position_on_main(app_handle: &AppHandle) {
         }
 
         #[cfg(target_os = "windows")]
-        if let Err(error) =
-            place_windows_overlay(app_handle, &overlay_window, OVERLAY_WIDTH, OVERLAY_HEIGHT)
-        {
-            log::error!("Failed to update recording overlay position: {error}");
+        if let Err(error) = place_windows_overlay(app_handle, &overlay_window, width, height) {
+            log::error!("Failed to update overlay position: {error}");
         }
 
         #[cfg(not(target_os = "windows"))]
         {
-            if let Some((x, y)) =
-                calculate_overlay_position(app_handle, OVERLAY_WIDTH, OVERLAY_HEIGHT)
-            {
+            if let Some((x, y)) = calculate_overlay_position(app_handle, width, height) {
                 let _ = overlay_window
                     .set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }));
             }
@@ -637,11 +647,14 @@ fn update_overlay_position_on_main(app_handle: &AppHandle) {
 /// down the overlay of one that started in the meantime.
 static OVERLAY_SHOW_GENERATION: AtomicU64 = AtomicU64::new(0);
 
-/// Hides the recording overlay window with fade-out animation
-pub fn hide_recording_overlay(app_handle: &AppHandle) {
-    // Always hide the overlay regardless of settings - if setting was changed while recording,
-    // we still want to hide it properly
-    if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+/// Window size of the view last shown, so a position change keeps it centred.
+static OVERLAY_SIZE: Mutex<(f64, f64)> = Mutex::new((OVERLAY_WIDTH, OVERLAY_HEIGHT));
+
+/// Hides the overlay window with fade-out animation
+pub fn hide_overlay(app_handle: &AppHandle) {
+    // Always hide the overlay regardless of settings - if the setting was
+    // changed while it was showing, we still want to hide it properly
+    if let Some(overlay_window) = app_handle.get_webview_window(OVERLAY_LABEL) {
         // Snapshot before doing anything observable, so any show that lands
         // after this point invalidates the delayed hide below.
         let scheduled_at = OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst);

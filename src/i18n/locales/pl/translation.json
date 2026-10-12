@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "Wymagane uprawnienia",
-      "description": "Mouthy potrzebuje kilku uprawnień, aby działać poprawnie.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Dostęp do dostępności",
-        "description": "Wymagany do wpisywania transkrybowanego tekstu w Twoich aplikacjach."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "Przyznaj uprawnienie",
       "waiting": "Oczekiwanie...",
@@ -34,7 +34,7 @@
       "title": "Ogólne",
       "shortcut": {
         "title": "Skróty Mouthy",
-        "description": "Skonfiguruj skróty klawiaturowe do uruchamiania nagrywania mowy",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "Wczytywanie skrótów...",
         "none": "Brak skonfigurowanych skrótów",
         "notFound": "Nie znaleziono skrótu",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "Dźwięk",
       "outputDevice": {
         "title": "Urządzenie wyjściowe",
-        "description": "Wybierz preferowane urządzenie audio do odtwarzania dźwięków",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Wybierz urządzenie wyjściowe...",
         "loading": "Wczytywanie..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Nakładka",
-          "description": "Wybierz nakładkę nagrywania: „Brak“ ją ukrywa, „Minimalna“ pokazuje kompaktowy wskaźnik, „Na żywo“ wyświetla transkrypcję w czasie rzeczywistym podczas mówienia (tylko modele obsługujące streaming — poszukaj etykiety „Streaming“ w selektorze modeli). W systemie Linux zalecana jest opcja „Brak“.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Brak",
             "minimal": "Minimalna"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Pozycja nakładki",
-          "description": "Wyświetlaj wizualną nakładkę podczas nagrywania i transkrypcji. Na Linuxie zalecane 'Brak'.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "Dół",
             "top": "Góra"
@@ -135,7 +155,7 @@
         "title": "Diagnostyka klawiatury",
         "description": "Sprawdza, czy zdarzenia klawiatury docierają do Mouthy. Zapisywana jest tylko liczba zdarzeń — nigdy to, które klawisze naciskasz.",
         "run": "Uruchom 10-sekundową diagnostykę",
-        "running": "Nasłuchiwanie… naciśnij swój skrót kilka razy (np. Option+Space)",
+        "running": "Nasłuchiwanie… naciśnij swój skrót kilka razy (np. Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "włączony",
         "disabled": "wyłączony",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "Podgląd konfiguracji początkowej",
-        "description": "Wyświetl ekrany konfiguracji początkowej bez zmiany uprawnień, modeli ani stanu ukończenia",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "Uprawnienia",
         "exitButton": "Zakończ podgląd"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Podziękowania",
-        "ggml": {
-          "title": "ggml",
-          "description": "Wydajne wykonywanie modelu rozpoznawania mowy Whisper od OpenAI",
-          "details": "Mouthy używa ggml do szybkiego, lokalnego przetwarzania mowy na tekst. Dzięki niesamowitej pracy Georgi Gerganova i współtwórców."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "Nie znaleziono opcji"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy potrzebuje uprawnień dostępności, aby wpisywać transkrybowany tekst.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Otwórz ustawienia systemowe"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} może blokować 1 skrót",

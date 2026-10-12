@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "Permisos necessaris",
-      "description": "El Mouthy demana alguns permisos per funcionar correctament.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Accés a l'accessibilitat",
-        "description": "Necessari per escriure el text transcrit a les aplicacions."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "Concediu el permís",
       "waiting": "S'està esperant...",
@@ -34,7 +34,7 @@
       "title": "General",
       "shortcut": {
         "title": "Dreceres del Mouthy",
-        "description": "Configura les dreceres de teclat per iniciar l'enregistrament de veu per a la transcripció",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "S'estan carregant les dreceres...",
         "none": "No hi ha cap drecera configurada",
         "notFound": "No s'ha trobat la drecera",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "So",
       "outputDevice": {
         "title": "Dispositiu de sortida",
-        "description": "Selecciona el dispositiu de sortida d'àudio preferit per als avisos sonors",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Selecciona un dispositiu de sortida...",
         "loading": "S'està carregant..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Finestra superposada",
-          "description": "Tria la finestra superposada d'enregistrament: Cap l'amaga, Mínima mostra un indicador compacte i En directe mostra la transcripció en temps real mentre parleu (només amb models compatibles; cerqueu el distintiu En temps real al selector de models). Al Linux es recomana Cap.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Cap",
             "minimal": "Mínima"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Posició de la finestra superposada",
-          "description": "On apareix la finestra superposada a la pantalla durant l'enregistrament i la transcripció.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "A baix",
             "top": "A dalt"
@@ -124,7 +144,7 @@
       },
       "onboardingPreview": {
         "title": "Previsualització de la configuració inicial",
-        "description": "Previsualitza les pantalles de configuració inicial sense canviar els permisos, os models ni l'estat de compleció",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "Permisos",
         "exitButton": "Sortiu de la previsualització"
       },
@@ -141,7 +161,7 @@
         "title": "Diagnòstic del teclat",
         "description": "Comprova si els esdeveniments del teclat arriben al Mouthy. Només se'n registra el recompte, mai les tecles que premeu.",
         "run": "Executa un diagnòstic de 10 s",
-        "running": "S'està escoltant… prema la drecera unes quantes vegades (p. ex., Option+Space)",
+        "running": "S'està escoltant… prema la drecera unes quantes vegades (p. ex., Option+Escape)",
         "secureInputLabel": "Entrada segura",
         "enabled": "activada",
         "disabled": "desactivada",
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Agraïments",
-        "ggml": {
-          "title": "ggml",
-          "description": "Biblioteca de tensors d'alt rendiment per a la inferència d'aprenentatge automàtic al dispositiu",
-          "details": "La transcripció local de veu a text del Mouthy es basa en el transcribe.cpp i el ggml. Gràcies a la gran feina de Georgi Gerganov i dels col·laboradors."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "No s'ha trobat cap opció"
   },
   "accessibility": {
-    "permissionsDescription": "El Mouthy necessita permisos d'accessibilitat per escriure el text transcrit.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Obriu la configuració del sistema"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} pot estar blocant 1 drecera",

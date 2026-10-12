@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "İzinler Gerekli",
-      "description": "Mouthy'nin düzgün çalışabilmesi için birkaç izne ihtiyacı var.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Erişilebilirlik Erişimi",
-        "description": "Transkribe edilen metni uygulamalarınıza yazabilmek için gereklidir."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "İzin Ver",
       "waiting": "Bekleniyor...",
@@ -34,7 +34,7 @@
       "title": "Genel",
       "shortcut": {
         "title": "Mouthy Kısayolları",
-        "description": "Sesle yazma kaydını başlatmak için klavye kısayollarını yapılandırın",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "Kısayollar yükleniyor...",
         "none": "Kısayol yapılandırılmadı",
         "notFound": "Kısayol bulunamadı",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "Ses",
       "outputDevice": {
         "title": "Çıkış Cihazı",
-        "description": "Geri bildirim sesleri için ses çıkış cihazını seçin",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Çıkış cihazı seçin...",
         "loading": "Yükleniyor..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Ekran Katmanı",
-          "description": "Kayıt sırasında gösterilecek ekran katmanını seçin: 'Yok' katmanı gizler, 'Sade' küçük bir gösterge gösterir, 'Canlı' siz konuşurken transkripsiyonu gerçek zamanlı gösterir (yalnızca akış destekli modeller — model seçicide 'Akış' rozetini arayın). Linux'ta 'Yok' önerilir.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Yok",
             "minimal": "Sade"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Ekran Katmanı Konumu",
-          "description": "Ekran katmanının kayıt ve transkripsiyon sırasında nerede görüneceğini belirler.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "Alt",
             "top": "Üst"
@@ -135,7 +155,7 @@
         "title": "Klavye Tanılaması",
         "description": "Klavye olaylarının Mouthy'ye ulaşıp ulaşmadığını denetler. Yalnızca olay sayıları kaydedilir — hangi tuşlara bastığınız asla kaydedilmez.",
         "run": "10 sn'lik tanılamayı çalıştır",
-        "running": "Dinleniyor… kısayolunuza birkaç kez basın (ör. Option+Space)",
+        "running": "Dinleniyor… kısayolunuza birkaç kez basın (ör. Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "etkin",
         "disabled": "devre dışı",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "İlk kurulum önizlemesi",
-        "description": "İzinleri, modelleri veya tamamlanma durumunu değiştirmeden ilk kurulum ekranlarını önizleyin",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "İzinler",
         "exitButton": "Önizlemeden çık"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Teşekkürler",
-        "ggml": {
-          "title": "ggml",
-          "description": "Cihaz üzerinde makine öğrenmesi çıkarımı için yüksek performanslı tensör kütüphanesi",
-          "details": "Mouthy'nin yerel konuşmadan metne dönüştürme özelliği transcribe.cpp ve ggml üzerine kuruludur. Georgi Gerganov'a ve katkıda bulunanlara harika çalışmaları için teşekkür ederiz."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "Seçenek bulunamadı"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy, transkribe edilen metni yazabilmek için erişilebilirlik izinlerine ihtiyaç duyar.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Sistem Ayarlarını Aç"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} 1 kısayolu engelliyor olabilir",

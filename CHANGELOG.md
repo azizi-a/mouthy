@@ -9,11 +9,15 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - Speech building blocks: clean-up of selected text for reading aloud (links, markdown, whitespace), sentence chunking, and a client for OpenAI-compatible speech servers such as Kokoro-FastAPI.
-- Speak selection: press ⌥⎋ (Alt+Esc on Windows/Linux) to read the selected text aloud, and press again to stop. Playback starts after the first sentence is ready while the rest is still being synthesised. Also available from the tray (Speak Selection / Stop), the `--speak-selection` and `--stop` flags, and `SIGUSR2` (speak) / `SIGUSR1` (stop, macOS only). The clipboard is restored exactly after the copy, including rich text and password-manager privacy markers. The overlay shows speaking, "nothing selected" and error states. Server URL, voice, speed and volume are stored settings (no UI yet).
+- Speak selection: press ⌥⎋ (Alt+Esc on Windows/Linux) to read the selected text aloud, and press again to stop. Playback starts after the first sentence is ready while the rest is still being synthesised. Also available from the tray (Speak Selection / Stop), the `--speak-selection` and `--stop` flags, and `SIGUSR2` (speak) / `SIGUSR1` (stop, macOS only). The clipboard is restored exactly after the copy, including rich text and password-manager privacy markers. The overlay shows speaking, "nothing selected" and error states.
+- Speech settings on the General page: server URL, voice (typed, or picked from the server's voice list when it has one), speed (0.5×–2×) and volume. Launch on startup, start hidden and the overlay settings moved to the General page too.
+- The error overlay has an Open Settings button.
 
 ### Changed
 
 - Rebranded to Mouthy: new name, bundle identifier `com.azizi.mouthy`, placeholder icons, and attribution to Handy in README and LICENSE. Removed Handy's sponsor images, donate link, CI workflows and Nix packaging.
+- New compact speaking overlay, and an indigo placeholder accent instead of Handy's pink.
+- Wording no longer mentions transcription, recording or feedback sounds; text whose meaning changed shows in English in other languages until translated. About credits Handy, Kokoro and rodio instead of ggml.
 
 ### Removed
 

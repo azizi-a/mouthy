@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "Permessi Richiesti",
-      "description": "Mouthy ha bisogno di alcuni permessi per funzionare correttamente.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Accesso all'Accessibilità",
-        "description": "Necessario per digitare il testo trascritto nelle tue applicazioni."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "Concedi Permesso",
       "waiting": "In attesa...",
@@ -34,7 +34,7 @@
       "title": "Generale",
       "shortcut": {
         "title": "Scorciatoie di Mouthy",
-        "description": "Configura le scorciatoie per attivare la trascrizione vocale",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "Caricamento delle scorciatoie...",
         "none": "Nessuna scorciatoia configurata",
         "notFound": "Scorciatoia non trovata",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "Suono",
       "outputDevice": {
         "title": "Dispositivo di Output",
-        "description": "Scegli il dispositivo di output per il feedback audio",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Scegli dispositivo di output...",
         "loading": "Caricamento..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Overlay",
-          "description": "Scegli l'overlay di registrazione: 'Nessuno' lo nasconde, 'Minimo' mostra una barra compatta, 'In tempo reale' mostra la trascrizione in tempo reale mentre parli (solo per modelli che supportano lo streaming — cerca il badge 'Streaming' nel selettore del modello). Su Linux si raccomanda l'opzione 'Nessuno'.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Nessuno",
             "minimal": "Minimo"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Posizione della Sovrimpressione",
-          "description": "Mostra un feedback visivo in sovrimpressione durante la registrazione e la trascrizione. Su Linux si raccomanda 'Nessuna'.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "In basso",
             "top": "In alto"
@@ -135,7 +155,7 @@
         "title": "Diagnostica tastiera",
         "description": "Verifica se gli eventi della tastiera arrivano a Mouthy. Viene registrato solo il numero di eventi, mai quali tasti premi.",
         "run": "Esegui diagnostica di 10 s",
-        "running": "In ascolto… premi la tua scorciatoia alcune volte (ad es. Option+Space)",
+        "running": "In ascolto… premi la tua scorciatoia alcune volte (ad es. Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "abilitato",
         "disabled": "disabilitato",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "Anteprima della configurazione iniziale",
-        "description": "Visualizza le schermate di configurazione senza modificare autorizzazioni, modelli o stato di completamento",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "Autorizzazioni",
         "exitButton": "Esci dall’anteprima"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Ringraziamenti",
-        "ggml": {
-          "title": "ggml",
-          "description": "Inferenza ad alte prestazioni del modello di riconoscimento vocale automatico Whisper di OpenAI",
-          "details": "Mouthy usa ggml per il riconoscimento vocale veloce in locale. Grazie a Georgi Gerganov e collaboratori per il fantastico lavoro."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "Nessuna opzione trovata"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy ha bisogno dei permessi di accessibilità per digitare il testo trascritto.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Apri Impostazioni di Sistema"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} potrebbe bloccare 1 scorciatoia",

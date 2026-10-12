@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "Потрібні дозволи",
-      "description": "Mouthy потребує деяких дозволів для коректної роботи.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Доступ до доступності",
-        "description": "Потрібен для введення транскрибованого тексту у ваші додатки."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "Надати дозвіл",
       "waiting": "Очікування...",
@@ -34,7 +34,7 @@
       "title": "Загальні",
       "shortcut": {
         "title": "Комбінації клавіш",
-        "description": "Налаштуйте клавіатурні скорочення для запуску запису мовлення в текст",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "Завантаження скорочень...",
         "none": "Скорочення не налаштовані",
         "notFound": "Скорочення не знайдено",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "Звук",
       "outputDevice": {
         "title": "Пристрій виводу",
-        "description": "Оберіть бажаний пристрій виводу звуку для звукових сповіщень",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Оберіть пристрій виводу...",
         "loading": "Завантаження..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Накладка",
-          "description": "Виберіть накладку під час запису: «Немає» приховує її, «Мінімальна» показує компактний індикатор, «У реальному часі» показує транскрипцію під час мовлення (лише моделі з підтримкою потокової обробки — шукайте позначку «Потокове» у списку моделей). У Linux рекомендовано «Немає».",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Немає",
             "minimal": "Мінімальна"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Позиція оверлею",
-          "description": "Показувати візуальний оверлей під час запису та транскрипції. На Linux рекомендовано «Немає»",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "Внизу",
             "top": "Вгорі"
@@ -135,7 +155,7 @@
         "title": "Діагностика клавіатури",
         "description": "Перевіряє, чи доходять події клавіатури до Mouthy. Записується лише кількість подій — ніколи те, які клавіші ви натискаєте.",
         "run": "Запустити 10-секундну діагностику",
-        "running": "Прослуховування… натисніть свою комбінацію кілька разів (наприклад, Option+Space)",
+        "running": "Прослуховування… натисніть свою комбінацію кілька разів (наприклад, Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "увімкнено",
         "disabled": "вимкнено",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "Попередній перегляд початкового налаштування",
-        "description": "Перегляньте екрани початкового налаштування, не змінюючи дозволи, моделі чи стан завершення",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "Дозволи",
         "exitButton": "Вийти з перегляду"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Подяки",
-        "ggml": {
-          "title": "ggml",
-          "description": "Високопродуктивний інференс моделі автоматичного розпізнавання мовлення Whisper від OpenAI",
-          "details": "Mouthy використовує ggml для швидкої локальної обробки мовлення в текст. Дякуємо за чудову роботу Георгію Герганову та контриб'юторам."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "Опцій не знайдено"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy потребує дозволи доступності для введення транскрибованого тексту.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Відкрити Системні налаштування"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} може блокувати 1 комбінацію клавіш",

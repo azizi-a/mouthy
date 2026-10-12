@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "Cần cấp quyền",
-      "description": "Mouthy cần một số quyền để hoạt động bình thường.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "Quyền truy cập Trợ năng",
-        "description": "Cần thiết để nhập văn bản đã chuyển đổi vào các ứng dụng của bạn."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "Cấp quyền",
       "waiting": "Đang chờ...",
@@ -34,7 +34,7 @@
       "title": "Chung",
       "shortcut": {
         "title": "Phím tắt Mouthy",
-        "description": "Cấu hình phím tắt để kích hoạt ghi âm chuyển đổi giọng nói thành văn bản",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "Đang tải phím tắt...",
         "none": "Chưa cấu hình phím tắt",
         "notFound": "Không tìm thấy phím tắt",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "Âm thanh",
       "outputDevice": {
         "title": "Thiết bị đầu ra",
-        "description": "Chọn thiết bị đầu ra âm thanh ưa thích của bạn cho âm thanh phản hồi",
+        "description": "Select the audio device that plays speech",
         "placeholder": "Chọn thiết bị đầu ra...",
         "loading": "Đang tải..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "Lớp phủ",
-          "description": "Chọn lớp phủ khi ghi âm: 'Không có' sẽ ẩn nó, 'Tối giản' hiển thị một chỉ báo nhỏ gọn, 'Trực tiếp' hiển thị bản chép lời theo thời gian thực khi bạn nói (chỉ với các mô hình hỗ trợ truyền trực tiếp — hãy tìm huy hiệu 'Truyền trực tiếp' trong bộ chọn mô hình). Trên Linux, khuyến nghị chọn 'Không có'.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "Không có",
             "minimal": "Tối giản"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "Vị trí lớp phủ",
-          "description": "Hiển thị lớp phủ phản hồi trực quan trong quá trình ghi âm và chuyển đổi. Trên Linux, 'Không có' được khuyến nghị.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "Dưới",
             "top": "Trên"
@@ -135,7 +155,7 @@
         "title": "Chẩn đoán bàn phím",
         "description": "Kiểm tra xem các sự kiện bàn phím có đến được Mouthy hay không. Chỉ số lượng sự kiện được ghi lại — không bao giờ ghi lại bạn bấm phím nào.",
         "run": "Chạy chẩn đoán 10 giây",
-        "running": "Đang lắng nghe… hãy bấm phím tắt của bạn vài lần (ví dụ: Option+Space)",
+        "running": "Đang lắng nghe… hãy bấm phím tắt của bạn vài lần (ví dụ: Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "đang bật",
         "disabled": "đang tắt",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "Xem trước thiết lập ban đầu",
-        "description": "Xem trước các màn hình thiết lập mà không thay đổi quyền, mô hình hoặc trạng thái hoàn tất",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "Quyền",
         "exitButton": "Thoát xem trước"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "Lời cảm ơn",
-        "ggml": {
-          "title": "ggml",
-          "description": "Suy luận hiệu suất cao của mô hình nhận dạng giọng nói tự động Whisper của OpenAI",
-          "details": "Mouthy sử dụng ggml để xử lý chuyển đổi giọng nói thành văn bản nhanh, cục bộ. Cảm ơn công việc tuyệt vời của Georgi Gerganov và các cộng tác viên."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "Không tìm thấy tùy chọn"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy cần quyền truy cập để gõ văn bản đã chuyển đổi.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "Mở Cài đặt Hệ thống"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} có thể đang chặn 1 phím tắt",

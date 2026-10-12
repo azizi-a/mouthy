@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "अनुमतिहरू आवश्यक छन्",
-      "description": "Mouthy लाई राम्रोसँग काम गर्न केही अनुमतिहरू चाहिन्छ।",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "एक्सेसिबिलिटी पहुँच",
-        "description": "ट्रान्सक्राइब गरिएको टेक्स्ट तपाईंका एपहरूमा टाइप गर्न आवश्यक छ।"
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "अनुमति दिनुहोस्",
       "waiting": "प्रतीक्षा गरिँदैछ...",
@@ -34,7 +34,7 @@
       "title": "सामान्य",
       "shortcut": {
         "title": "Mouthy सर्टकटहरू",
-        "description": "स्पिच-टु-टेक्स्ट रेकर्डिङ सुरु गर्न किबोर्ड सर्टकटहरू सेट अप गर्नुहोस्",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "सर्टकटहरू लोड गरिँदैछन्...",
         "none": "कुनै सर्टकट सेट गरिएको छैन",
         "notFound": "सर्टकट भेटिएन",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "साउन्ड",
       "outputDevice": {
         "title": "आउटपुट डिभाइस",
-        "description": "फिडब्याक आवाजका लागि आफ्नो मनपर्ने अडियो आउटपुट डिभाइस चयन गर्नुहोस्",
+        "description": "Select the audio device that plays speech",
         "placeholder": "आउटपुट डिभाइस चयन गर्नुहोस्...",
         "loading": "लोड गरिँदैछ..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "ओभरले",
-          "description": "रेकर्डिङ ओभरले छान्नुहोस्: 'कुनै होइन' ले लुकाउँछ, 'मिनिमल' ले सानो पिल देखाउँछ, 'लाइभ' ले बोल्दै गर्दा वास्तविक समयमा ट्रान्सक्रिप्सन देखाउँछ (स्ट्रिमिङ-सक्षम मोडेलहरूमा मात्र — मोडेल पिकरमा स्ट्रिमिङ ब्याज हेर्नुहोस्)। Linux मा 'कुनै होइन' सिफारिस गरिन्छ।",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "कुनै होइन",
             "minimal": "मिनिमल"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "ओभरले स्थिति",
-          "description": "रेकर्डिङ र ट्रान्सक्रिप्सनका बेला ओभरले स्क्रिनमा कहाँ देखिन्छ।",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "तल",
             "top": "माथि"
@@ -124,7 +144,7 @@
       },
       "onboardingPreview": {
         "title": "प्रारम्भिक सेटअप पूर्वावलोकन",
-        "description": "अनुमति, मोडेल वा सम्पन्न स्थिति परिवर्तन नगरी प्रारम्भिक सेटअप स्क्रिनहरू पूर्वावलोकन गर्नुहोस्",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "अनुमतिहरू",
         "exitButton": "पूर्वावलोकन बन्द गर्नुहोस्"
       },
@@ -141,7 +161,7 @@
         "title": "किबोर्ड डायग्नोस्टिक",
         "description": "किबोर्ड इभेन्टहरू Mouthy सम्म पुग्छन् कि पुग्दैनन् भनी जाँच्छ। इभेन्टको संख्या मात्र रेकर्ड हुन्छ — तपाईंले कुन कुञ्जी थिच्नुभयो भन्ने कहिल्यै होइन।",
         "run": "१० सेकेन्डको डायग्नोस्टिक चलाउनुहोस्",
-        "running": "सुनिरहेको छ… आफ्नो सर्टकट केही पटक थिच्नुहोस् (जस्तै Option+Space)",
+        "running": "सुनिरहेको छ… आफ्नो सर्टकट केही पटक थिच्नुहोस् (जस्तै Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "सक्षम",
         "disabled": "अक्षम",
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "आभार",
-        "ggml": {
-          "title": "ggml",
-          "description": "अन-डिभाइस मेसिन लर्निङ अनुमानका लागि उच्च-प्रदर्शन टेन्सर लाइब्रेरी",
-          "details": "Mouthy को स्थानीय स्पिच-टु-टेक्स्ट transcribe.cpp र ggml मा आधारित छ। Georgi Gerganov र योगदानकर्ताहरूको उत्कृष्ट कामका लागि धन्यवाद।"
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "कुनै विकल्प भेटिएन"
   },
   "accessibility": {
-    "permissionsDescription": "ट्रान्सक्राइब गरिएको टेक्स्ट टाइप गर्न Mouthy लाई एक्सेसिबिलिटी अनुमति चाहिन्छ।",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "सिस्टम सेटिङहरू खोल्नुहोस्"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} ले 1 सर्टकट रोकिरहेको हुन सक्छ",

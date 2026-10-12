@@ -128,7 +128,7 @@ fn stop_speaking_on_main(app: &AppHandle) {
     if let Some(session) = state.lock().take() {
         session.stop.store(true, Ordering::SeqCst);
     }
-    overlay::hide_recording_overlay(app);
+    overlay::hide_overlay(app);
     tray::set_tray_state(app, TrayIconState::Idle);
 }
 
@@ -149,7 +149,7 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, error: Option<St
     }
     match error {
         Some(message) => overlay::show_overlay(app, OverlayView::Error { message }),
-        None => overlay::hide_recording_overlay(app),
+        None => overlay::hide_overlay(app),
     }
     tray::set_tray_state(app, TrayIconState::Idle);
 }

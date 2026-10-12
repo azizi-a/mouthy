@@ -15,10 +15,10 @@
   "onboarding": {
     "permissions": {
       "title": "נדרשות הרשאות",
-      "description": "Mouthy צריך כמה הרשאות כדי לעבוד כמו שצריך.",
+      "description": "Mouthy needs one permission to read your selected text.",
       "accessibility": {
         "title": "גישת נגישות",
-        "description": "נדרש כדי להקליד את הטקסט המתומלל לתוך האפליקציות שלך."
+        "description": "Required to copy the text you select so Mouthy can read it aloud."
       },
       "grant": "תן הרשאה",
       "waiting": "ממתין...",
@@ -34,7 +34,7 @@
       "title": "כללי",
       "shortcut": {
         "title": "קיצורי מקשים של Mouthy",
-        "description": "הגדר קיצורי מקשים כדי להפעיל הקלטה ותמלול דיבור",
+        "description": "Configure the keyboard shortcut that reads your selection aloud",
         "loading": "טוען קיצורי מקשים...",
         "none": "לא הוגדרו קיצורי מקשים",
         "notFound": "קיצור הדרך לא נמצא",
@@ -52,11 +52,31 @@
         }
       }
     },
+    "speech": {
+      "title": "Speech",
+      "backendUrl": {
+        "title": "Server URL",
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+      },
+      "voice": {
+        "title": "Voice",
+        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "choose": "Choose a voice..."
+      },
+      "speed": {
+        "title": "Speed",
+        "description": "How fast the voice speaks, from 0.5× to 2×."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Playback volume for speech."
+      }
+    },
     "sound": {
       "title": "שמע",
       "outputDevice": {
         "title": "התקן פלט",
-        "description": "בחר את התקן השמע המועדף עליך עבור צלילי המשוב",
+        "description": "Select the audio device that plays speech",
         "placeholder": "בחר התקן פלט...",
         "loading": "טוען..."
       }
@@ -85,7 +105,7 @@
       "overlay": {
         "style": {
           "title": "שכבת-על",
-          "description": "בחר את שכבת-העל בהקלטה: 'ללא' מסתירה אותה, 'מינימלי' מציג סמן קומפקטי, 'בזמן אמת' מציג תמלול בזמן אמת בזמן הדיבור (מודלים התומכים בסטרימינג בלבד — חפש את התווית 'סטרימינג' בבורר המודלים). ב-Linux מומלץ לבחור 'ללא'.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
           "options": {
             "none": "ללא",
             "minimal": "מינימלי"
@@ -93,7 +113,7 @@
         },
         "position": {
           "title": "מיקום שכבת המשוב",
-          "description": "הצג שכבת משוב חזותית בזמן הקלטה ותמלול. בלינוקס מומלץ לבחור 'ללא'.",
+          "description": "Where the overlay appears on screen while Mouthy is speaking.",
           "options": {
             "bottom": "למטה",
             "top": "למעלה"
@@ -135,7 +155,7 @@
         "title": "אבחון מקלדת",
         "description": "בודק אם אירועי מקלדת מגיעים ל-Mouthy. נרשם רק מספר האירועים — לעולם לא אילו מקשים הקשת.",
         "run": "הרצת אבחון של 10 שניות",
-        "running": "מאזין… הקש על קיצור המקשים שלך כמה פעמים (למשל Option+Space)",
+        "running": "מאזין… הקש על קיצור המקשים שלך כמה פעמים (למשל Option+Escape)",
         "secureInputLabel": "Secure Input",
         "enabled": "מופעל",
         "disabled": "מושבת",
@@ -153,7 +173,7 @@
       },
       "onboardingPreview": {
         "title": "תצוגה מקדימה של ההגדרה הראשונית",
-        "description": "הצג את מסכי ההגדרה הראשונית בלי לשנות הרשאות, מודלים או את מצב ההשלמה",
+        "description": "Preview onboarding screens without changing permissions or completion state",
         "permissionsButton": "הרשאות",
         "exitButton": "יציאה מהתצוגה המקדימה"
       }
@@ -175,10 +195,20 @@
       },
       "acknowledgments": {
         "title": "תודות",
-        "ggml": {
-          "title": "ggml",
-          "description": "הסקה מהירה לביצועים גבוהים עבור מודל זיהוי הדיבור Whisper של OpenAI",
-          "details": "Mouthy משתמש ב-ggml לתמלול מהיר ומקומי. תודה לעבודה המדהימה של Georgi Gerganov וכל התורמים."
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source speech-to-text app Mouthy is forked from",
+          "details": "Mouthy is derived from Handy by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project."
+        },
+        "kokoro": {
+          "title": "Kokoro",
+          "description": "Open-weight text-to-speech model",
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+        },
+        "rodio": {
+          "title": "rodio",
+          "description": "Audio playback library for Rust",
+          "details": "Mouthy plays speech through rodio and cpal from the RustAudio project."
         }
       }
     }
@@ -190,7 +220,7 @@
     "noOptionsFound": "לא נמצאו אפשרויות"
   },
   "accessibility": {
-    "permissionsDescription": "Mouthy צריך הרשאות נגישות כדי להקליד את הטקסט המתומלל.",
+    "permissionsDescription": "Mouthy needs accessibility permissions to copy the text you select.",
     "openSettings": "פתח את הגדרות המערכת"
   },
   "errors": {
@@ -210,9 +240,11 @@
     }
   },
   "overlay": {
-    "speaking": "Speaking",
+    "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
-    "error": "Speech failed"
+    "error": "Speech failed",
+    "openSettings": "Open Settings",
+    "dismiss": "Dismiss"
   },
   "secureInput": {
     "blockedWithCulprit_one": "ייתכן ש-{{name}} חוסם קיצור דרך אחד",

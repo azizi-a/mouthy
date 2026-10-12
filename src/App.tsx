@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useState,
@@ -168,10 +169,10 @@ function App() {
     }
   };
 
-  const handleAccessibilityComplete = () => {
+  const handleAccessibilityComplete = useCallback(() => {
     updateSetting("onboarding_completed", true);
     setOnboardingStep("done");
-  };
+  }, [updateSetting]);
 
   // Rendered once around every step below (including onboarding) so
   // toast.error() calls surface to the user. sonner renders via a portal, so

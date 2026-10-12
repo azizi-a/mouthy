@@ -473,7 +473,7 @@ pub fn change_theme_setting(app: AppHandle, theme: String) -> Result<(), String>
     settings::write_settings(&app, settings);
     #[cfg(any(target_os = "windows", target_os = "macos"))]
     apply_window_theme(&app, parsed);
-    // Notify other webviews (the recording overlay) so they re-apply the palette
+    // Notify other webviews (the overlay) so they re-apply the palette
     // live — they set `data-theme` on their own document and can't see this one.
     let _ = app.emit("theme-changed", parsed);
     Ok(())

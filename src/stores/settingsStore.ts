@@ -73,6 +73,14 @@ const settingUpdaters: {
   tts_volume: (value) => commands.changeTtsVolumeSetting(value as number),
 };
 
+// The backend trims or clamps these on write, so re-read what it stored.
+const backendNormalizedSettings = new Set<keyof Settings>([
+  "tts_base_url",
+  "tts_voice",
+  "tts_speed",
+  "tts_volume",
+]);
+
 export const useSettingsStore = create<SettingsStore>()(
   subscribeWithSelector((set, get) => ({
     settings: null,
@@ -157,6 +165,9 @@ export const useSettingsStore = create<SettingsStore>()(
         const updater = settingUpdaters[key];
         if (updater) {
           await updater(value);
+          if (backendNormalizedSettings.has(key)) {
+            await get().refreshSettings();
+          }
         } else if (key !== "bindings") {
           console.warn(`No handler for setting: ${String(key)}`);
         }

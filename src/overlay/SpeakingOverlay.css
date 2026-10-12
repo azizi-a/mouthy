@@ -1,0 +1,125 @@
+@import "../styles/theme.css";
+
+/* The card sits flush against the window's screen-edge side, so overlay.rs
+   alone decides where it lands. Card sizes must fit the window sizes there. */
+.ov-stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-text);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.ov-stage.top {
+  align-items: flex-start;
+}
+.ov-stage.visible {
+  opacity: 1;
+}
+
+.ov-card {
+  box-sizing: border-box;
+  max-width: 100vw;
+  min-height: 40px;
+  padding: 4px 9px 4px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--color-background) 98%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-mid-gray) 25%, transparent);
+}
+.ov-card.error {
+  width: 100vw;
+  border-radius: 16px;
+}
+
+.ov-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ov-card.error .ov-text {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ov-bars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+}
+.ov-bars i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-logo-primary);
+  animation: ov-bar 900ms ease-in-out infinite;
+}
+.ov-bars i:nth-child(2) {
+  animation-delay: 150ms;
+}
+.ov-bars i:nth-child(3) {
+  animation-delay: 300ms;
+}
+.ov-bars i:nth-child(4) {
+  animation-delay: 450ms;
+}
+@keyframes ov-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.ov-button,
+.ov-close {
+  flex: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.ov-button {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: white;
+  background: var(--color-background-ui);
+}
+.ov-button:hover {
+  filter: brightness(1.1);
+}
+.ov-close {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
+  background: color-mix(in srgb, var(--color-mid-gray) 15%, transparent);
+}
+.ov-close:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-mid-gray) 30%, transparent);
+}
+.ov-close svg {
+  width: 9px;
+  height: 9px;
+}
