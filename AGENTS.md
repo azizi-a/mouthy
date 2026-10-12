@@ -52,7 +52,7 @@ Phase 1 synthesises through an external OpenAI-compatible HTTP server (default `
 ### Backend Structure (src-tauri/src/)
 
 - `lib.rs` - Entry point, Tauri setup, plugin and command registration
-- `actions.rs` - `ShortcutAction` trait + `ACTION_MAP`; `SpeakAction` owns `TtsState`, the synth thread and the playback thread
+- `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction` is a thin wrapper); `speak_selection`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
 - `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences`
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
 - `clipboard.rs` - `capture_selection`: snapshot pasteboard, send ⌘C, poll, read, restore
@@ -78,7 +78,7 @@ Phase 1 synthesises through an external OpenAI-compatible HTTP server (default `
 
 ### Key Architecture Patterns
 
-**Speak loop:** hotkey → `SpeakAction::start` → if speaking, stop; else capture selection → normalise → split → synth thread (`block_on` per sentence, bounded channel) → playback thread (sole owner of the rodio `Player`). Each session has a generation number so a stale session never touches the overlay or tray.
+**Speak loop:** hotkey, tray, CLI or signal → `actions::speak_selection` → main thread: if speaking, stop; else capture selection → normalise → split → synth thread (`block_on` per sentence, bounded channel) → playback thread (sole owner of the rodio `Player`). Every session change runs on the main thread, the only thread that locks `TtsState`, so a press during the capture queues behind it and then stops. A session's stop flag is its identity: a finished playback thread ends only its own session.
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 
@@ -129,11 +129,11 @@ Locales live in `src/i18n/locales/<lang>/translation.json`; `en` is the source.
 
 ## CLI Parameters
 
-**Implementation:** `cli.rs` (definitions), `main.rs` (parsing), `lib.rs` (applying), `signal_handle.rs` (shared logic)
+**Implementation:** `cli.rs` (definitions), `main.rs` (parsing), `lib.rs` (applying), `signal_handle.rs` (signals); both call `actions::speak_selection` / `actions::stop_speaking`
 
 | Flag                | Description                                                |
 | ------------------- | ---------------------------------------------------------- |
-| `--speak-selection` | Speak the current selection on a running instance          |
+| `--speak-selection` | Speak the selection on a running instance, or stop speech  |
 | `--stop`            | Stop playback on a running instance                        |
 | `--start-hidden`    | Launch without showing the main window (tray icon visible) |
 | `--no-tray`         | Launch without system tray (closing window quits the app)  |

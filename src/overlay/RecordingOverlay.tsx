@@ -6,15 +6,11 @@ import { commands } from "@/bindings";
 import i18n, { syncLanguageFromSettings } from "@/i18n";
 import { getLanguageDirection } from "@/lib/utils/rtl";
 
+// Mirrors `OverlayView` in overlay.rs.
 type OverlayView =
   | { kind: "speaking" }
   | { kind: "nothing-selected" }
-  | { kind: "error"; message: string | null };
-
-interface OverlayNotice {
-  kind: "nothing-selected" | "error";
-  message: string | null;
-}
+  | { kind: "error"; message: string };
 
 // Number of bars in the activity pulse.
 const WAVE_BARS = 9;
@@ -46,22 +42,8 @@ const RecordingOverlay: React.FC = () => {
     };
 
     const setupEventListeners = async () => {
-      const unlistenShow = await listen<string>("show-overlay", (event) => {
-        if (event.payload === "speaking") {
-          present({ kind: "speaking" });
-        }
-      });
-
-      const unlistenNotice = await listen<OverlayNotice>(
-        "show-overlay-notice",
-        (event) => {
-          const notice = event.payload;
-          present(
-            notice.kind === "error"
-              ? { kind: "error", message: notice.message }
-              : { kind: "nothing-selected" },
-          );
-        },
+      const unlistenShow = await listen<OverlayView>("show-overlay", (event) =>
+        present(event.payload),
       );
 
       const unlistenHide = await listen("hide-overlay", () => {
@@ -70,7 +52,6 @@ const RecordingOverlay: React.FC = () => {
 
       return () => {
         unlistenShow();
-        unlistenNotice();
         unlistenHide();
       };
     };

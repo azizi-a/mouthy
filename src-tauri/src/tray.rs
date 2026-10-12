@@ -561,7 +561,9 @@ mod tests {
 
     #[test]
     fn idle_and_busy_menus_differ() {
-        assert_ne!(inputs(false), inputs(true));
+        // The Stop item is enabled only while speaking.
+        assert!(!TrayIconState::Idle.is_busy());
+        assert!(TrayIconState::Speaking.is_busy());
         assert_ne!(
             inputs(TrayIconState::Idle.is_busy()),
             inputs(TrayIconState::Speaking.is_busy())

@@ -16,12 +16,12 @@ use signal_hook::consts::SIGUSR1;
 /// fired the action on every GC cycle (cjpais/Handy#1660).
 pub fn setup_signal_handler(app_handle: AppHandle) {
     #[cfg(target_os = "macos")]
-    let (handled, names) = ([SIGUSR2, SIGUSR1], "SIGUSR2, SIGUSR1");
+    let handled = [SIGUSR2, SIGUSR1];
     #[cfg(not(target_os = "macos"))]
-    let (handled, names) = ([SIGUSR2], "SIGUSR2");
+    let handled = [SIGUSR2];
 
     let mut signals = Signals::new(handled).expect("failed to register signal handler");
-    debug!("Signal handler registered ({names})");
+    debug!("Signal handler registered (SIGUSR2; SIGUSR1 on macOS)");
     thread::spawn(move || {
         for signal in signals.forever() {
             match signal {

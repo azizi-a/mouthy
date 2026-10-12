@@ -64,16 +64,6 @@ mod macos {
         (0..KEYCODE_COUNT).find(|&keycode| matches(keycode))
     }
 
-    /// kVK_ANSI_* keycodes: what was sent before layout-aware resolution, and
-    /// the fallback when macOS cannot expose the active layout.
-    fn ansi_keycode(ch: u8) -> Option<u16> {
-        match ch {
-            b'c' => Some(8),
-            b'v' => Some(9),
-            _ => None,
-        }
-    }
-
     /// Resolves the physical key that macOS interprets as `ch` while Command
     /// is held. Including Command is important: non-Latin layouts commonly map
     /// Cmd shortcuts to their ANSI equivalents, while standard Dvorak does not.
@@ -142,27 +132,23 @@ mod macos {
     }
 
     /// The key to press with Command to get the shortcut for `ch` (a lowercase
-    /// ASCII letter) in the active layout.
-    pub(super) fn command_key(ch: u8) -> Key {
+    /// ASCII letter) in the active layout. `ansi_fallback` is its kVK_ANSI_*
+    /// keycode, sent when macOS cannot expose the active layout.
+    pub(super) fn command_key(ch: u8, ansi_fallback: u16) -> Key {
         let name = ch.to_ascii_uppercase() as char;
-        match resolve_command_keycode(ch) {
+        let keycode = match resolve_command_keycode(ch) {
             Ok(keycode) => {
                 debug!("Resolved Cmd+{name} for the active macOS layout to keycode {keycode}");
-                Key::Other(u32::from(keycode))
+                keycode
             }
-            Err(error) => match ansi_keycode(ch) {
-                Some(keycode) => {
-                    warn!(
-                        "Could not resolve Cmd+{name} for the active macOS layout ({error}); using ANSI keycode {keycode}"
-                    );
-                    Key::Other(u32::from(keycode))
-                }
-                None => {
-                    warn!("Could not resolve Cmd+{name} for the active macOS layout ({error})");
-                    Key::Unicode(char::from(ch))
-                }
-            },
-        }
+            Err(error) => {
+                warn!(
+                    "Could not resolve Cmd+{name} for the active macOS layout ({error}); using ANSI keycode {ansi_fallback}"
+                );
+                ansi_fallback
+            }
+        };
+        Key::Other(u32::from(keycode))
     }
 }
 
@@ -190,7 +176,7 @@ pub fn get_cursor_position(app_handle: &AppHandle) -> Option<(i32, i32)> {
 /// C click (see `send_paste_ctrl_v`). On macOS this must run on the main thread.
 pub fn send_copy(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
     #[cfg(target_os = "macos")]
-    let (modifier_key, c_key_code) = (Key::Meta, macos::command_key(b'c'));
+    let (modifier_key, c_key_code) = (Key::Meta, macos::command_key(b'c', 8)); // kVK_ANSI_C
     #[cfg(target_os = "windows")]
     let (modifier_key, c_key_code) = (Key::Control, Key::Other(0x43)); // VK_C
     #[cfg(target_os = "linux")]
@@ -225,7 +211,7 @@ pub fn send_copy(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
 pub fn send_paste_ctrl_v(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
     // Platform-specific key definitions
     #[cfg(target_os = "macos")]
-    let (modifier_key, v_key_code) = (Key::Meta, macos::command_key(b'v'));
+    let (modifier_key, v_key_code) = (Key::Meta, macos::command_key(b'v', 9)); // kVK_ANSI_V
     #[cfg(target_os = "windows")]
     let (modifier_key, v_key_code) = (Key::Control, Key::Other(0x56)); // VK_V
     #[cfg(target_os = "linux")]
@@ -254,7 +240,7 @@ pub fn send_paste_ctrl_v(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> 
 pub fn send_paste_ctrl_shift_v(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
     // Platform-specific key definitions
     #[cfg(target_os = "macos")]
-    let (modifier_key, v_key_code) = (Key::Meta, macos::command_key(b'v'));
+    let (modifier_key, v_key_code) = (Key::Meta, macos::command_key(b'v', 9)); // kVK_ANSI_V
     #[cfg(target_os = "windows")]
     let (modifier_key, v_key_code) = (Key::Control, Key::Other(0x56)); // VK_V
     #[cfg(target_os = "linux")]

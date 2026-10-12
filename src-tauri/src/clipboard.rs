@@ -58,39 +58,9 @@ pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, Strin
     pasteboard::capture(|| with_enigo(app_handle, |enigo| input::send_copy(enigo, COPY_HOLD_MS)))
 }
 
-/// Copies the current selection in the frontmost app and returns its text,
-/// restoring the previous clipboard text or image. A selection identical to
-/// the current clipboard text reads as nothing selected.
 #[cfg(not(target_os = "macos"))]
-pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, String> {
-    let clipboard = app_handle.clipboard();
-    let saved_text = clipboard.read_text().ok().filter(|t| !t.is_empty());
-    let saved_image = if saved_text.is_none() {
-        clipboard.read_image().ok().map(|image| image.to_owned())
-    } else {
-        None
-    };
-
-    with_enigo(app_handle, |enigo| input::send_copy(enigo, COPY_HOLD_MS))?;
-
-    let copied = poll(COPY_TIMEOUT, COPY_POLL_INTERVAL, || {
-        clipboard
-            .read_text()
-            .ok()
-            .filter(|text| !text.is_empty() && Some(text) != saved_text.as_ref())
-    });
-
-    if copied.is_some() {
-        if let Some(text) = &saved_text {
-            let _ = write_text_to_clipboard(app_handle, text);
-        } else if let Some(image) = &saved_image {
-            let _ = clipboard.write_image(image);
-        } else {
-            let _ = clipboard.clear();
-        }
-    }
-
-    Ok(copied)
+pub fn capture_selection(_app_handle: &AppHandle) -> Result<Option<String>, String> {
+    Err("selection capture is macOS-only".into())
 }
 
 /// Calls `probe` every `interval` until it returns a value, giving up once

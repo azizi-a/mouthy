@@ -1,6 +1,6 @@
 use crate::audio_out;
 use crate::clipboard;
-use crate::overlay;
+use crate::overlay::{self, OverlayView};
 use crate::settings;
 use crate::tray::{self, TrayIconState};
 use crate::tts;
@@ -10,7 +10,7 @@ use rodio::buffer::SamplesBuffer;
 use rodio::Player;
 use std::collections::HashMap;
 use std::num::NonZero;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
@@ -23,8 +23,8 @@ pub trait ShortcutAction: Send + Sync {
     fn stop(&self, app: &AppHandle, binding_id: &str, shortcut_str: &str);
 }
 
-/// Sentences queued in the player ahead of the one playing. The synth thread
-/// can run at most this many plus the channel capacity ahead of playback.
+/// Most sentences the player holds, counting the one playing. Also the
+/// channel capacity, so synthesis stays only a few sentences ahead.
 const READ_AHEAD: usize = 2;
 const PLAYBACK_POLL: Duration = Duration::from_millis(20);
 const MONO: NonZero<u16> = NonZero::<u16>::MIN;
@@ -32,178 +32,68 @@ const SAMPLE_RATE: NonZero<u32> = NonZero::new(tts::http::SAMPLE_RATE).unwrap();
 
 type Chunk = Result<Vec<i16>, String>;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Phase {
-    Capturing,
-    Speaking,
-}
-
-/// One press of the speak hotkey: capturing the selection, then speaking it.
+/// One speak session. Its stop flag is also its identity.
 struct Session {
-    generation: u64,
     stop: Arc<AtomicBool>,
-    phase: Phase,
 }
 
-/// What the overlay and tray show after a session change.
-enum Ui {
-    Speaking,
-    Idle,
-    Notice {
-        kind: &'static str,
-        message: Option<String>,
-    },
-}
-
-/// The current speak session, if any.
+/// The current speak session, if any. Only the main thread locks it, so
+/// nothing the main thread waits on can be holding it. The `*_on_main` fns
+/// must never call the public entry points: on the main thread those run
+/// inline and would lock it again.
 #[derive(Default)]
 pub struct TtsState {
     current: Mutex<Option<Session>>,
-    last_generation: AtomicU64,
-    /// Numbers UI changes in the order the session changed.
-    ui_seq: AtomicU64,
-    /// Highest UI change applied; only the main thread touches it.
-    ui_applied: AtomicU64,
 }
 
-type SessionLock<'a> = MutexGuard<'a, Option<Session>>;
-
 impl TtsState {
-    fn lock(&self) -> SessionLock<'_> {
+    fn lock(&self) -> MutexGuard<'_, Option<Session>> {
         self.current.lock().unwrap_or_else(|poisoned| {
             warn!("TTS state mutex was poisoned, recovering");
             poisoned.into_inner()
         })
     }
-
-    /// Schedules `ui` on the main thread. Taking the lock guard numbers the
-    /// change in session order. Never touch the tray or overlay directly while
-    /// holding the lock: their getters wait on the main thread, which may be
-    /// waiting on this lock.
-    fn post_ui(&self, _held: &SessionLock<'_>, app: &AppHandle, ui: Ui) {
-        let seq = self.ui_seq.fetch_add(1, Ordering::SeqCst) + 1;
-        let handle = app.clone();
-        if let Err(e) = app.run_on_main_thread(move || apply_ui(&handle, seq, ui)) {
-            warn!("Failed to update the overlay and tray: {e}");
-        }
-    }
 }
 
-/// Main thread only.
-fn apply_ui(app: &AppHandle, seq: u64, ui: Ui) {
-    let Some(state) = app.try_state::<TtsState>() else {
-        return;
-    };
-    // A change posted from another thread can arrive after a newer one that
-    // the main thread applied inline.
-    if seq < state.ui_applied.load(Ordering::SeqCst) {
-        return;
-    }
-    state.ui_applied.store(seq, Ordering::SeqCst);
-    match ui {
-        Ui::Speaking => {
-            overlay::show_speaking_overlay(app);
-            tray::set_tray_state(app, TrayIconState::Speaking);
-        }
-        Ui::Idle => {
-            overlay::hide_recording_overlay(app);
-            tray::set_tray_state(app, TrayIconState::Idle);
-        }
-        Ui::Notice { kind, message } => {
-            overlay::show_overlay_notice(app, kind, message.as_deref());
-            tray::set_tray_state(app, TrayIconState::Idle);
-        }
-    }
-}
-
-fn is_current(current: &Option<Session>, generation: u64) -> bool {
-    current.as_ref().map(|session| session.generation) == Some(generation)
-}
-
-/// Ends the session `current` holds, if any, with `ui`.
-fn end_session(state: &TtsState, current: &mut SessionLock<'_>, app: &AppHandle, ui: Ui) {
-    if let Some(session) = current.take() {
-        session.stop.store(true, Ordering::SeqCst);
-    }
-    state.post_ui(current, app, ui);
-}
-
-/// Speaks the current selection, or stops if already speaking. A press while
-/// the selection is still being captured is ignored.
+/// Speaks the current selection, or stops if already speaking. A press during
+/// the capture runs after it, so it stops the speech that capture started.
 pub fn speak_selection(app: &AppHandle, source: &str) {
+    let handle = app.clone();
+    let source = source.to_string();
+    // Never wait for this: the handy-keys thread calling it is the one the
+    // main thread's shortcut commands wait on.
+    if let Err(e) = app.run_on_main_thread(move || speak_selection_on_main(&handle, &source)) {
+        error!("Failed to schedule speech: {e}");
+    }
+}
+
+/// Stops any speech in progress and hides the overlay.
+pub fn stop_speaking(app: &AppHandle, source: &str) {
+    info!("Stopping speech ({source})");
+    let handle = app.clone();
+    if let Err(e) = app.run_on_main_thread(move || stop_speaking_on_main(&handle)) {
+        error!("Failed to schedule stopping speech: {e}");
+    }
+}
+
+fn speak_selection_on_main(app: &AppHandle, source: &str) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
-    let mut current = state.lock();
-    match current.as_ref().map(|session| session.phase) {
-        Some(Phase::Speaking) => {
-            info!("Stopping speech ({source})");
-            end_session(&state, &mut current, app, Ui::Idle);
-            return;
-        }
-        Some(Phase::Capturing) => {
-            debug!("Ignoring speak from {source}: still capturing the selection");
-            return;
-        }
-        None => {}
+    if state.lock().is_some() {
+        info!("Stopping speech ({source})");
+        stop_speaking_on_main(app);
+        return;
     }
-
-    let generation = state.last_generation.fetch_add(1, Ordering::Relaxed) + 1;
-    let stop = Arc::new(AtomicBool::new(false));
-    *current = Some(Session {
-        generation,
-        stop: stop.clone(),
-        phase: Phase::Capturing,
-    });
-    drop(current);
 
     info!("Speaking selection ({source})");
-    // Capture needs the main thread. Never wait for it here: the handy-keys
-    // thread calling this is the one the main thread's shortcut commands wait on.
-    let handle = app.clone();
-    if let Err(e) = app.run_on_main_thread(move || capture_and_speak(&handle, generation, stop)) {
-        error!("Failed to schedule selection capture: {e}");
-        let mut current = state.lock();
-        if is_current(&current, generation) {
-            *current = None;
-        }
-    }
-}
-
-/// Stops any speech or capture in progress and hides the overlay.
-pub fn stop_speaking(app: &AppHandle, source: &str) {
-    let Some(state) = app.try_state::<TtsState>() else {
-        return;
-    };
-    info!("Stopping speech ({source})");
-    end_session(&state, &mut state.lock(), app, Ui::Idle);
-}
-
-/// Runs on the main thread.
-fn capture_and_speak(app: &AppHandle, generation: u64, stop: Arc<AtomicBool>) {
-    let captured = clipboard::capture_selection(app);
-    let settings = settings::get_settings(app);
-
-    let Some(state) = app.try_state::<TtsState>() else {
-        return;
-    };
-    let mut current = state.lock();
-    if !is_current(&current, generation) {
-        debug!("Selection captured after the session was stopped; not speaking it");
-        return;
-    }
-
-    let text = match captured {
+    let text = match clipboard::capture_selection(app) {
         Ok(text) => text
             .map(|text| tts::text::normalize(&text))
             .unwrap_or_default(),
         Err(e) => {
             error!("Failed to capture the selection: {e}");
-            let ui = Ui::Notice {
-                kind: "error",
-                message: Some(e),
-            };
-            end_session(&state, &mut current, app, ui);
+            overlay::show_overlay(app, OverlayView::Error { message: e });
             return;
         }
     };
@@ -214,53 +104,80 @@ fn capture_and_speak(app: &AppHandle, generation: u64, stop: Arc<AtomicBool>) {
         sentences.len()
     );
     if sentences.is_empty() {
-        let ui = Ui::Notice {
-            kind: "nothing-selected",
-            message: None,
-        };
-        end_session(&state, &mut current, app, ui);
+        overlay::show_overlay(app, OverlayView::NothingSelected);
         return;
     }
 
-    let (tx, rx) = mpsc::sync_channel::<Chunk>(2);
-    let playback = {
+    let stop = Arc::new(AtomicBool::new(false));
+    if let Err(e) = start_speech(app, sentences, &stop) {
+        error!("Failed to start speech threads: {e}");
+        stop.store(true, Ordering::SeqCst);
+        let message = e.to_string();
+        overlay::show_overlay(app, OverlayView::Error { message });
+        return;
+    }
+    *state.lock() = Some(Session { stop });
+    overlay::show_overlay(app, OverlayView::Speaking);
+    tray::set_tray_state(app, TrayIconState::Speaking);
+}
+
+fn stop_speaking_on_main(app: &AppHandle) {
+    let Some(state) = app.try_state::<TtsState>() else {
+        return;
+    };
+    if let Some(session) = state.lock().take() {
+        session.stop.store(true, Ordering::SeqCst);
+    }
+    overlay::hide_recording_overlay(app);
+    tray::set_tray_state(app, TrayIconState::Idle);
+}
+
+/// Ends the session that owns `stop`, unless it already ended.
+fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, error: Option<String>) {
+    let Some(state) = app.try_state::<TtsState>() else {
+        return;
+    };
+    {
+        let mut current = state.lock();
+        let owns = current
+            .as_ref()
+            .is_some_and(|session| Arc::ptr_eq(&session.stop, stop));
+        if !owns {
+            return;
+        }
+        *current = None;
+    }
+    match error {
+        Some(message) => overlay::show_overlay(app, OverlayView::Error { message }),
+        None => overlay::hide_recording_overlay(app),
+    }
+    tray::set_tray_state(app, TrayIconState::Idle);
+}
+
+fn start_speech(
+    app: &AppHandle,
+    sentences: Vec<String>,
+    stop: &Arc<AtomicBool>,
+) -> std::io::Result<()> {
+    let settings = settings::get_settings(app);
+    // The settings commands clamp too, but the store can be edited by hand.
+    let speed = settings.tts_speed.clamp(0.5, 2.0);
+    let volume = settings.tts_volume.clamp(0.0, 1.0);
+    let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+    {
         let app = app.clone();
         let stop = stop.clone();
-        let device = settings.selected_output_device.clone();
-        let volume = settings.tts_volume;
+        let device = settings.selected_output_device;
         thread::Builder::new()
             .name("tts-playback".into())
-            .spawn(move || play(app, generation, stop, rx, device, volume))
-    };
-    let synth = playback.and_then(|_| {
-        let stop = stop.clone();
-        thread::Builder::new()
-            .name("tts-synth".into())
-            .spawn(move || {
-                synthesize(
-                    sentences,
-                    settings.tts_base_url,
-                    settings.tts_voice,
-                    settings.tts_speed,
-                    stop,
-                    tx,
-                )
-            })
-    });
-    if let Err(e) = synth {
-        error!("Failed to start speech threads: {e}");
-        let ui = Ui::Notice {
-            kind: "error",
-            message: Some(e.to_string()),
-        };
-        end_session(&state, &mut current, app, ui);
-        return;
+            .spawn(move || play(app, stop, rx, device, volume))?;
     }
-
-    if let Some(session) = current.as_mut() {
-        session.phase = Phase::Speaking;
-    }
-    state.post_ui(&current, app, Ui::Speaking);
+    let stop = stop.clone();
+    let (base_url, voice) = (settings.tts_base_url, settings.tts_voice);
+    thread::Builder::new()
+        .name("tts-synth".into())
+        .spawn(move || synthesize(sentences, base_url, voice, speed, stop, tx))?;
+    Ok(())
 }
 
 /// Synth thread: one request per sentence, handed to playback in order.
@@ -272,6 +189,7 @@ fn synthesize(
     stop: Arc<AtomicBool>,
     tx: SyncSender<Chunk>,
 ) {
+    let _report_panic = ReportPanic(&tx);
     let client = tts::http::client();
     for sentence in &sentences {
         if stop.load(Ordering::SeqCst) {
@@ -296,11 +214,22 @@ fn synthesize(
     }
 }
 
+/// Reports a synth thread panic to playback, so speech that stops short shows
+/// an error instead of ending as if it had finished.
+struct ReportPanic<'a>(&'a SyncSender<Chunk>);
+
+impl Drop for ReportPanic<'_> {
+    fn drop(&mut self) {
+        if thread::panicking() {
+            let _ = self.0.send(Err("synthesis failed".into()));
+        }
+    }
+}
+
 /// Ends the session when the playback thread exits for any reason, including
-/// a panic or a missing output device, unless it was stopped or replaced first.
+/// a panic or a missing output device.
 struct SessionGuard {
     app: AppHandle,
-    generation: u64,
     stop: Arc<AtomicBool>,
     error: Option<String>,
 }
@@ -312,28 +241,21 @@ impl Drop for SessionGuard {
         if thread::panicking() {
             error!("Speech playback thread panicked");
         }
-        let Some(state) = self.app.try_state::<TtsState>() else {
-            return;
-        };
-        let mut current = state.lock();
-        if !is_current(&current, self.generation) {
-            return;
+        let app = self.app.clone();
+        let stop = self.stop.clone();
+        let error = self.error.take();
+        if let Err(e) = self
+            .app
+            .run_on_main_thread(move || end_session_on_main(&app, &stop, error))
+        {
+            warn!("Failed to end the speech session: {e}");
         }
-        let ui = match self.error.take() {
-            Some(message) => Ui::Notice {
-                kind: "error",
-                message: Some(message),
-            },
-            None => Ui::Idle,
-        };
-        end_session(&state, &mut current, &self.app, ui);
     }
 }
 
 /// Playback thread: sole owner of the output device and the player.
 fn play(
     app: AppHandle,
-    generation: u64,
     stop: Arc<AtomicBool>,
     rx: Receiver<Chunk>,
     device: Option<String>,
@@ -341,7 +263,6 @@ fn play(
 ) {
     let mut guard = SessionGuard {
         app,
-        generation,
         stop: stop.clone(),
         error: None,
     };
@@ -356,12 +277,16 @@ fn play(
     sink.log_on_drop(false);
     let player = Player::connect_new(sink.mixer());
     player.set_volume(volume);
+    guard.error = play_chunks(&player, &rx, &stop);
+}
 
-    let mut queued = 0usize;
+/// Plays chunks from `rx` until they run out, synthesis fails or `stop` is
+/// set. Returns the synthesis error once the audio queued before it has played.
+fn play_chunks(player: &Player, rx: &Receiver<Chunk>, stop: &AtomicBool) -> Option<String> {
     loop {
         if stop.load(Ordering::SeqCst) {
             player.stop();
-            break;
+            return None;
         }
         // `append` never blocks, so this is what bounds the read-ahead.
         if player.len() >= READ_AHEAD {
@@ -373,30 +298,30 @@ fn play(
                 // Appending after `stop` restarts a stopped player.
                 if stop.load(Ordering::SeqCst) {
                     player.stop();
-                    break;
+                    return None;
                 }
                 player.append(SamplesBuffer::new(MONO, SAMPLE_RATE, pcm_to_f32(&samples)));
-                queued += 1;
-                if queued == 1 {
-                    info!("First speech chunk queued");
-                }
             }
             Ok(Err(message)) => {
                 error!("Speech synthesis failed: {message}");
-                guard.error = Some(message);
-                break;
+                play_out(player, stop);
+                return Some(message);
             }
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
-                while !player.empty() && !stop.load(Ordering::SeqCst) {
-                    thread::sleep(PLAYBACK_POLL);
-                }
-                player.stop();
-                break;
+                play_out(player, stop);
+                return None;
             }
         }
     }
-    debug!("Speech playback ended after {queued} chunks");
+}
+
+/// Waits for the queued audio to finish, or for `stop`.
+fn play_out(player: &Player, stop: &AtomicBool) {
+    while !player.empty() && !stop.load(Ordering::SeqCst) {
+        thread::sleep(PLAYBACK_POLL);
+    }
+    player.stop();
 }
 
 fn pcm_to_f32(samples: &[i16]) -> Vec<f32> {
@@ -444,5 +369,58 @@ mod tests {
             pcm_to_f32(&[0, i16::MIN, 16384, i16::MAX]),
             vec![0.0, -1.0, 0.5, 32767.0 / 32768.0]
         );
+    }
+
+    #[test]
+    fn synth_panic_reaches_playback_as_an_error() {
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        let synth = thread::spawn(move || {
+            let _report_panic = ReportPanic(&tx);
+            panic!("synth thread panic (expected by this test)");
+        });
+        assert!(synth.join().is_err());
+        assert_eq!(rx.recv(), Ok(Err("synthesis failed".to_string())));
+    }
+
+    #[test]
+    fn synthesis_error_waits_for_queued_audio_to_play() {
+        let (player, mut output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        tx.send(Ok(vec![0; 480])).unwrap();
+        tx.send(Err("server error".into())).unwrap();
+        let stop = AtomicBool::new(false);
+
+        let (player_ref, stop_ref) = (&player, &stop);
+        thread::scope(|scope| {
+            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            // Nothing is consuming the audio yet, so the error must wait.
+            thread::sleep(PLAYBACK_POLL * 10);
+            assert!(!playback.is_finished());
+            assert_eq!(player.len(), 1);
+
+            // Stand in for the device and play it out.
+            output.by_ref().take(48_000).for_each(drop);
+            assert_eq!(playback.join().unwrap(), Some("server error".into()));
+            assert!(player.empty());
+        });
+    }
+
+    #[test]
+    fn stop_ends_the_wait_for_queued_audio() {
+        let (player, _output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        tx.send(Ok(vec![0; 480])).unwrap();
+        tx.send(Err("server error".into())).unwrap();
+        let stop = AtomicBool::new(false);
+
+        let (player_ref, stop_ref) = (&player, &stop);
+        thread::scope(|scope| {
+            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            thread::sleep(PLAYBACK_POLL * 10);
+            assert!(!playback.is_finished());
+
+            stop.store(true, Ordering::SeqCst);
+            assert_eq!(playback.join().unwrap(), Some("server error".into()));
+        });
     }
 }

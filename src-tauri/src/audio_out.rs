@@ -1,6 +1,7 @@
 use crate::audio_toolkit::audio::output_device_name;
 use log::{debug, warn};
 use rodio::cpal::traits::HostTrait;
+use rodio::cpal::BufferSize;
 use rodio::{DeviceSinkBuilder, MixerDeviceSink};
 
 /// Opens the output device named in settings, falling back to the system
@@ -30,8 +31,9 @@ pub fn open_output(settings_device: Option<&str>) -> Result<MixerDeviceSink, Str
     .map_err(|e| format!("Failed to select output device: {}", e))?;
 
     // The builder asks for a fixed ~50 ms buffer, which some devices reject
-    // (Bluetooth headsets cap at 1024 frames); fall back to their own configs.
+    // (Bluetooth headsets cap at 1024 frames); let the device choose instead.
     sink_builder
-        .open_sink_or_fallback()
+        .with_buffer_size(BufferSize::Default)
+        .open_stream()
         .map_err(|e| format!("Failed to open output stream: {}", e))
 }

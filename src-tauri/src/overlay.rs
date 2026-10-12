@@ -4,7 +4,7 @@ use crate::settings::{OverlayPosition, OverlayStyle};
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 
 #[cfg(not(target_os = "macos"))]
 use log::debug;
@@ -456,14 +456,29 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
     }
 }
 
-/// Shows the overlay, then lets `emit` tell it what to display. With
-/// `auto_hide`, hides it again after that long unless it was shown again since.
-fn show_overlay(
-    app_handle: &AppHandle,
-    label: String,
-    emit: impl FnOnce(&WebviewWindow) + Send + 'static,
-    auto_hide: Option<Duration>,
-) {
+/// What the overlay shows, sent as the `show-overlay` payload.
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum OverlayView {
+    Speaking,
+    NothingSelected,
+    Error { message: String },
+}
+
+impl OverlayView {
+    /// Notices hide themselves; the speaking overlay stays until hidden.
+    fn auto_hide(&self) -> Option<Duration> {
+        match self {
+            OverlayView::Speaking => None,
+            OverlayView::NothingSelected => Some(Duration::from_secs(2)),
+            OverlayView::Error { .. } => Some(Duration::from_secs(6)),
+        }
+    }
+}
+
+/// Shows the overlay. A notice hides itself unless the overlay is shown again
+/// before then.
+pub fn show_overlay(app_handle: &AppHandle, view: OverlayView) {
     // Whether the overlay shows at all is governed by overlay_style; position
     // only chooses Top vs Bottom placement. Checked here (off the main thread)
     // so the common overlay-disabled case never pays for a main-thread hop.
@@ -481,12 +496,92 @@ fn show_overlay(
     // NSScreen access main-thread-correct). run_on_main_thread runs the closure
     // inline when already on the main thread, so this never deadlocks.
     let handle = app_handle.clone();
-    let _ = app_handle.run_on_main_thread(move || {
-        let Some((overlay_window, shown_at)) = show_overlay_on_main(&handle, &label) else {
-            return;
+    let _ = app_handle.run_on_main_thread(move || show_overlay_state_on_main(&handle, view));
+}
+
+fn show_overlay_state_on_main(app_handle: &AppHandle, view: OverlayView) {
+    let (width, height) = (OVERLAY_WIDTH, OVERLAY_HEIGHT);
+    if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        // Invalidate any delayed hide still in flight from a previous session
+        // (see `hide_recording_overlay`).
+        let shown_at = OVERLAY_SHOW_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+
+        #[cfg(target_os = "linux")]
+        let shown_with_layer_shell = if LAYER_SHELL_ACTIVE.load(Ordering::SeqCst) {
+            let position = settings::get_settings(app_handle).overlay_position;
+            match overlay_window.gtk_window() {
+                Ok(gtk_window) => {
+                    configure_layer_shell_surface(&gtk_window, position, width, height)
+                }
+                Err(error) => log::error!("Failed to access GTK overlay window: {error}"),
+            }
+            let _ = overlay_window.show();
+            true
+        } else {
+            false
         };
-        emit(&overlay_window);
-        if let Some(delay) = auto_hide {
+        #[cfg(not(target_os = "linux"))]
+        let shown_with_layer_shell = false;
+
+        if !shown_with_layer_shell {
+            let size_started = std::time::Instant::now();
+            #[cfg(not(target_os = "windows"))]
+            let _ =
+                overlay_window.set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }));
+            let size_elapsed = size_started.elapsed();
+
+            let pos_started = std::time::Instant::now();
+            #[cfg(not(target_os = "windows"))]
+            let set_pos_elapsed =
+                if let Some((x, y)) = calculate_overlay_position(app_handle, width, height) {
+                    let set_pos_started = std::time::Instant::now();
+                    let _ = overlay_window
+                        .set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }));
+                    set_pos_started.elapsed()
+                } else {
+                    std::time::Duration::ZERO
+                };
+            #[cfg(target_os = "windows")]
+            let set_pos_elapsed = {
+                let set_pos_started = std::time::Instant::now();
+                if let Err(error) =
+                    place_windows_overlay(app_handle, &overlay_window, width, height)
+                {
+                    log::error!("Failed to place recording overlay: {error}");
+                }
+                set_pos_started.elapsed()
+            };
+            let pos_calc_elapsed = pos_started.elapsed() - set_pos_elapsed;
+
+            let show_started = std::time::Instant::now();
+            let _ = overlay_window.show();
+            let show_elapsed = show_started.elapsed();
+
+            // On Windows, aggressively re-assert "topmost" in the native Z-order after showing
+            #[cfg(target_os = "windows")]
+            force_overlay_topmost(&overlay_window);
+
+            // Re-assert bounds after show(): the pre-show move crosses the DPI
+            // boundary, and tao's WM_DPICHANGED reflow clobbers the first placement.
+            #[cfg(target_os = "windows")]
+            if let Err(error) = place_windows_overlay(app_handle, &overlay_window, width, height) {
+                log::error!("Failed to re-assert recording overlay position: {error}");
+            }
+
+            log::debug!(
+                "overlay {:?}: set_size={:?} pos_calc={:?} set_pos={:?} show={:?}",
+                view,
+                size_elapsed,
+                pos_calc_elapsed,
+                set_pos_elapsed,
+                show_elapsed
+            );
+        }
+
+        let _ = overlay_window.emit("show-overlay", &view);
+
+        if let Some(delay) = view.auto_hide() {
+            let handle = app_handle.clone();
             std::thread::spawn(move || {
                 std::thread::sleep(delay);
                 if OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst) == shown_at {
@@ -494,129 +589,13 @@ fn show_overlay(
                 }
             });
         }
-    });
-}
-
-/// Shows and places the overlay window. Returns it with the show generation.
-fn show_overlay_on_main(app_handle: &AppHandle, label: &str) -> Option<(WebviewWindow, u64)> {
-    let (width, height) = (OVERLAY_WIDTH, OVERLAY_HEIGHT);
-    let overlay_window = app_handle.get_webview_window("recording_overlay")?;
-    // Invalidate any delayed hide still in flight from a previous session
-    // (see `hide_recording_overlay`).
-    let shown_at = OVERLAY_SHOW_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
-
-    #[cfg(target_os = "linux")]
-    let shown_with_layer_shell = if LAYER_SHELL_ACTIVE.load(Ordering::SeqCst) {
-        let position = settings::get_settings(app_handle).overlay_position;
-        match overlay_window.gtk_window() {
-            Ok(gtk_window) => configure_layer_shell_surface(&gtk_window, position, width, height),
-            Err(error) => log::error!("Failed to access GTK overlay window: {error}"),
-        }
-        let _ = overlay_window.show();
-        true
-    } else {
-        false
-    };
-    #[cfg(not(target_os = "linux"))]
-    let shown_with_layer_shell = false;
-
-    if !shown_with_layer_shell {
-        let size_started = std::time::Instant::now();
-        #[cfg(not(target_os = "windows"))]
-        let _ = overlay_window.set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }));
-        let size_elapsed = size_started.elapsed();
-
-        let pos_started = std::time::Instant::now();
-        #[cfg(not(target_os = "windows"))]
-        let set_pos_elapsed =
-            if let Some((x, y)) = calculate_overlay_position(app_handle, width, height) {
-                let set_pos_started = std::time::Instant::now();
-                let _ = overlay_window
-                    .set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }));
-                set_pos_started.elapsed()
-            } else {
-                std::time::Duration::ZERO
-            };
-        #[cfg(target_os = "windows")]
-        let set_pos_elapsed = {
-            let set_pos_started = std::time::Instant::now();
-            if let Err(error) = place_windows_overlay(app_handle, &overlay_window, width, height) {
-                log::error!("Failed to place recording overlay: {error}");
-            }
-            set_pos_started.elapsed()
-        };
-        let pos_calc_elapsed = pos_started.elapsed() - set_pos_elapsed;
-
-        let show_started = std::time::Instant::now();
-        let _ = overlay_window.show();
-        let show_elapsed = show_started.elapsed();
-
-        // On Windows, aggressively re-assert "topmost" in the native Z-order after showing
-        #[cfg(target_os = "windows")]
-        force_overlay_topmost(&overlay_window);
-
-        // Re-assert bounds after show(): the pre-show move crosses the DPI
-        // boundary, and tao's WM_DPICHANGED reflow clobbers the first placement.
-        #[cfg(target_os = "windows")]
-        if let Err(error) = place_windows_overlay(app_handle, &overlay_window, width, height) {
-            log::error!("Failed to re-assert recording overlay position: {error}");
-        }
-
-        log::debug!(
-            "overlay '{}': set_size={:?} pos_calc={:?} set_pos={:?} show={:?}",
-            label,
-            size_elapsed,
-            pos_calc_elapsed,
-            set_pos_elapsed,
-            show_elapsed
-        );
     }
-    Some((overlay_window, shown_at))
-}
-
-/// Shows the speaking overlay until `hide_recording_overlay`.
-pub fn show_speaking_overlay(app_handle: &AppHandle) {
-    show_overlay(
-        app_handle,
-        "speaking".to_string(),
-        |window| {
-            let _ = window.emit("show-overlay", "speaking");
-        },
-        None,
-    );
-}
-
-#[derive(Clone, Serialize)]
-struct OverlayNotice {
-    kind: String,
-    message: Option<String>,
-}
-
-/// Shows a short-lived notice: `kind` is `"nothing-selected"` or `"error"`.
-pub fn show_overlay_notice(app_handle: &AppHandle, kind: &str, message: Option<&str>) {
-    let auto_hide = if kind == "error" {
-        Duration::from_secs(6)
-    } else {
-        Duration::from_secs(2)
-    };
-    let notice = OverlayNotice {
-        kind: kind.to_string(),
-        message: message.map(str::to_string),
-    };
-    show_overlay(
-        app_handle,
-        kind.to_string(),
-        move |window| {
-            let _ = window.emit("show-overlay-notice", notice);
-        },
-        Some(auto_hide),
-    );
 }
 
 /// Updates the overlay window position based on current settings
 pub fn update_overlay_position(app_handle: &AppHandle) {
     // Positioning queries monitors/cursor (GDK/Xlib on Linux) and moves the
-    // window, so it must run on the main thread — see show_overlay_state.
+    // window, so it must run on the main thread — see show_overlay.
     let handle = app_handle.clone();
     let _ = app_handle.run_on_main_thread(move || update_overlay_position_on_main(&handle));
 }
@@ -690,6 +669,25 @@ static LAYER_SHELL_ACTIVE: AtomicBool = AtomicBool::new(false);
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn overlay_view_is_tagged_by_kind() {
+        let json = |view| serde_json::to_value(view).unwrap();
+        assert_eq!(
+            json(OverlayView::Speaking),
+            serde_json::json!({ "kind": "speaking" })
+        );
+        assert_eq!(
+            json(OverlayView::NothingSelected),
+            serde_json::json!({ "kind": "nothing-selected" })
+        );
+        assert_eq!(
+            json(OverlayView::Error {
+                message: "boom".into()
+            }),
+            serde_json::json!({ "kind": "error", "message": "boom" })
+        );
+    }
 
     #[test]
     fn monitor_hit_test_uses_half_open_physical_bounds() {
