@@ -76,7 +76,7 @@ Phase 1 synthesises through an external OpenAI-compatible HTTP server (default `
 
 ### Key Architecture Patterns
 
-**Speak loop:** hotkey, tray, CLI or signal → `actions::speak_selection` → main thread: if speaking, stop; else capture selection → normalise → split → synth thread (`block_on` per sentence, bounded channel) → playback thread (sole owner of the rodio `Player`). Every session change runs on the main thread, the only thread that locks `TtsState`, so a press during the capture queues behind it and then stops. A session's stop flag is its identity: a finished playback thread ends only its own session.
+**Speak loop:** hotkey, tray, CLI or signal → `actions::speak_selection` → main thread: if speaking, stop (a hotkey press only once the hotkey was released since the speech started, so a held key's repeats never stop it); else capture selection → normalise → split → synth thread (`block_on` per sentence, bounded channel) → playback thread (sole owner of the rodio `Player`). Every session change runs on the main thread, the only thread that locks `TtsState`, so a press during the capture queues behind it and then stops. A session's stop flag is its identity: a finished playback thread ends only its own session.
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 

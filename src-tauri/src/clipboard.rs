@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::AppHandle;
 
 #[cfg(target_os = "macos")]
@@ -33,13 +33,21 @@ const COPY_POLL_INTERVAL: Duration = Duration::from_millis(10);
 #[cfg(target_os = "macos")]
 const MODIFIER_RELEASE_TIMEOUT: Duration = Duration::from_millis(300);
 
-/// Copies the current selection in the frontmost app and returns its text,
-/// leaving the clipboard as it was. `Ok(None)` when nothing was copied or the
-/// copy had no text.
+/// What a selection capture copied.
+pub struct Selection {
+    /// `None` when nothing was copied or the copy had no text.
+    pub text: Option<String>,
+    /// When ⌘C went out with ⌥, ⌃ or ⇧ still down. A hotkey listener can take
+    /// its synthetic ⌘-up for the release of a hotkey held with them.
+    pub copied_while_held_at: Option<Instant>,
+}
+
+/// Copies the current selection in the frontmost app, leaving the clipboard
+/// as it was.
 ///
 /// Must run on the main thread on macOS (keyboard layout lookup).
 #[cfg(target_os = "macos")]
-pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, String> {
+pub fn capture_selection(app_handle: &AppHandle) -> Result<Selection, String> {
     use log::{debug, info, warn};
     use objc2_app_kit::{NSApplication, NSEvent};
 
@@ -50,11 +58,16 @@ pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, Strin
     // read, in time to overwrite the clipboard.
     if NSApplication::sharedApplication(mtm).isActive() {
         info!("Mouthy is the active app, so there is no selection to copy");
-        return Ok(None);
+        return Ok(Selection {
+            text: None,
+            copied_while_held_at: None,
+        });
     }
 
-    let waited = std::time::Instant::now();
-    if wait_for_modifier_release(MODIFIER_RELEASE_TIMEOUT, NSEvent::modifierFlags_class) {
+    let waited = Instant::now();
+    let modifiers_up =
+        wait_for_modifier_release(MODIFIER_RELEASE_TIMEOUT, NSEvent::modifierFlags_class);
+    if modifiers_up {
         debug!("Modifier keys up after {:?}", waited.elapsed());
     } else {
         warn!(
@@ -63,10 +76,16 @@ pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, Strin
         );
     }
 
-    pasteboard::capture(|| {
+    let mut copied_at = None;
+    let text = pasteboard::capture(|| {
+        copied_at = Some(Instant::now());
         with_enigo(app_handle, |enigo| {
             crate::input::send_copy(enigo, COPY_HOLD_MS)
         })
+    })?;
+    Ok(Selection {
+        text,
+        copied_while_held_at: copied_at.filter(|_| !modifiers_up),
     })
 }
 
@@ -93,7 +112,7 @@ fn wait_for_modifier_release(
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn capture_selection(_app_handle: &AppHandle) -> Result<Option<String>, String> {
+pub fn capture_selection(_app_handle: &AppHandle) -> Result<Selection, String> {
     Err("selection capture is macOS-only".into())
 }
 

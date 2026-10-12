@@ -2766,7 +2766,7 @@ dependencies = [
 
 [[package]]
 name = "mouthy"
-version = "0.9.8"
+version = "0.1.0"
 dependencies = [
  "clap",
  "enigo",

@@ -9,7 +9,7 @@ Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MI
 ### Added
 
 - Speak selection: press ⌥⎋ (Alt+Esc on Windows/Linux) to read the selected text aloud, and press again to stop. Playback starts once the first sentence is ready while the rest is still being synthesised.
-- Speech through any local OpenAI-compatible server such as Kokoro-FastAPI (default `http://127.0.0.1:8880`, voice `bm_lewis`). Errors show the server's own message, and a system proxy does not get in the way.
+- Speech through an OpenAI-compatible server that supports `pcm` output, such as Kokoro-FastAPI (default `http://127.0.0.1:8880`, voice `bm_lewis`). Errors show the server's own message, and a system proxy does not get in the way.
 - Text clean-up before reading: links become "link", markdown symbols and extra whitespace go, lines without punctuation (headings, bullets) read as separate sentences, and common abbreviations such as "Dr." do not end a sentence. A sentence the server cannot speak is skipped.
 - Selection capture that restores the clipboard afterwards, including rich content and password-manager privacy markers. It waits briefly for the hotkey's modifiers to be released before copying. Clipboards over 16 MB are not restored.
 - Overlay states for speaking, "nothing selected" and errors, with an Open Settings button and a stop button.
@@ -36,3 +36,4 @@ Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MI
 ### Fixed
 
 - Speech plays on output devices that reject the default 50 ms buffer, such as Bluetooth headsets.
+- Holding the hotkey no longer stops the speech it started: a press stops speech only after the hotkey has been released.

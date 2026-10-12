@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 
 // Shortcut Action Trait
@@ -29,12 +29,65 @@ const READ_AHEAD: usize = 2;
 const PLAYBACK_POLL: Duration = Duration::from_millis(20);
 const MONO: NonZero<u16> = NonZero::<u16>::MIN;
 const SAMPLE_RATE: NonZero<u32> = NonZero::new(tts::http::SAMPLE_RATE).unwrap();
+/// A hotkey release this soon after a ⌘C sent with the hotkey still held is
+/// the hotkey listener taking our synthetic ⌘-up for the user letting go.
+const COPY_ECHO_WINDOW: Duration = Duration::from_millis(150);
 
 type Chunk = Result<Vec<i16>, String>;
 
 /// One speak session. Its stop flag is also its identity.
 struct Session {
     stop: Arc<AtomicBool>,
+    /// Until the hotkey goes up, a hotkey press is the held key repeating.
+    released_since_start: bool,
+    /// When the capture's ⌘C went out with ⌥, ⌃ or ⇧ still down: the only
+    /// time a hotkey listener can echo it as a release.
+    copied_while_held_at: Option<Instant>,
+}
+
+impl Session {
+    fn new(stop: Arc<AtomicBool>, copied_while_held_at: Option<Instant>) -> Self {
+        Self {
+            stop,
+            released_since_start: false,
+            copied_while_held_at,
+        }
+    }
+
+    /// Records a hotkey release unless it is the echo of our own ⌘C. Returns
+    /// whether it counted.
+    fn note_release(&mut self, released_at: Instant) -> bool {
+        if is_copy_echo(released_at, self.copied_while_held_at) {
+            return false;
+        }
+        self.released_since_start = true;
+        true
+    }
+}
+
+/// What asked to speak.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Trigger {
+    /// A held hotkey repeats its press.
+    Hotkey,
+    /// Tray, CLI or signal.
+    Other,
+}
+
+/// Whether a press while speaking stops the speech. A hotkey press does only
+/// once the key has been released, so holding it never stops what it started.
+fn should_toggle_stop(released_since_start: bool, trigger: Trigger) -> bool {
+    trigger == Trigger::Other || released_since_start
+}
+
+/// Whether a release at `released_at` is the echo of a ⌘C sent at
+/// `copied_while_held_at`.
+fn is_copy_echo(released_at: Instant, copied_while_held_at: Option<Instant>) -> bool {
+    copied_while_held_at.is_some_and(|copied_at| {
+        released_at
+            .checked_duration_since(copied_at)
+            .is_some_and(|after| after <= COPY_ECHO_WINDOW)
+    })
 }
 
 /// The current speak session, if any. Only the main thread locks it, so
@@ -58,12 +111,28 @@ impl TtsState {
 /// Speaks the current selection, or stops if already speaking. A press during
 /// the capture runs after it, so it stops the speech that capture started.
 pub fn speak_selection(app: &AppHandle, source: &str) {
+    request_speech(app, source, Trigger::Other);
+}
+
+fn request_speech(app: &AppHandle, source: &str, trigger: Trigger) {
     let handle = app.clone();
     let source = source.to_string();
     // Never wait for this: the handy-keys thread calling it is the one the
     // main thread's shortcut commands wait on.
-    if let Err(e) = app.run_on_main_thread(move || speak_selection_on_main(&handle, &source)) {
+    if let Err(e) =
+        app.run_on_main_thread(move || speak_selection_on_main(&handle, &source, trigger))
+    {
         error!("Failed to schedule speech: {e}");
+    }
+}
+
+/// Lets the next hotkey press stop the current speech.
+fn hotkey_released(app: &AppHandle) {
+    // Timed before posting: a capture can hold up the main thread for a while.
+    let released_at = Instant::now();
+    let handle = app.clone();
+    if let Err(e) = app.run_on_main_thread(move || hotkey_released_on_main(&handle, released_at)) {
+        error!("Failed to schedule the hotkey release: {e}");
     }
 }
 
@@ -76,27 +145,37 @@ pub fn stop_speaking(app: &AppHandle, source: &str) {
     }
 }
 
-fn speak_selection_on_main(app: &AppHandle, source: &str) {
+fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
-    if state.lock().is_some() {
-        info!("Stopping speech ({source})");
-        stop_speaking_on_main(app);
+    let released = state
+        .lock()
+        .as_ref()
+        .map(|session| session.released_since_start);
+    if let Some(released_since_start) = released {
+        if should_toggle_stop(released_since_start, trigger) {
+            info!("Stopping speech ({source})");
+            stop_speaking_on_main(app);
+        } else {
+            debug!("Ignoring a repeat while held ({source})");
+        }
         return;
     }
 
     info!("Speaking selection ({source})");
-    let text = match clipboard::capture_selection(app) {
-        Ok(text) => text
-            .map(|text| tts::text::normalize(&text))
-            .unwrap_or_default(),
+    let selection = match clipboard::capture_selection(app) {
+        Ok(selection) => selection,
         Err(e) => {
             error!("Failed to capture the selection: {e}");
             overlay::show_overlay(app, OverlayView::Error { message: e });
             return;
         }
     };
+    let text = selection
+        .text
+        .map(|text| tts::text::normalize(&text))
+        .unwrap_or_default();
     let sentences = tts::text::split_sentences(&text);
     info!(
         "Captured {} chars, {} sentences",
@@ -116,9 +195,22 @@ fn speak_selection_on_main(app: &AppHandle, source: &str) {
         overlay::show_overlay(app, OverlayView::Error { message });
         return;
     }
-    *state.lock() = Some(Session { stop });
+    *state.lock() = Some(Session::new(stop, selection.copied_while_held_at));
     overlay::show_overlay(app, OverlayView::Speaking);
     tray::set_tray_state(app, TrayIconState::Speaking);
+}
+
+fn hotkey_released_on_main(app: &AppHandle, released_at: Instant) {
+    let Some(state) = app.try_state::<TtsState>() else {
+        return;
+    };
+    let echoed = state
+        .lock()
+        .as_mut()
+        .is_some_and(|session| !session.note_release(released_at));
+    if echoed {
+        debug!("Ignoring the hotkey release echoed by our ⌘C");
+    }
 }
 
 fn stop_speaking_on_main(app: &AppHandle) {
@@ -206,7 +298,10 @@ fn synthesize(
         ));
         if let Err(e) = &chunk {
             if tts::http::is_unspeakable(e) {
-                debug!("Skipping a sentence with no speakable text: {sentence:?}");
+                debug!(
+                    "Skipping a sentence with no speakable text ({} chars)",
+                    sentence.chars().count()
+                );
                 continue;
             }
         }
@@ -353,15 +448,18 @@ fn pcm_to_f32(samples: &[i16]) -> Vec<f32> {
         .collect()
 }
 
-/// Toggle: press speaks the selection or stops speech; release does nothing.
+/// Toggle: a press speaks the selection, or stops speech once the key has
+/// been released since that speech started.
 struct SpeakAction;
 
 impl ShortcutAction for SpeakAction {
     fn start(&self, app: &AppHandle, _binding_id: &str, shortcut_str: &str) {
-        speak_selection(app, shortcut_str);
+        request_speech(app, shortcut_str, Trigger::Hotkey);
     }
 
-    fn stop(&self, _app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {}
+    fn stop(&self, app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {
+        hotkey_released(app);
+    }
 }
 
 // Static Action Map
@@ -392,6 +490,66 @@ mod tests {
         for id in settings::get_default_settings().bindings.keys() {
             assert!(ACTION_MAP.contains_key(id), "no action for binding '{id}'");
         }
+    }
+
+    #[test]
+    fn only_tray_cli_and_signals_stop_speech_before_a_hotkey_release() {
+        assert!(!should_toggle_stop(false, Trigger::Hotkey));
+        assert!(should_toggle_stop(true, Trigger::Hotkey));
+        assert!(should_toggle_stop(false, Trigger::Other));
+        assert!(should_toggle_stop(true, Trigger::Other));
+    }
+
+    #[test]
+    fn copy_echo_window_is_the_150_ms_after_a_copy_sent_while_held() {
+        let copied_at = Instant::now();
+        let after = |ms| copied_at + Duration::from_millis(ms);
+        assert!(is_copy_echo(copied_at, Some(copied_at)));
+        assert!(is_copy_echo(after(50), Some(copied_at)));
+        assert!(is_copy_echo(after(150), Some(copied_at)));
+        assert!(!is_copy_echo(after(151), Some(copied_at)));
+        assert!(
+            !is_copy_echo(copied_at, Some(after(10))),
+            "a release before the copy is the user letting go"
+        );
+        assert!(
+            !is_copy_echo(after(50), None),
+            "a copy sent with the modifiers up has no echo"
+        );
+    }
+
+    #[test]
+    fn holding_the_hotkey_never_stops_the_speech_it_started() {
+        let pressed_at = Instant::now();
+        let after = |ms| pressed_at + Duration::from_millis(ms);
+        // Modifiers still down when the wait gave up and ⌘C went out.
+        let mut session = Session::new(Arc::new(AtomicBool::new(false)), Some(after(300)));
+
+        assert!(
+            !session.note_release(after(340)),
+            "the ⌘-up echo must not count"
+        );
+        assert!(
+            !should_toggle_stop(session.released_since_start, Trigger::Hotkey),
+            "the key repeat the echo lets through must not stop"
+        );
+        assert!(session.note_release(after(2000)));
+        assert!(should_toggle_stop(
+            session.released_since_start,
+            Trigger::Hotkey
+        ));
+    }
+
+    #[test]
+    fn a_quick_tap_counts_its_release_however_close_to_the_copy() {
+        let copied_at = Instant::now();
+        // Modifiers were up by the copy, so there is no echo window.
+        let mut session = Session::new(Arc::new(AtomicBool::new(false)), None);
+        assert!(session.note_release(copied_at + Duration::from_millis(20)));
+        assert!(should_toggle_stop(
+            session.released_since_start,
+            Trigger::Hotkey
+        ));
     }
 
     #[test]

@@ -56,7 +56,7 @@
       "title": "Speech",
       "backendUrl": {
         "title": "Server URL",
-        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Default: http://127.0.0.1:8880"
+        "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Selected text is sent to it; plain http is unencrypted. Default: http://127.0.0.1:8880"
       },
       "voice": {
         "title": "Voice",
