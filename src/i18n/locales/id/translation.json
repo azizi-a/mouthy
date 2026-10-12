@@ -241,7 +241,6 @@
     }
   },
   "common": {
-    "close": "Tutup",
     "open": "Buka",
     "copy": "Salin",
     "clear": "Bersihkan",

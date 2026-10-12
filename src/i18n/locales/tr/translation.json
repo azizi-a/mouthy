@@ -241,7 +241,6 @@
     }
   },
   "common": {
-    "close": "Kapat",
     "open": "Aç",
     "copy": "Kopyala",
     "clear": "Temizle",

@@ -241,7 +241,6 @@
     }
   },
   "common": {
-    "close": "Chiudi",
     "open": "Apri",
     "copy": "Copia",
     "clear": "Svuota",

@@ -241,7 +241,6 @@
     }
   },
   "common": {
-    "close": "Cerrar",
     "open": "Abrir",
     "copy": "Copiar",
     "clear": "Limpiar",

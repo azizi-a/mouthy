@@ -241,7 +241,6 @@
     }
   },
   "common": {
-    "close": "Đóng",
     "open": "Mở",
     "copy": "Sao chép",
     "clear": "Xóa",

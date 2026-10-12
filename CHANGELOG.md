@@ -25,7 +25,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - Text post-processing: LLM cleanup (OpenAI-compatible providers and Apple Intelligence), custom words, filler-word removal, Chinese script conversion, language detection, the Post Process page, and the `--toggle-post-process` flag and macOS `SIGUSR1` trigger.
 - Transcript history: the History page, saved recordings and their SQLite database, history limit and auto-delete settings, and the tray "Copy Last Transcript" item. Mouthy no longer creates `history.db` or `recordings/` in its data folder.
 - The Cancel shortcut, the `--toggle-transcription` and `--cancel` flags, and the tray Cancel item; Speak Selection and Stop replace them.
+- Unused dependencies and code left over from Handy: `rdev` (and the 28 crates it pulled in, which removes a future-Rust incompatibility warning), `react-select`, two unused UI components and an unused translation string. CMake is no longer a build requirement.
 
 ### Fixed
 
 - Speech plays on output devices that reject rodio's default 50 ms buffer, such as Bluetooth headsets.
+- Speech reaches a local server even when a system proxy is configured, a server URL ending in `/v1` works, and server errors show the server's own message.
+- Reading text aloud: lines without punctuation (headings, bullets) are read as separate sentences, abbreviations such as "Dr." and "U.S." no longer end a sentence, long sentences are not cut inside numbers such as "$1,500" or "10:30", code such as `handlers[0](event)` is no longer mistaken for a link, large selections such as JSON no longer stall or lose text, and a selection with nothing to pronounce ("...", dashes, emoji) shows "nothing selected". A sentence the server finds unspeakable is skipped instead of ending playback.

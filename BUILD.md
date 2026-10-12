@@ -7,7 +7,6 @@ Mouthy targets Apple-Silicon macOS first. Windows and Linux are kept compiling w
 - [Rust](https://rustup.rs/) (latest stable)
 - [Bun](https://bun.sh/)
 - Xcode Command Line Tools: `xcode-select --install`
-- [CMake](https://cmake.org/download/) (`brew install cmake`)
 - For other platforms, the [Tauri prerequisites](https://tauri.app/start/prerequisites/)
 
 ## Setup

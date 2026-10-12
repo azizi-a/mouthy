@@ -241,7 +241,6 @@
     }
   },
   "common": {
-    "close": "Stäng",
     "open": "Öppna",
     "copy": "Kopiera",
     "clear": "Rensa",
