@@ -1,20 +1,6 @@
-use log::info;
-use tauri::AppHandle;
-
 // Re-export all utility modules for easy access
 pub use crate::overlay::*;
 pub use crate::tray::*;
-
-/// Centralized cancellation function that can be called from anywhere in the app.
-/// Returns the UI to idle: hides the overlay and resets the tray icon.
-pub fn cancel_current_operation(app: &AppHandle) {
-    info!("Initiating operation cancellation...");
-
-    set_tray_state(app, crate::tray::TrayIconState::Idle);
-    hide_recording_overlay(app);
-
-    info!("Operation cancellation completed - returned to idle state");
-}
 
 /// Check if using the Wayland display server protocol
 #[cfg(target_os = "linux")]

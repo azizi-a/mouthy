@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Настройки...",
     "quit": "Выход",
-    "cancel": "Отмена",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Сочетания клавиш заблокированы Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Ярлык не найден",
         "pressKeys": "Нажимайте клавиши...",
         "bindings": {
-          "cancel": {
-            "name": "Горячая клавиша отмены",
-            "description": "Сочетание клавиш для отмены текущей записи."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Расшифровка...",
-    "processing": "Обработка..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} может блокировать 1 сочетание клавиш",

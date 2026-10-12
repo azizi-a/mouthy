@@ -6,7 +6,15 @@ import { commands } from "@/bindings";
 import i18n, { syncLanguageFromSettings } from "@/i18n";
 import { getLanguageDirection } from "@/lib/utils/rtl";
 
-type OverlayState = "recording" | "transcribing" | "processing";
+type OverlayView =
+  | { kind: "speaking" }
+  | { kind: "nothing-selected" }
+  | { kind: "error"; message: string | null };
+
+interface OverlayNotice {
+  kind: "nothing-selected" | "error";
+  message: string | null;
+}
 
 // Number of bars in the activity pulse.
 const WAVE_BARS = 9;
@@ -14,30 +22,47 @@ const WAVE_BARS = 9;
 const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
-  const [state, setState] = useState<OverlayState>("recording");
+  const [view, setView] = useState<OverlayView>({ kind: "speaking" });
   // Overlay placement (top vs bottom of the screen); the card sits flush to
   // that edge.
   const [position, setPosition] = useState<"top" | "bottom">("bottom");
   const direction = getLanguageDirection(i18n.language);
 
   useEffect(() => {
-    const setupEventListeners = async () => {
-      const unlistenShow = await listen("show-overlay", async (event) => {
-        const overlayState = event.payload as OverlayState;
-        await syncLanguageFromSettings();
-        try {
-          const settings = await commands.getAppSettings();
-          if (settings.status === "ok") {
-            setPosition(
-              settings.data.overlay_position === "top" ? "top" : "bottom",
-            );
-          }
-        } catch {
-          // Keep the previous/default placement if settings can't be read.
+    const present = async (next: OverlayView) => {
+      await syncLanguageFromSettings();
+      try {
+        const settings = await commands.getAppSettings();
+        if (settings.status === "ok") {
+          setPosition(
+            settings.data.overlay_position === "top" ? "top" : "bottom",
+          );
         }
-        setState(overlayState);
-        setIsVisible(true);
+      } catch {
+        // Keep the previous/default placement if settings can't be read.
+      }
+      setView(next);
+      setIsVisible(true);
+    };
+
+    const setupEventListeners = async () => {
+      const unlistenShow = await listen<string>("show-overlay", (event) => {
+        if (event.payload === "speaking") {
+          present({ kind: "speaking" });
+        }
       });
+
+      const unlistenNotice = await listen<OverlayNotice>(
+        "show-overlay-notice",
+        (event) => {
+          const notice = event.payload;
+          present(
+            notice.kind === "error"
+              ? { kind: "error", message: notice.message }
+              : { kind: "nothing-selected" },
+          );
+        },
+      );
 
       const unlistenHide = await listen("hide-overlay", () => {
         setIsVisible(false);
@@ -45,6 +70,7 @@ const RecordingOverlay: React.FC = () => {
 
       return () => {
         unlistenShow();
+        unlistenNotice();
         unlistenHide();
       };
     };
@@ -54,11 +80,11 @@ const RecordingOverlay: React.FC = () => {
 
   if (!isVisible) return null;
 
-  const cancelBtn = (
+  const stopBtn = (
     <button
       className="sx"
-      aria-label="cancel"
-      onClick={() => commands.cancelOperation()}
+      aria-label={t("tray.stop")}
+      onClick={() => commands.stopSpeaking()}
     >
       <svg viewBox="0 0 16 16" aria-hidden="true">
         <path
@@ -71,9 +97,9 @@ const RecordingOverlay: React.FC = () => {
     </button>
   );
 
-  // dot (left) | pulse (center) | cancel (right)
-  const listeningRow = (
-    <div className="sbase">
+  // dot (left) | pulse (center) | stop (right)
+  const speakingRow = (
+    <div className="sbase" role="status" aria-label={t("overlay.speaking")}>
       <div className="sbase-l">
         <span className="sdot" />
       </div>
@@ -82,30 +108,31 @@ const RecordingOverlay: React.FC = () => {
           <i key={i} />
         ))}
       </div>
-      <div className="sbase-r">{cancelBtn}</div>
+      <div className="sbase-r">{stopBtn}</div>
     </div>
   );
 
-  // spinner (left) | label (center) | cancel (right) — same 3-zone grid as the
-  // listening row, so the label is centered.
-  const workingRow = (label: string) => (
-    <div className="sbase">
-      <div className="sbase-l">
-        <span className="sspinner" />
-      </div>
-      <span className="swork-label">{label}</span>
-      <div className="sbase-r">{cancelBtn}</div>
+  // (empty) | label (center) | dismiss (right)
+  const noticeRow = (label: string) => (
+    <div className="sbase" role="status">
+      <div className="sbase-l" />
+      <span className="swork-label" title={label}>
+        {label}
+      </span>
+      <div className="sbase-r">{stopBtn}</div>
     </div>
   );
 
-  // Exactly one row at a time: the pulse (recording), or a spinner + label
-  // (transcribing / processing). The pill animates its width between them; the
-  // cancel button is in both rows so it stays put.
-  const working = state === "transcribing" || state === "processing";
-  const workLabel =
-    state === "processing"
-      ? t("overlay.processing")
-      : t("overlay.transcribing");
+  let row = speakingRow;
+  if (view.kind === "nothing-selected") {
+    row = noticeRow(t("overlay.nothingSelected"));
+  } else if (view.kind === "error") {
+    row = noticeRow(
+      view.message
+        ? `${t("overlay.error")}: ${view.message}`
+        : t("overlay.error"),
+    );
+  }
 
   return (
     <div
@@ -113,9 +140,9 @@ const RecordingOverlay: React.FC = () => {
       className={`ov-stage ${position} ov-fade ${isVisible ? "show" : ""}`}
     >
       <div
-        className={`scard compact ${working && isVisible ? "cworking" : ""}`}
+        className={`scard compact ${view.kind !== "speaking" ? "cworking" : ""}`}
       >
-        {working ? workingRow(workLabel) : listeningRow}
+        {row}
       </div>
     </div>
   );

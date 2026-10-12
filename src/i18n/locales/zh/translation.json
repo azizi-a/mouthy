@@ -2,7 +2,8 @@
   "tray": {
     "settings": "设置...",
     "quit": "退出",
-    "cancel": "取消",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ 快捷键被 Secure Input 阻止"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "未找到快捷键",
         "pressKeys": "请按键...",
         "bindings": {
-          "cancel": {
-            "name": "取消快捷键",
-            "description": "用于取消当前录制的键盘快捷键。"
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "正在转录...",
-    "processing": "处理中..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} 可能正在阻止 1 个快捷键",

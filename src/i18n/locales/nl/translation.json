@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Instellingen...",
     "quit": "Afsluiten",
-    "cancel": "Annuleren",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Sneltoetsen geblokkeerd door Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Sneltoets niet gevonden",
         "pressKeys": "Druk op toetsen...",
         "bindings": {
-          "cancel": {
-            "name": "Sneltoets voor annuleren",
-            "description": "De sneltoets om de huidige opname te annuleren."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Transcriberen...",
-    "processing": "Verwerken..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokkeert mogelijk 1 sneltoets",

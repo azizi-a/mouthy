@@ -29,7 +29,9 @@ pub fn open_output(settings_device: Option<&str>) -> Result<MixerDeviceSink, Str
     }
     .map_err(|e| format!("Failed to select output device: {}", e))?;
 
+    // The builder asks for a fixed ~50 ms buffer, which some devices reject
+    // (Bluetooth headsets cap at 1024 frames); fall back to their own configs.
     sink_builder
-        .open_stream()
+        .open_sink_or_fallback()
         .map_err(|e| format!("Failed to open output stream: {}", e))
 }

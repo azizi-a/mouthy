@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Configuració...",
     "quit": "Surt",
-    "cancel": "Cancel·la",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Dreceres blocades per l'entrada segura"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "No s'ha trobat la drecera",
         "pressKeys": "Premeu les tecles...",
         "bindings": {
-          "cancel": {
-            "name": "Drecera de cancel·lació",
-            "description": "La drecera de teclat per cancel·lar l'enregistrament actual."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "S'està transcrivint...",
-    "processing": "S'està processant..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} pot estar blocant 1 drecera",

@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Налаштування...",
     "quit": "Вийти",
-    "cancel": "Скасувати",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Комбінації клавіш заблоковано Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Скорочення не знайдено",
         "pressKeys": "Натисніть клавіші...",
         "bindings": {
-          "cancel": {
-            "name": "Гаряча клавіша скасування",
-            "description": "Комбінація клавіш для скасування поточного запису."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Обробка...",
-    "processing": "Постобробка..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} може блокувати 1 комбінацію клавіш",

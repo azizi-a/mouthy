@@ -12,10 +12,6 @@ mod macos {
     type CfDataRef = *const c_void;
     type CfStringRef = *const c_void;
 
-    // kVK_ANSI_V. This is the behavior Handy used before layout-aware
-    // resolution and remains the safest fallback if macOS cannot expose the
-    // active layout.
-    const ANSI_V_KEYCODE: u16 = 9;
     const KEYCODE_COUNT: u16 = 128;
     const UC_KEY_ACTION_DISPLAY: u16 = 3;
     const UC_KEY_TRANSLATE_NO_DEAD_KEYS_MASK: u32 = 1;
@@ -68,13 +64,23 @@ mod macos {
         (0..KEYCODE_COUNT).find(|&keycode| matches(keycode))
     }
 
-    /// Resolves the physical key that macOS interprets as `v` while Command is
-    /// held. Including Command is important: non-Latin layouts commonly map
+    /// kVK_ANSI_* keycodes: what was sent before layout-aware resolution, and
+    /// the fallback when macOS cannot expose the active layout.
+    fn ansi_keycode(ch: u8) -> Option<u16> {
+        match ch {
+            b'c' => Some(8),
+            b'v' => Some(9),
+            _ => None,
+        }
+    }
+
+    /// Resolves the physical key that macOS interprets as `ch` while Command
+    /// is held. Including Command is important: non-Latin layouts commonly map
     /// Cmd shortcuts to their ANSI equivalents, while standard Dvorak does not.
     ///
-    /// TIS APIs must run on the main thread. Handy's paste path already enters
-    /// through `AppHandle::run_on_main_thread` before reaching this function.
-    fn resolve_command_v_keycode() -> Result<u16, String> {
+    /// TIS APIs must run on the main thread; callers enter through
+    /// `AppHandle::run_on_main_thread`.
+    fn resolve_command_keycode(ch: u8) -> Result<u16, String> {
         // SAFETY: This function is called on the macOS main thread. The returned
         // source follows the Create Rule and is released by InputSource::drop.
         let source = InputSource(unsafe { TISCopyCurrentKeyboardLayoutInputSource() });
@@ -123,25 +129,39 @@ mod macos {
                 )
             };
 
-            status == 0 && length == 1 && chars[0] == u16::from(b'v')
+            status == 0 && length == 1 && chars[0] == u16::from(ch)
         })
-        .ok_or_else(|| "could not map Cmd+V in the current macOS keyboard layout".to_string())?;
+        .ok_or_else(|| {
+            format!(
+                "could not map Cmd+{} in the current macOS keyboard layout",
+                ch.to_ascii_uppercase() as char
+            )
+        })?;
 
         Ok(keycode)
     }
 
-    pub(super) fn command_v_key() -> Key {
-        match resolve_command_v_keycode() {
+    /// The key to press with Command to get the shortcut for `ch` (a lowercase
+    /// ASCII letter) in the active layout.
+    pub(super) fn command_key(ch: u8) -> Key {
+        let name = ch.to_ascii_uppercase() as char;
+        match resolve_command_keycode(ch) {
             Ok(keycode) => {
-                debug!("Resolved Cmd+V for the active macOS layout to keycode {keycode}");
+                debug!("Resolved Cmd+{name} for the active macOS layout to keycode {keycode}");
                 Key::Other(u32::from(keycode))
             }
-            Err(error) => {
-                warn!(
-                    "Could not resolve Cmd+V for the active macOS layout ({error}); using ANSI V keycode {ANSI_V_KEYCODE}"
-                );
-                Key::Other(u32::from(ANSI_V_KEYCODE))
-            }
+            Err(error) => match ansi_keycode(ch) {
+                Some(keycode) => {
+                    warn!(
+                        "Could not resolve Cmd+{name} for the active macOS layout ({error}); using ANSI keycode {keycode}"
+                    );
+                    Key::Other(u32::from(keycode))
+                }
+                None => {
+                    warn!("Could not resolve Cmd+{name} for the active macOS layout ({error})");
+                    Key::Unicode(char::from(ch))
+                }
+            },
         }
     }
 }
@@ -166,6 +186,32 @@ pub fn get_cursor_position(app_handle: &AppHandle) -> Option<(i32, i32)> {
     enigo.location().ok()
 }
 
+/// Sends Cmd+C (macOS) or Ctrl+C, holding the modifier for `hold_ms` after the
+/// C click (see `send_paste_ctrl_v`). On macOS this must run on the main thread.
+pub fn send_copy(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let (modifier_key, c_key_code) = (Key::Meta, macos::command_key(b'c'));
+    #[cfg(target_os = "windows")]
+    let (modifier_key, c_key_code) = (Key::Control, Key::Other(0x43)); // VK_C
+    #[cfg(target_os = "linux")]
+    let (modifier_key, c_key_code) = (Key::Control, Key::Unicode('c'));
+
+    enigo
+        .key(modifier_key, enigo::Direction::Press)
+        .map_err(|e| format!("Failed to press modifier key: {}", e))?;
+    let click = enigo
+        .key(c_key_code, enigo::Direction::Click)
+        .map_err(|e| format!("Failed to click C key: {}", e));
+
+    std::thread::sleep(std::time::Duration::from_millis(hold_ms));
+
+    // Release even when the click failed, so the modifier is never left down.
+    let release = enigo
+        .key(modifier_key, enigo::Direction::Release)
+        .map_err(|e| format!("Failed to release modifier key: {}", e));
+    click.and(release)
+}
+
 /// Sends a Ctrl+V or Cmd+V paste command using platform-specific virtual key codes.
 /// This ensures the paste works regardless of keyboard layout (e.g., Russian, AZERTY, DVORAK).
 /// Note: On Wayland, this may not work - callers should check for Wayland and use alternative methods.
@@ -179,7 +225,7 @@ pub fn get_cursor_position(app_handle: &AppHandle) -> Option<(i32, i32)> {
 pub fn send_paste_ctrl_v(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
     // Platform-specific key definitions
     #[cfg(target_os = "macos")]
-    let (modifier_key, v_key_code) = (Key::Meta, macos::command_v_key());
+    let (modifier_key, v_key_code) = (Key::Meta, macos::command_key(b'v'));
     #[cfg(target_os = "windows")]
     let (modifier_key, v_key_code) = (Key::Control, Key::Other(0x56)); // VK_V
     #[cfg(target_os = "linux")]
@@ -208,7 +254,7 @@ pub fn send_paste_ctrl_v(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> 
 pub fn send_paste_ctrl_shift_v(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
     // Platform-specific key definitions
     #[cfg(target_os = "macos")]
-    let (modifier_key, v_key_code) = (Key::Meta, macos::command_v_key());
+    let (modifier_key, v_key_code) = (Key::Meta, macos::command_key(b'v'));
     #[cfg(target_os = "windows")]
     let (modifier_key, v_key_code) = (Key::Control, Key::Other(0x56)); // VK_V
     #[cfg(target_os = "linux")]

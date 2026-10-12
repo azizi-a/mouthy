@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Indstillinger...",
     "quit": "Afslut",
-    "cancel": "Annuller",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Genveje blokeret af Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Genvej ikke fundet",
         "pressKeys": "Tryk på ønskede taster...",
         "bindings": {
-          "cancel": {
-            "name": "Annulleringsgenvej",
-            "description": "Tastaturgenvejen til at annullere den aktuelle optagelse."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Transskriberer...",
-    "processing": "Behandler..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokerer muligvis 1 genvej",

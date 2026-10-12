@@ -227,6 +227,38 @@ async changeOnboardingCompletedSetting(completed: boolean) : Promise<Result<null
     else return { status: "error", error: e  as any };
 }
 },
+async changeTtsBaseUrlSetting(url: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_tts_base_url_setting", { url }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeTtsVoiceSetting(voice: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_tts_voice_setting", { voice }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeTtsSpeedSetting(speed: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_tts_speed_setting", { speed }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeTtsVolumeSetting(volume: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_tts_volume_setting", { volume }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Start key recording mode
  */
@@ -268,8 +300,19 @@ async showMainWindowCommand() : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async cancelOperation() : Promise<void> {
-    await TAURI_INVOKE("cancel_operation");
+async stopSpeaking() : Promise<void> {
+    await TAURI_INVOKE("stop_speaking");
+},
+/**
+ * Voice ids offered by the configured speech server.
+ */
+async fetchTtsVoices() : Promise<Result<string[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("fetch_tts_voices") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 async getAppDirPath() : Promise<Result<string, string>> {
     try {
@@ -407,7 +450,11 @@ bindings?: Partial<{ [key in string]: ShortcutBinding }>; start_hidden?: boolean
  * after the target app actually reads the transcript, instead of after a
  * fixed delay. See `paste_tx`. macOS and Windows only.
  */
-reliable_paste?: boolean; typing_tool?: TypingTool; external_script_path?: string | null; overlay_style?: OverlayStyle }
+reliable_paste?: boolean; typing_tool?: TypingTool; external_script_path?: string | null; overlay_style?: OverlayStyle; tts_base_url?: string; tts_voice?: string; 
+/**
+ * Sent to the server; changing playback rate locally would shift pitch.
+ */
+tts_speed?: number; tts_volume?: number }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }

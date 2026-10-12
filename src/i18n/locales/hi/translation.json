@@ -2,7 +2,8 @@
   "tray": {
     "settings": "सेटिंग...",
     "quit": "बाहर निकलें",
-    "cancel": "रद्द करें",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Secure Input ने शॉर्टकट ब्लॉक किए हैं"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "शॉर्टकट नहीं मिला",
         "pressKeys": "बटन दबाएं...",
         "bindings": {
-          "cancel": {
-            "name": "रद्द करने का शॉर्टकट",
-            "description": "मौजूदा रिकॉर्डिंग रद्द करने के लिए कीबोर्ड शॉर्टकट."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "ट्रांसक्राइब हो रहा है...",
-    "processing": "प्रोसेस हो रहा है..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} शायद 1 शॉर्टकट को ब्लॉक कर रहा है",

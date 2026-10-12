@@ -2,7 +2,8 @@
   "tray": {
     "settings": "सेटिङहरू...",
     "quit": "बाहिर निस्कनुहोस्",
-    "cancel": "रद्द गर्नुहोस्",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Secure Input ले सर्टकटहरू रोकेको छ"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "सर्टकट भेटिएन",
         "pressKeys": "किहरू थिच्नुहोस्...",
         "bindings": {
-          "cancel": {
-            "name": "रद्द सर्टकट",
-            "description": "हालको रेकर्डिङ रद्द गर्ने किबोर्ड सर्टकट।"
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "ट्रान्सक्राइब गरिँदैछ...",
-    "processing": "प्रशोधन गरिँदैछ..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} ले 1 सर्टकट रोकिरहेको हुन सक्छ",

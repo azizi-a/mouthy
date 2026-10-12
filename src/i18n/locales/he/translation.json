@@ -2,7 +2,8 @@
   "tray": {
     "settings": "הגדרות...",
     "quit": "יציאה",
-    "cancel": "ביטול",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ קיצורי המקשים חסומים על ידי Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "קיצור הדרך לא נמצא",
         "pressKeys": "לחץ על המקשים...",
         "bindings": {
-          "cancel": {
-            "name": "קיצור מקשים לביטול",
-            "description": "קיצור המקלדת לביטול ההקלטה הנוכחית."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "מתמלל...",
-    "processing": "מעבד..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "ייתכן ש-{{name}} חוסם קיצור דרך אחד",

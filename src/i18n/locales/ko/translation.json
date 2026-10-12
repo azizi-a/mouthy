@@ -2,7 +2,8 @@
   "tray": {
     "settings": "설정...",
     "quit": "종료",
-    "cancel": "취소",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Secure Input으로 단축키가 차단됨"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "단축키를 찾을 수 없음",
         "pressKeys": "키를 눌러주세요...",
         "bindings": {
-          "cancel": {
-            "name": "취소 단축키",
-            "description": "현재 녹음을 취소하는 키보드 단축키입니다."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "텍스트로 변환 중...",
-    "processing": "처리 중..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}}이(가) 단축키 1개를 차단하고 있을 수 있습니다",

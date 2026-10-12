@@ -243,6 +243,15 @@ pub struct AppSettings {
     pub external_script_path: Option<String>,
     #[serde(default = "default_overlay_style")]
     pub overlay_style: OverlayStyle,
+    #[serde(default = "default_tts_base_url")]
+    pub tts_base_url: String,
+    #[serde(default = "default_tts_voice")]
+    pub tts_voice: String,
+    /// Sent to the server; changing playback rate locally would shift pitch.
+    #[serde(default = "default_tts_speed")]
+    pub tts_speed: f32,
+    #[serde(default = "default_tts_volume")]
+    pub tts_volume: f32,
 }
 
 fn default_start_hidden() -> bool {
@@ -306,18 +315,40 @@ fn default_typing_tool() -> TypingTool {
     TypingTool::Auto
 }
 
+fn default_tts_base_url() -> String {
+    "http://127.0.0.1:8880".to_string()
+}
+
+fn default_tts_voice() -> String {
+    "bm_lewis".to_string()
+}
+
+fn default_tts_speed() -> f32 {
+    1.0
+}
+
+fn default_tts_volume() -> f32 {
+    1.0
+}
+
 pub const SETTINGS_STORE_PATH: &str = "settings_store.json";
 
 pub fn get_default_settings() -> AppSettings {
+    // Matches macOS's own "Speak selection" shortcut.
+    #[cfg(target_os = "macos")]
+    let speak_shortcut = "option+escape";
+    #[cfg(not(target_os = "macos"))]
+    let speak_shortcut = "alt+escape";
+
     let mut bindings = HashMap::new();
     bindings.insert(
-        "cancel".to_string(),
+        "speak".to_string(),
         ShortcutBinding {
-            id: "cancel".to_string(),
-            name: "Cancel".to_string(),
-            description: "Cancels the current recording.".to_string(),
-            default_binding: "escape".to_string(),
-            current_binding: "escape".to_string(),
+            id: "speak".to_string(),
+            name: "Speak Selection".to_string(),
+            description: "Reads the selected text aloud; press again to stop.".to_string(),
+            default_binding: speak_shortcut.to_string(),
+            current_binding: speak_shortcut.to_string(),
         },
     );
 
@@ -346,6 +377,10 @@ pub fn get_default_settings() -> AppSettings {
         typing_tool: default_typing_tool(),
         external_script_path: None,
         overlay_style: default_overlay_style(),
+        tts_base_url: default_tts_base_url(),
+        tts_voice: default_tts_voice(),
+        tts_speed: default_tts_speed(),
+        tts_volume: default_tts_volume(),
     }
 }
 
@@ -492,9 +527,9 @@ mod tests {
     fn stored_binding_returns_the_requested_binding() {
         let settings = get_default_settings();
 
-        let result = get_stored_binding(&settings, "cancel");
+        let result = get_stored_binding(&settings, "speak");
 
-        assert_eq!(result.unwrap().id, "cancel");
+        assert_eq!(result.unwrap().id, "speak");
     }
 
     #[test]
@@ -530,7 +565,7 @@ mod tests {
         // An enum variant this build doesn't know, e.g. written by a newer
         // version before a downgrade.
         map.insert("theme".into(), serde_json::json!("sepia"));
-        stored["bindings"]["cancel"]["current_binding"] = serde_json::json!("f13");
+        stored["bindings"]["speak"]["current_binding"] = serde_json::json!("f13");
 
         // Precondition: this is exactly the whole-store parse failure from
         // #1619 that used to reset everything to defaults.
@@ -539,7 +574,7 @@ mod tests {
         let salvaged = salvage_settings(&stored);
         assert_eq!(salvaged.app_language, "fr");
         assert!(salvaged.onboarding_completed);
-        assert_eq!(salvaged.bindings["cancel"].current_binding, "f13");
+        assert_eq!(salvaged.bindings["speak"].current_binding, "f13");
         assert_eq!(salvaged.theme, default_theme());
     }
 
@@ -567,7 +602,7 @@ mod tests {
         // take the rest of the settings down with it.
         map.insert(
             "bindings".into(),
-            serde_json::json!({ "cancel": { "id": 42 } }),
+            serde_json::json!({ "speak": { "id": 42 } }),
         );
         map.insert("app_language".into(), serde_json::json!("de"));
 
@@ -577,8 +612,8 @@ mod tests {
         assert_eq!(salvaged.app_language, "de");
         let defaults = get_default_settings();
         assert_eq!(
-            salvaged.bindings["cancel"].current_binding,
-            defaults.bindings["cancel"].current_binding
+            salvaged.bindings["speak"].current_binding,
+            defaults.bindings["speak"].current_binding
         );
     }
 
@@ -639,13 +674,15 @@ mod tests {
                 "transcribe".to_string(),
                 binding("transcribe", "option+space"),
             ),
-            ("cancel".to_string(), binding("cancel", "f13")),
+            ("cancel".to_string(), binding("cancel", "escape")),
+            ("speak".to_string(), binding("speak", "f13")),
         ]);
 
         assert!(sync_bindings_with_defaults(&mut bindings));
 
         assert!(!bindings.contains_key("transcribe"));
-        assert_eq!(bindings["cancel"].current_binding, "f13");
+        assert!(!bindings.contains_key("cancel"));
+        assert_eq!(bindings["speak"].current_binding, "f13");
         let mut ids: Vec<_> = bindings.keys().cloned().collect();
         let mut default_ids: Vec<_> = get_default_settings().bindings.into_keys().collect();
         ids.sort();

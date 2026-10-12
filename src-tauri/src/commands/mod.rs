@@ -1,14 +1,21 @@
 pub mod audio;
 
 use crate::settings::{get_settings, write_settings, AppSettings, LogLevel};
-use crate::utils::cancel_current_operation;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
 
 #[tauri::command]
 #[specta::specta]
-pub fn cancel_operation(app: AppHandle) {
-    cancel_current_operation(&app);
+pub fn stop_speaking(app: AppHandle) {
+    crate::actions::stop_speaking(&app, "app");
+}
+
+/// Voice ids offered by the configured speech server.
+#[tauri::command]
+#[specta::specta]
+pub async fn fetch_tts_voices(app: AppHandle) -> Result<Vec<String>, String> {
+    let base_url = get_settings(&app).tts_base_url;
+    crate::tts::http::list_voices(&crate::tts::http::client(), &base_url).await
 }
 
 #[tauri::command]

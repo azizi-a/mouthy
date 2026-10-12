@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Configurações...",
     "quit": "Sair",
-    "cancel": "Cancelar",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Atalhos bloqueados pelo Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Atalho não encontrado",
         "pressKeys": "Pressione as teclas...",
         "bindings": {
-          "cancel": {
-            "name": "Atalho de Cancelar",
-            "description": "O atalho de teclado para cancelar a gravação atual."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Transcrevendo...",
-    "processing": "Processando..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} pode estar bloqueando 1 atalho",

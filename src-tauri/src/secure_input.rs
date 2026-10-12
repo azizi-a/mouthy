@@ -463,11 +463,6 @@ mod imp {
         let mut wanted: Vec<(String, ShortcutBinding, bool)> = Vec::new();
         if eligible {
             for (id, binding) in &settings.bindings {
-                // Never registered by the primary backend, so never shadowed
-                if id == "cancel" {
-                    continue;
-                }
-
                 match plan_fallback_binding(id, binding) {
                     ShadowPlan::Immune => immune += 1,
                     ShadowPlan::Uncovered => next.uncovered.push(id.clone()),

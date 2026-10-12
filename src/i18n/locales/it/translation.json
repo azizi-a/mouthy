@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Impostazioni...",
     "quit": "Esci",
-    "cancel": "Annulla",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Scorciatoie bloccate da Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Scorciatoia non trovata",
         "pressKeys": "Premi i tasti...",
         "bindings": {
-          "cancel": {
-            "name": "Scorciatoia Annulla",
-            "description": "La scorciatoia da tastiera per annullare la registrazione in corso."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Trascrizione...",
-    "processing": "Elaborazione..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} potrebbe bloccare 1 scorciatoia",

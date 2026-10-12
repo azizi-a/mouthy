@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Paramètres...",
     "quit": "Quitter",
-    "cancel": "Annuler",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Raccourcis bloqués par Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Raccourci non trouvé",
         "pressKeys": "Appuyez sur les touches...",
         "bindings": {
-          "cancel": {
-            "name": "Raccourci d'Annulation",
-            "description": "Le raccourci clavier pour annuler l'enregistrement en cours."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Transcription...",
-    "processing": "Traitement..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} bloque peut-être 1 raccourci",

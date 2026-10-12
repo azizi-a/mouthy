@@ -122,21 +122,6 @@ pub fn change_binding(
         }
     };
 
-    // The cancel binding is never registered globally, so only persist it
-    if id == "cancel" {
-        if let Some(mut b) = settings.bindings.get(&id).cloned() {
-            b.current_binding = binding;
-            settings.bindings.insert(id.clone(), b.clone());
-            settings::write_settings(&app, settings);
-            crate::secure_input::reconcile_fallback(&app);
-            return Ok(BindingResponse {
-                success: true,
-                binding: Some(b.clone()),
-                error: None,
-            });
-        }
-    }
-
     // Unregister the existing binding
     if let Err(e) = unregister_shortcut(&app, binding_to_modify.clone()) {
         let error_msg = format!("Failed to unregister shortcut: {}", e);
@@ -202,12 +187,9 @@ pub fn reset_binding(app: AppHandle, id: String) -> Result<BindingResponse, Stri
 
 /// Unregister every binding while the user is recording a new shortcut in
 /// the UI, so no existing shortcut can fire — or swallow the keystrokes —
-/// mid-capture. The "cancel" binding is untouched: it is never registered.
+/// mid-capture.
 pub fn suspend_all_shortcuts(app: &AppHandle) {
     for (id, binding) in settings::get_bindings(app) {
-        if id == "cancel" {
-            continue;
-        }
         if let Err(e) = unregister_shortcut(app, binding) {
             debug!(
                 "suspend_all_shortcuts: could not unregister '{}': {}",
@@ -223,9 +205,6 @@ pub fn suspend_all_shortcuts(app: &AppHandle) {
 pub fn resume_all_shortcuts(app: &AppHandle) {
     let settings = get_settings(app);
     for (id, binding) in &settings.bindings {
-        if id == "cancel" {
-            continue;
-        }
         if let Err(e) = register_shortcut(app, binding.clone()) {
             debug!("resume_all_shortcuts: could not register '{}': {}", id, e);
         }
@@ -380,11 +359,6 @@ fn unregister_all_shortcuts(app: &AppHandle, implementation: KeyboardImplementat
     let bindings = settings::get_bindings(app);
 
     for (id, binding) in bindings {
-        // Skip cancel shortcut as it's never registered
-        if id == "cancel" {
-            continue;
-        }
-
         let result = match implementation {
             KeyboardImplementation::Tauri => tauri_impl::unregister_shortcut(app, binding),
             KeyboardImplementation::HandyKeys => handy_keys::unregister_shortcut(app, binding),
@@ -409,11 +383,6 @@ fn register_all_shortcuts_for_implementation(
     let mut current_settings = settings::get_settings(app);
 
     for (id, default_binding) in &default_bindings {
-        // Skip cancel shortcut as it's never registered
-        if id == "cancel" {
-            continue;
-        }
-
         let mut binding = current_settings
             .bindings
             .get(id)
@@ -834,6 +803,42 @@ pub fn change_onboarding_completed_setting(app: AppHandle, completed: bool) -> R
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+pub fn change_tts_base_url_setting(app: AppHandle, url: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_base_url = url.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_tts_voice_setting(app: AppHandle, voice: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_voice = voice.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_tts_speed_setting(app: AppHandle, speed: f32) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_speed = speed.clamp(0.5, 2.0);
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_tts_volume_setting(app: AppHandle, volume: f32) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_volume = volume.clamp(0.0, 1.0);
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use handy_keys::Hotkey;
@@ -851,6 +856,15 @@ mod tests {
         ] {
             assert!(key.parse::<Shortcut>().is_ok(), "Tauri rejected {key}");
             assert!(key.parse::<Hotkey>().is_ok(), "HandyKeys rejected {key}");
+        }
+    }
+
+    #[test]
+    fn default_bindings_are_valid_on_both_backends() {
+        for binding in crate::settings::get_default_settings().bindings.values() {
+            let raw = &binding.current_binding;
+            assert_eq!(super::tauri_impl::validate_shortcut(raw), Ok(()), "{raw}");
+            assert_eq!(super::handy_keys::validate_shortcut(raw), Ok(()), "{raw}");
         }
     }
 }

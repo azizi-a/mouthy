@@ -18,9 +18,6 @@ pub fn init_shortcuts(app: &AppHandle) {
 
     // Register all default shortcuts, applying user customizations
     for (id, default_binding) in default_bindings {
-        if id == "cancel" {
-            continue; // Skip cancel shortcut, it is never registered
-        }
         let binding = user_settings
             .bindings
             .get(&id)
@@ -181,6 +178,8 @@ mod tests {
             "ctrl+shift+space",
             "alt+space",
             "escape",
+            "option+escape",
+            "alt+escape",
         ] {
             assert_eq!(validate_shortcut(raw), Ok(()), "{raw} should be accepted");
         }

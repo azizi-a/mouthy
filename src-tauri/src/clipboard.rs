@@ -41,6 +41,182 @@ fn write_text_to_clipboard(app_handle: &AppHandle, text: &str) -> Result<(), Str
         .map_err(|e| format!("Failed to write to clipboard: {}", e))
 }
 
+/// How long ⌘ stays held after the C click. Apps read the modifier from the
+/// C event's own flags; the hold covers the few that poll keyboard state.
+const COPY_HOLD_MS: u64 = 30;
+/// How long to wait for the copy to land on the clipboard.
+const COPY_TIMEOUT: Duration = Duration::from_millis(200);
+const COPY_POLL_INTERVAL: Duration = Duration::from_millis(10);
+
+/// Copies the current selection in the frontmost app and returns its text,
+/// leaving the clipboard as it was. `Ok(None)` when nothing was copied or the
+/// copy had no text.
+///
+/// Must run on the main thread on macOS (keyboard layout lookup).
+#[cfg(target_os = "macos")]
+pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, String> {
+    pasteboard::capture(|| with_enigo(app_handle, |enigo| input::send_copy(enigo, COPY_HOLD_MS)))
+}
+
+/// Copies the current selection in the frontmost app and returns its text,
+/// restoring the previous clipboard text or image. A selection identical to
+/// the current clipboard text reads as nothing selected.
+#[cfg(not(target_os = "macos"))]
+pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, String> {
+    let clipboard = app_handle.clipboard();
+    let saved_text = clipboard.read_text().ok().filter(|t| !t.is_empty());
+    let saved_image = if saved_text.is_none() {
+        clipboard.read_image().ok().map(|image| image.to_owned())
+    } else {
+        None
+    };
+
+    with_enigo(app_handle, |enigo| input::send_copy(enigo, COPY_HOLD_MS))?;
+
+    let copied = poll(COPY_TIMEOUT, COPY_POLL_INTERVAL, || {
+        clipboard
+            .read_text()
+            .ok()
+            .filter(|text| !text.is_empty() && Some(text) != saved_text.as_ref())
+    });
+
+    if copied.is_some() {
+        if let Some(text) = &saved_text {
+            let _ = write_text_to_clipboard(app_handle, text);
+        } else if let Some(image) = &saved_image {
+            let _ = clipboard.write_image(image);
+        } else {
+            let _ = clipboard.clear();
+        }
+    }
+
+    Ok(copied)
+}
+
+/// Calls `probe` every `interval` until it returns a value, giving up once
+/// `timeout` has passed. Always probes at least once.
+fn poll<T>(
+    timeout: Duration,
+    interval: Duration,
+    mut probe: impl FnMut() -> Option<T>,
+) -> Option<T> {
+    let deadline = std::time::Instant::now() + timeout;
+    loop {
+        if let Some(value) = probe() {
+            return Some(value);
+        }
+        if std::time::Instant::now() >= deadline {
+            return None;
+        }
+        std::thread::sleep(interval);
+    }
+}
+
+/// Selection capture against `NSPasteboard`. Copy detection uses
+/// `changeCount`, so the clipboard is never cleared beforehand and a copy of
+/// text identical to the clipboard still counts.
+#[cfg(target_os = "macos")]
+mod pasteboard {
+    use super::{poll, COPY_POLL_INTERVAL, COPY_TIMEOUT};
+    use log::{debug, info, warn};
+    use objc2::rc::{autoreleasepool, Retained};
+    use objc2::runtime::ProtocolObject;
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{
+        NSPasteboard, NSPasteboardItem, NSPasteboardType, NSPasteboardTypeString,
+        NSPasteboardWriting,
+    };
+    use objc2_foundation::{NSArray, NSData};
+
+    /// Every pasteboard item with the data of each of its types. Restoring all
+    /// types keeps rich text and files, and the concealed/transient markers
+    /// that keep clipboard managers from recording passwords.
+    type Snapshot = Vec<Vec<(Retained<NSPasteboardType>, Retained<NSData>)>>;
+
+    fn snapshot(pasteboard: &NSPasteboard) -> Snapshot {
+        let Some(items) = pasteboard.pasteboardItems() else {
+            return Vec::new();
+        };
+        items
+            .iter()
+            .map(|item| {
+                item.types()
+                    .iter()
+                    .filter_map(|data_type| {
+                        let data = item.dataForType(&data_type)?;
+                        Some((data_type, data))
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn restore(pasteboard: &NSPasteboard, snapshot: &Snapshot) {
+        pasteboard.clearContents();
+        let items: Vec<Retained<ProtocolObject<dyn NSPasteboardWriting>>> = snapshot
+            .iter()
+            .filter(|types| !types.is_empty())
+            .map(|types| {
+                let item = NSPasteboardItem::new();
+                for (data_type, data) in types {
+                    item.setData_forType(data, data_type);
+                }
+                ProtocolObject::from_retained(item)
+            })
+            .collect();
+        if !items.is_empty() && !pasteboard.writeObjects(&NSArray::from_retained_slice(&items)) {
+            warn!("Failed to restore the clipboard after copying the selection");
+        }
+    }
+
+    pub(super) fn capture(
+        send_copy: impl FnOnce() -> Result<(), String>,
+    ) -> Result<Option<String>, String> {
+        if MainThreadMarker::new().is_none() {
+            return Err("Selection capture must run on the main thread".into());
+        }
+
+        autoreleasepool(|_| {
+            let pasteboard = NSPasteboard::generalPasteboard();
+            let before = pasteboard.changeCount();
+            let saved = snapshot(&pasteboard);
+
+            send_copy()?;
+
+            // The copy may bump changeCount (clearContents) a moment before the
+            // text is written, so keep polling until the text is readable.
+            let mut copied_at = None;
+            let text = poll(COPY_TIMEOUT, COPY_POLL_INTERVAL, || {
+                let count = pasteboard.changeCount();
+                if count == before {
+                    return None;
+                }
+                copied_at = Some(count);
+                // SAFETY: NSPasteboardTypeString is a read-only framework static.
+                let text = pasteboard.stringForType(unsafe { NSPasteboardTypeString })?;
+                Some(text.to_string())
+            });
+
+            let Some(copied_at) = copied_at else {
+                debug!("Copy left the clipboard unchanged: nothing selected");
+                return Ok(None);
+            };
+            if text.is_none() {
+                debug!("Copied selection has no plain text");
+            }
+
+            // A later write (the app finishing its copy, or the user copying)
+            // wins over our restore.
+            if pasteboard.changeCount() == copied_at {
+                restore(&pasteboard, &saved);
+            } else {
+                info!("Clipboard changed again after the copy; leaving it as is");
+            }
+            Ok(text)
+        })
+    }
+}
+
 fn finish_clipboard_paste(
     paste_result: Result<(), String>,
     paste_delay_after_ms: u64,
@@ -1011,5 +1187,41 @@ e.g. 28:1 28:0 means pressing on the Enter button on a standard US keyboard.
             .expect("external script should return without waiting for its child");
         fs::remove_file(script_path).expect("remove external script");
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn poll_returns_the_first_value_without_waiting_out_the_timeout() {
+        let calls = Cell::new(0);
+        let value = poll(Duration::from_secs(5), Duration::from_millis(1), || {
+            calls.set(calls.get() + 1);
+            (calls.get() == 3).then_some("copied")
+        });
+        assert_eq!(value, Some("copied"));
+        assert_eq!(calls.get(), 3);
+    }
+
+    #[test]
+    fn poll_gives_up_after_the_timeout() {
+        let calls = Cell::new(0);
+        let started = std::time::Instant::now();
+        let value: Option<()> = poll(Duration::from_millis(50), Duration::from_millis(10), || {
+            calls.set(calls.get() + 1);
+            None
+        });
+        assert_eq!(value, None);
+        assert!(started.elapsed() >= Duration::from_millis(50));
+        // One probe up front, then at most one per interval; a slow machine only probes less.
+        assert!((2..=7).contains(&calls.get()), "{} probes", calls.get());
+    }
+
+    #[test]
+    fn poll_probes_once_with_a_zero_timeout() {
+        let calls = Cell::new(0);
+        let value: Option<()> = poll(Duration::ZERO, Duration::from_millis(10), || {
+            calls.set(calls.get() + 1);
+            None
+        });
+        assert_eq!(value, None);
+        assert_eq!(calls.get(), 1);
     }
 }

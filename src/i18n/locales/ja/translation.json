@@ -2,7 +2,8 @@
   "tray": {
     "settings": "設定…",
     "quit": "終了",
-    "cancel": "キャンセル",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Secure Input でショートカットがブロック中"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "ショートカットが見つかりません",
         "pressKeys": "キーを押してください…",
         "bindings": {
-          "cancel": {
-            "name": "キャンセルのショートカット",
-            "description": "現在の録音をキャンセルするためのキーボードショートカット。"
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "文字起こし中…",
-    "processing": "処理中…"
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} が1個のショートカットをブロックしている可能性があります",

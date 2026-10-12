@@ -11,6 +11,7 @@ mod paste_tx;
 mod secure_input;
 mod settings;
 mod shortcut;
+#[cfg(unix)]
 mod signal_handle;
 mod tray;
 mod tray_i18n;
@@ -144,15 +145,15 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // on macOS before the user is ready.
 
     app_handle.manage(tray::TrayState::new());
+    app_handle.manage(actions::TtsState::default());
 
     // Note: Shortcuts are NOT initialized here.
     // The frontend is responsible for calling the `initialize_shortcuts` command
     // after permissions are confirmed (on macOS) or after onboarding completes.
     // This matches the pattern used for Enigo initialization.
 
-    // Set up signal handlers for toggling transcription. On Linux, SIGUSR1 is
-    // deliberately not handled — it belongs to WebKitGTK's garbage collector
-    // (#1660) — see signal_handle.rs.
+    // Signals speak and stop. On Linux, SIGUSR1 is deliberately not handled —
+    // it belongs to WebKitGTK's garbage collector — see signal_handle.rs.
     #[cfg(unix)]
     signal_handle::setup_signal_handler(app_handle.clone());
 
@@ -218,11 +219,11 @@ fn initialize_core_logic(app_handle: &AppHandle) {
                 // Full explanation lives in the settings-window banner
                 show_main_window(app);
             }
-            "cancel" => {
-                use crate::utils::cancel_current_operation;
-
-                // Use centralized cancellation that handles all operations
-                cancel_current_operation(app);
+            "speak_selection" => {
+                actions::speak_selection(app, "tray");
+            }
+            "stop" => {
+                actions::stop_speaking(app, "tray");
             }
             "quit" => {
                 app.exit(0);
@@ -291,12 +292,17 @@ pub fn run(cli_args: CliArgs) {
         shortcut::get_keyboard_implementation,
         shortcut::change_show_tray_icon_setting,
         shortcut::change_onboarding_completed_setting,
+        shortcut::change_tts_base_url_setting,
+        shortcut::change_tts_voice_setting,
+        shortcut::change_tts_speed_setting,
+        shortcut::change_tts_volume_setting,
         shortcut::handy_keys::start_handy_keys_recording,
         shortcut::handy_keys::stop_handy_keys_recording,
         secure_input::get_secure_input_status,
         secure_input::run_keyboard_diagnostic,
         show_main_window_command,
-        commands::cancel_operation,
+        commands::stop_speaking,
+        commands::fetch_tts_voices,
         commands::get_app_dir_path,
         commands::get_app_settings,
         commands::get_default_settings,
@@ -363,13 +369,14 @@ pub fn run(cli_args: CliArgs) {
     }
 
     // Single-instance forwards CLI args to an already-running Mouthy and exits.
+    // The callback runs on an async runtime worker: hand off, never block.
     #[allow(unused_mut)]
     let mut app = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-            if args.iter().any(|a| a == "--toggle-transcription") {
-                signal_handle::send_external_input(app, "transcribe", "CLI");
-            } else if args.iter().any(|a| a == "--cancel") {
-                crate::utils::cancel_current_operation(app);
+            if args.iter().any(|a| a == "--speak-selection") {
+                actions::speak_selection(app, "CLI");
+            } else if args.iter().any(|a| a == "--stop") {
+                actions::stop_speaking(app, "CLI");
             } else {
                 // A second process was launched without remote-control flags
                 // (e.g. the binary run from a shell). On macOS, relaunching the

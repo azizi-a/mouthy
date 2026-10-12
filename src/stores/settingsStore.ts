@@ -84,6 +84,10 @@ const settingUpdaters: {
     commands.changeShowTrayIconSetting(value as boolean),
   onboarding_completed: (value) =>
     commands.changeOnboardingCompletedSetting(value as boolean),
+  tts_base_url: (value) => commands.changeTtsBaseUrlSetting(value as string),
+  tts_voice: (value) => commands.changeTtsVoiceSetting(value as string),
+  tts_speed: (value) => commands.changeTtsSpeedSetting(value as number),
+  tts_volume: (value) => commands.changeTtsVolumeSetting(value as number),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

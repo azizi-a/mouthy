@@ -11,13 +11,13 @@ pub struct CliArgs {
     #[arg(long)]
     pub no_tray: bool,
 
-    /// Toggle transcription on/off (sent to running instance)
+    /// Speak the current selection, or stop if speaking (sent to running instance)
     #[arg(long)]
-    pub toggle_transcription: bool,
+    pub speak_selection: bool,
 
-    /// Cancel the current operation (sent to running instance)
+    /// Stop speaking (sent to running instance)
     #[arg(long)]
-    pub cancel: bool,
+    pub stop: bool,
 
     /// Enable debug mode with verbose logging
     #[arg(long)]

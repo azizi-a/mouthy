@@ -9,9 +9,9 @@
 //! coalesced into it, so bursts of state changes never queue up native work.
 //!
 //! Why: native tray updates are the lever we control for the macOS tray
-//! disappearance bug (tauri-apps/tauri#12060, cjpais/Handy#1948). Before this, every
-//! recording cycle rebuilt the full menu 3-6 times from several threads, and
-//! concurrent rebuilds could interleave and leave a stale menu behind.
+//! disappearance bug (tauri-apps/tauri#12060, cjpais/Handy#1948). Rebuilding
+//! the full menu several times per session from several threads let concurrent
+//! rebuilds interleave and leave a stale menu behind.
 //!
 //! Exception: [`set_tray_visibility`] and [`recreate_tray_icon`] call the tray
 //! directly. Visibility is a separate attribute that never participates in the
@@ -35,15 +35,13 @@ use tauri::{AppHandle, Manager, Theme};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TrayIconState {
     Idle,
-    Recording,
-    Transcribing,
+    Speaking,
 }
 
 impl TrayIconState {
-    /// Recording and Transcribing share the same menu (with "Cancel"), so only
-    /// the idle/busy distinction matters for the menu.
+    /// Whether the menu's Stop item is enabled.
     fn is_busy(self) -> bool {
-        self != TrayIconState::Idle
+        self == TrayIconState::Speaking
     }
 }
 
@@ -177,8 +175,8 @@ fn windows_taskbar_theme() -> Option<AppTheme> {
 /// Gets the appropriate icon path for the given theme and state.
 ///
 /// `warning` overlays a badge on the idle icon while keyboard shortcuts are
-/// blocked (macOS Secure Input); recording/transcribing states keep their
-/// normal icons so in-flight activity stays recognizable.
+/// blocked (macOS Secure Input); the speaking icon is kept so in-flight
+/// activity stays recognizable.
 pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'static str {
     if warning && state == TrayIconState::Idle {
         return match theme {
@@ -192,26 +190,22 @@ pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'
     match (theme, state) {
         // Dark theme uses light icons
         (AppTheme::Dark, TrayIconState::Idle) => "resources/tray_idle.png",
-        (AppTheme::Dark, TrayIconState::Recording | TrayIconState::Transcribing) => {
-            "resources/tray_speaking.png"
-        }
+        (AppTheme::Dark, TrayIconState::Speaking) => "resources/tray_speaking.png",
         // Light theme uses dark icons
         (AppTheme::Light, TrayIconState::Idle) => "resources/tray_idle_dark.png",
-        (AppTheme::Light, TrayIconState::Recording | TrayIconState::Transcribing) => {
-            "resources/tray_speaking_dark.png"
-        }
+        (AppTheme::Light, TrayIconState::Speaking) => "resources/tray_speaking_dark.png",
         // Colored theme uses one colored icon for every state (for Linux)
         (AppTheme::Colored, _) => "resources/mouthy.png",
     }
 }
 
-/// Sets the recording state shown by the tray (icon + Cancel menu item).
+/// Sets the state shown by the tray (icon + Stop menu item).
 pub fn set_tray_state(app: &AppHandle, state: TrayIconState) {
     sync_tray_with(app, |inner| inner.icon_state = state);
 }
 
-/// Re-syncs the tray after something other than the recording state changed
-/// (theme, Secure Input warning). The recording state itself is preserved.
+/// Re-syncs the tray after something other than the speaking state changed
+/// (theme, Secure Input warning). The speaking state itself is preserved.
 pub fn refresh_tray_icon(app: &AppHandle) {
     sync_tray(app);
 }
@@ -473,34 +467,29 @@ fn build_menu(app: &AppHandle, inputs: &MenuInputs) -> tauri::Result<(Menu<tauri
     let quit_i = MenuItem::with_id(app, "quit", &strings.quit, true, quit_accelerator)?;
     let separator = || PredefinedMenuItem::separator(app);
 
-    let menu = if inputs.busy {
-        let cancel_i = MenuItem::with_id(app, "cancel", &strings.cancel, true, None::<&str>)?;
-        Menu::with_items(
-            app,
-            &[
-                &version_i,
-                &separator()?,
-                &cancel_i,
-                &separator()?,
-                &settings_i,
-                &separator()?,
-                &quit_i,
-            ],
-        )?
-    } else {
-        Menu::with_items(
-            app,
-            &[
-                &version_i,
-                &separator()?,
-                &settings_i,
-                &separator()?,
-                &quit_i,
-            ],
-        )?
-    };
+    let speak_i = MenuItem::with_id(
+        app,
+        "speak_selection",
+        &strings.speak_selection,
+        true,
+        None::<&str>,
+    )?;
+    let stop_i = MenuItem::with_id(app, "stop", &strings.stop, inputs.busy, None::<&str>)?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &version_i,
+            &separator()?,
+            &speak_i,
+            &stop_i,
+            &separator()?,
+            &settings_i,
+            &separator()?,
+            &quit_i,
+        ],
+    )?;
 
-    // Both layouts start with [version, separator, ...]; slot the warning in
+    // The menu starts with [version, separator, ...]; slot the warning in
     // right below the version line so it's the first actionable thing seen.
     let mut tooltip = version_label;
     if let Some(warning_item) = secure_input_warning {
@@ -548,7 +537,7 @@ pub fn recreate_tray_icon(app: &AppHandle) {
 
 #[cfg(test)]
 mod tests {
-    use super::{load_tray_icon, MenuInputs, TrayDesired, TrayIconState};
+    use super::{get_icon_path, load_tray_icon, AppTheme, MenuInputs, TrayIconState};
 
     fn inputs(busy: bool) -> MenuInputs {
         MenuInputs {
@@ -571,21 +560,23 @@ mod tests {
     }
 
     #[test]
-    fn recording_and_transcribing_share_a_menu() {
-        // A Recording -> Transcribing transition must not rebuild the menu.
-        let recording = TrayDesired {
-            icon_path: "resources/tray_speaking.png",
-            menu: inputs(TrayIconState::Recording.is_busy()),
-        };
-        let transcribing = TrayDesired {
-            icon_path: "resources/tray_speaking.png",
-            menu: inputs(TrayIconState::Transcribing.is_busy()),
-        };
-        assert_eq!(recording.menu, transcribing.menu);
+    fn idle_and_busy_menus_differ() {
+        assert_ne!(inputs(false), inputs(true));
+        assert_ne!(
+            inputs(TrayIconState::Idle.is_busy()),
+            inputs(TrayIconState::Speaking.is_busy())
+        );
     }
 
     #[test]
-    fn idle_and_busy_menus_differ() {
-        assert_ne!(inputs(false), inputs(true));
+    fn speaking_icon_keeps_priority_over_the_warning_badge() {
+        assert_eq!(
+            get_icon_path(AppTheme::Dark, TrayIconState::Speaking, true),
+            "resources/tray_speaking.png"
+        );
+        assert_eq!(
+            get_icon_path(AppTheme::Light, TrayIconState::Idle, true),
+            "resources/tray_idle_warning_dark.png"
+        );
     }
 }

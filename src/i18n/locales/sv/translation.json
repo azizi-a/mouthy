@@ -2,7 +2,8 @@
   "tray": {
     "settings": "Inställningar...",
     "quit": "Avsluta",
-    "cancel": "Avbryt",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ Kortkommandon blockeras av Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "Kortkommando hittades inte",
         "pressKeys": "Tryck på tangenter...",
         "bindings": {
-          "cancel": {
-            "name": "Kortkommando för att avbryta",
-            "description": "Kortkommandot för att avbryta den aktuella inspelningen."
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "Transkriberar...",
-    "processing": "Bearbetar..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} kanske blockerar 1 kortkommando",

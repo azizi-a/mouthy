@@ -13,7 +13,7 @@ use crate::actions::ACTION_MAP;
 ///
 /// # Arguments
 /// * `app` - The Tauri app handle
-/// * `binding_id` - The ID of the binding (e.g., "cancel")
+/// * `binding_id` - The ID of the binding (e.g., "speak")
 /// * `hotkey_string` - The string representation of the hotkey
 /// * `is_pressed` - Whether this is a key press (true) or release (false)
 pub fn handle_shortcut_event(

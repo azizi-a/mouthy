@@ -2,7 +2,8 @@
   "tray": {
     "settings": "الإعدادات...",
     "quit": "إنهاء",
-    "cancel": "إلغاء",
+    "speakSelection": "Speak Selection",
+    "stop": "Stop",
     "secureInputWarning": "⚠ الاختصارات محجوبة بواسطة Secure Input"
   },
   "sidebar": {
@@ -39,9 +40,9 @@
         "notFound": "الاختصار غير موجود",
         "pressKeys": "اضغط على المفاتيح...",
         "bindings": {
-          "cancel": {
-            "name": "اختصار الإلغاء",
-            "description": ".اختصار لوحة المفاتيح لإلغاء التسجيل الحالي"
+          "speak": {
+            "name": "Speak Selection",
+            "description": "Reads the selected text aloud. Press again to stop."
           }
         },
         "errors": {
@@ -267,8 +268,9 @@
     }
   },
   "overlay": {
-    "transcribing": "جاري التفريغ...",
-    "processing": "جاري المعالجة..."
+    "speaking": "Speaking",
+    "nothingSelected": "Nothing selected",
+    "error": "Speech failed"
   },
   "secureInput": {
     "blockedWithCulprit_one": "قد يحظر {{name}} اختصارًا واحدًا",
