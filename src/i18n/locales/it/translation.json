@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Permessi Richiesti",
       "description": "Mouthy ha bisogno di alcuni permessi per funzionare correttamente.",
-      "microphone": {
-        "title": "Accesso al Microfono",
-        "description": "Necessario per sentire la tua voce per la trascrizione."
-      },
       "accessibility": {
         "title": "Accesso all'Accessibilità",
         "description": "Necessario per digitare il testo trascritto nelle tue applicazioni."
       },
       "grant": "Concedi Permesso",
-      "granted": "Concesso",
       "waiting": "In attesa...",
       "allGranted": "Tutto pronto!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Suono",
-      "microphone": {
-        "title": "Microfono",
-        "description": "Scegli il microfono preferito",
-        "placeholder": "Scegli microfono...",
-        "loading": "Caricamento..."
-      },
-      "channel": {
-        "title": "Canale di ingresso",
-        "description": "Seleziona il canale di ingresso da cui registrare. Usa questa opzione se l'interfaccia audio dispone di più ingressi.",
-        "average": "Media di tutti i canali",
-        "channel": "Canale {{n}}"
-      },
       "audioFeedback": {
         "label": "Feedback Audio",
         "description": "Riproduci un suono quando la registrazione inizia e finisce"
@@ -282,8 +265,7 @@
           "description": "Scegli l'overlay di registrazione: 'Nessuno' lo nasconde, 'Minimo' mostra una barra compatta, 'In tempo reale' mostra la trascrizione in tempo reale mentre parli (solo per modelli che supportano lo streaming — cerca il badge 'Streaming' nel selettore del modello). Su Linux si raccomanda l'opzione 'Nessuno'.",
           "options": {
             "none": "Nessuno",
-            "minimal": "Minimo",
-            "live": "In tempo reale"
+            "minimal": "Minimo"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Aggiungi",
         "remove": "Rimuovi {{word}}",
         "duplicate": "\"{{word}}\" esiste già"
-      },
-      "voiceActivityDetection": {
-        "title": "Rilevamento dell'attività vocale",
-        "description": "Filtra il silenzio dalle registrazioni. I modelli che supportano lo streaming utilizzano una coda VAD più lunga; disabilitando la VAD si registra l'audio grezzo."
-      },
-      "vadBackend": {
-        "title": "Backend di rilevamento vocale",
-        "description": "Scegli il rilevatore usato per filtrare il silenzio. Earshot è sperimentale; torna a Silero se il parlato viene tagliato o il rumore viene mantenuto.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Rimuovi le parole riempitive",
@@ -494,21 +464,9 @@
         "months3": "Dopo 3 mesi",
         "placeholder": "Seleziona periodo di conservazione..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Microfono Sempre Attivo",
-        "description": "Tieni il microfono attivo per una risposta più rapida"
-      },
-      "clamshellMicrophone": {
-        "title": "Microfono con coperchio chiuso",
-        "description": "Microfono da usare quando il portatile è chiuso"
-      },
       "postProcessingToggle": {
         "label": "Post-Elaborazione",
         "description": "Abilita il miglioramento della trascrizione con IA"
-      },
-      "muteWhileRecording": {
-        "label": "Silenzia durante la registrazione",
-        "description": "Silenzia l'audio di sistema durante la registrazione"
       },
       "appendTrailingSpace": {
         "label": "Aggiungi Spazio Finale",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Incolla affidabile (Beta)",
         "description": "Ripristina gli appunti solo dopo che l'app di destinazione ha effettivamente letto la trascrizione, anziché dopo un ritardo fisso. Serve a risolvere l'incollaggio del vecchio contenuto degli appunti quando il sistema è sotto carico. Richiede un metodo di incollaggio tramite appunti; solo macOS e Windows."
-      },
-      "recordingBuffer": {
-        "title": "Buffer di registrazione extra",
-        "description": "Tempo extra (in millisecondi) per continuare a registrare dopo aver rilasciato il tasto, per catturare l'audio finale. 0 = nessun buffer extra."
       },
       "keyboardDiagnostic": {
         "title": "Diagnostica tastiera",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Caricamento...",
     "delete": "Elimina",
     "close": "Chiudi",
     "open": "Apri",

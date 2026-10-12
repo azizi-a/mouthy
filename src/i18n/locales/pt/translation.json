@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Permissões Necessárias",
       "description": "O Mouthy precisa de algumas permissões para funcionar corretamente.",
-      "microphone": {
-        "title": "Acesso ao Microfone",
-        "description": "Necessário para ouvir sua voz para transcrição."
-      },
       "accessibility": {
         "title": "Acesso à Acessibilidade",
         "description": "Necessário para digitar o texto transcrito em seus aplicativos."
       },
       "grant": "Conceder Permissão",
-      "granted": "Concedido",
       "waiting": "Aguardando...",
       "allGranted": "Tudo pronto!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Som",
-      "microphone": {
-        "title": "Microfone",
-        "description": "Selecione seu dispositivo de microfone preferido",
-        "placeholder": "Selecionar microfone...",
-        "loading": "Carregando..."
-      },
-      "channel": {
-        "title": "Canal de entrada",
-        "description": "Selecione o canal de entrada que será gravado. Use esta opção se a sua interface de áudio tiver várias entradas.",
-        "average": "Média de todos os canais",
-        "channel": "Canal {{n}}"
-      },
       "audioFeedback": {
         "label": "Feedback de Áudio",
         "description": "Reproduzir som quando a gravação iniciar e parar"
@@ -282,8 +265,7 @@
           "description": "Escolha a sobreposição de gravação: 'Nenhum' a oculta, 'Minimalista' mostra um indicador compacto, 'Ao vivo' mostra a transcrição em tempo real enquanto você fala (apenas modelos com suporte a streaming — procure o selo 'Streaming' no seletor de modelos). No Linux, recomenda-se 'Nenhum'.",
           "options": {
             "none": "Nenhum",
-            "minimal": "Minimalista",
-            "live": "Ao vivo"
+            "minimal": "Minimalista"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Adicionar",
         "remove": "Remover {{word}}",
         "duplicate": "\"{{word}}\" já existe"
-      },
-      "voiceActivityDetection": {
-        "title": "Detecção de atividade de voz",
-        "description": "Filtra o silêncio das gravações. Modelos com suporte a streaming usam uma cauda de VAD mais longa; desativar o VAD grava o áudio bruto."
-      },
-      "vadBackend": {
-        "title": "Backend de detecção de voz",
-        "description": "Escolha o detector usado para filtrar o silêncio. O Earshot é experimental; volte para o Silero se a fala for cortada ou o ruído for mantido.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Remover palavras de preenchimento",
@@ -494,21 +464,9 @@
         "months3": "Após 3 meses",
         "placeholder": "Selecionar período de retenção..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Microfone Sempre Ativo",
-        "description": "Manter microfone ativo para resposta mais rápida"
-      },
-      "clamshellMicrophone": {
-        "title": "Microfone em Modo Fechado",
-        "description": "Microfone a usar quando a tampa do laptop está fechada"
-      },
       "postProcessingToggle": {
         "label": "Pós-Processamento",
         "description": "Habilitar refinamento de texto com IA após a transcrição"
-      },
-      "muteWhileRecording": {
-        "label": "Silenciar Durante Gravação",
-        "description": "Silenciar áudio do sistema durante a gravação"
       },
       "appendTrailingSpace": {
         "label": "Adicionar Espaço Final",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Colagem confiável (Beta)",
         "description": "Restaura a área de transferência somente depois que o aplicativo de destino realmente lê a transcrição, em vez de após um atraso fixo. Serve para corrigir a colagem do conteúdo antigo da área de transferência quando o sistema está sobrecarregado. Requer um método de colar via área de transferência; apenas macOS e Windows."
-      },
-      "recordingBuffer": {
-        "title": "Buffer de gravação extra",
-        "description": "Tempo extra (em milissegundos) para continuar gravando após soltar a tecla, para capturar áudio restante. 0 = sem buffer extra."
       },
       "keyboardDiagnostic": {
         "title": "Diagnóstico do teclado",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Carregando...",
     "delete": "Excluir",
     "close": "Fechar",
     "open": "Abrir",

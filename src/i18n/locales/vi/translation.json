@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Cần cấp quyền",
       "description": "Mouthy cần một số quyền để hoạt động bình thường.",
-      "microphone": {
-        "title": "Quyền truy cập Micrô",
-        "description": "Cần thiết để nghe giọng nói của bạn để chuyển đổi."
-      },
       "accessibility": {
         "title": "Quyền truy cập Trợ năng",
         "description": "Cần thiết để nhập văn bản đã chuyển đổi vào các ứng dụng của bạn."
       },
       "grant": "Cấp quyền",
-      "granted": "Đã cấp",
       "waiting": "Đang chờ...",
       "allGranted": "Hoàn tất!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Âm thanh",
-      "microphone": {
-        "title": "Micrô",
-        "description": "Chọn thiết bị micrô ưa thích của bạn",
-        "placeholder": "Chọn micrô...",
-        "loading": "Đang tải..."
-      },
-      "channel": {
-        "title": "Kênh đầu vào",
-        "description": "Chọn kênh đầu vào để ghi âm. Sử dụng tùy chọn này nếu giao diện âm thanh của bạn có nhiều đầu vào.",
-        "average": "Trung bình tất cả các kênh",
-        "channel": "Kênh {{n}}"
-      },
       "audioFeedback": {
         "label": "Phản hồi âm thanh",
         "description": "Phát âm thanh khi bắt đầu và kết thúc ghi âm"
@@ -282,8 +265,7 @@
           "description": "Chọn lớp phủ khi ghi âm: 'Không có' sẽ ẩn nó, 'Tối giản' hiển thị một chỉ báo nhỏ gọn, 'Trực tiếp' hiển thị bản chép lời theo thời gian thực khi bạn nói (chỉ với các mô hình hỗ trợ truyền trực tiếp — hãy tìm huy hiệu 'Truyền trực tiếp' trong bộ chọn mô hình). Trên Linux, khuyến nghị chọn 'Không có'.",
           "options": {
             "none": "Không có",
-            "minimal": "Tối giản",
-            "live": "Trực tiếp"
+            "minimal": "Tối giản"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Thêm",
         "remove": "Xóa {{word}}",
         "duplicate": "\"{{word}}\" đã tồn tại"
-      },
-      "voiceActivityDetection": {
-        "title": "Phát hiện hoạt động giọng nói",
-        "description": "Lọc bỏ khoảng lặng khỏi bản ghi. Các mô hình hỗ trợ truyền trực tiếp dùng đuôi VAD dài hơn; tắt VAD sẽ ghi âm thanh thô."
-      },
-      "vadBackend": {
-        "title": "Bộ phát hiện giọng nói",
-        "description": "Chọn bộ phát hiện dùng để lọc khoảng lặng. Earshot đang thử nghiệm; hãy chuyển về Silero nếu giọng nói bị cắt hoặc tiếng ồn vẫn còn.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Loại bỏ từ đệm",
@@ -494,21 +464,9 @@
         "months3": "Sau 3 tháng",
         "placeholder": "Chọn thời gian lưu giữ..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Micrô luôn bật",
-        "description": "Giữ micrô hoạt động để phản hồi nhanh hơn"
-      },
-      "clamshellMicrophone": {
-        "title": "Micrô chế độ gập",
-        "description": "Micrô sử dụng khi nắp laptop được đóng"
-      },
       "postProcessingToggle": {
         "label": "Xử lý sau",
         "description": "Bật tinh chỉnh văn bản bằng AI sau khi chuyển đổi"
-      },
-      "muteWhileRecording": {
-        "label": "Tắt tiếng khi ghi âm",
-        "description": "Tắt tiếng âm thanh hệ thống trong khi ghi âm"
       },
       "appendTrailingSpace": {
         "label": "Thêm dấu cách cuối",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Dán đáng tin cậy (Beta)",
         "description": "Chỉ khôi phục bảng nhớ tạm sau khi ứng dụng đích thực sự đọc bản chép lời, thay vì sau một độ trễ cố định. Nhằm khắc phục việc nội dung bảng nhớ tạm cũ bị dán khi hệ thống bị tải nặng. Cần một phương thức dán qua bảng nhớ tạm; chỉ dành cho macOS và Windows."
-      },
-      "recordingBuffer": {
-        "title": "Bộ đệm ghi âm thêm",
-        "description": "Thời gian thêm (tính bằng mili giây) để tiếp tục ghi âm sau khi nhả phím, để thu âm thanh cuối. 0 = không có bộ đệm thêm."
       },
       "keyboardDiagnostic": {
         "title": "Chẩn đoán bàn phím",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Đang tải...",
     "delete": "Xóa",
     "close": "Đóng",
     "open": "Mở",

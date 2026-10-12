@@ -117,16 +117,15 @@ pub enum OverlayPosition {
     Bottom,
 }
 
-/// Which recording overlay to display. `Minimal` and `Live` share one base
-/// (the pill); `Live` grows into the panel that shows live transcription text.
-/// `None` hides the overlay entirely. Decoupled from whether the model runs in
-/// streaming mode (that is driven purely by model capability).
+/// Which overlay to display: `Minimal` is the compact pill, `None` hides it.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum OverlayStyle {
     None,
+    // `live` (Handy's streaming-text panel) is retired; the alias keeps stores
+    // that still hold it deserializing instead of failing the whole load.
+    #[serde(alias = "live")]
     Minimal,
-    Live,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
@@ -312,14 +311,6 @@ pub enum OrtAcceleratorSetting {
     Rocm,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum VadBackend {
-    #[default]
-    Silero,
-    Earshot,
-}
-
 #[derive(Clone, Serialize, Deserialize, Type)]
 #[serde(transparent)]
 pub(crate) struct SecretMap(HashMap<String, String>);
@@ -376,16 +367,6 @@ pub struct AppSettings {
     pub selected_model: String,
     #[serde(default)]
     pub onboarding_completed: bool,
-    #[serde(default = "default_always_on_microphone")]
-    pub always_on_microphone: bool,
-    #[serde(default)]
-    pub selected_microphone: Option<String>,
-    /// Which input channel to use on the selected microphone device.
-    /// None means "average all channels" (original behavior).
-    #[serde(default)]
-    pub selected_channel: Option<u16>,
-    #[serde(default)]
-    pub clamshell_microphone: Option<String>,
     #[serde(default)]
     pub selected_output_device: Option<String>,
     #[serde(default = "default_translate_to_english")]
@@ -430,8 +411,6 @@ pub struct AppSettings {
     pub post_process_prompts: Vec<LLMPrompt>,
     #[serde(default)]
     pub post_process_selected_prompt_id: Option<String>,
-    #[serde(default)]
-    pub mute_while_recording: bool,
     #[serde(default)]
     pub append_trailing_space: bool,
     #[serde(default = "default_app_language")]
@@ -478,25 +457,12 @@ pub struct AppSettings {
         deserialize_with = "deserialize_transcribe_gpu_device"
     )]
     pub transcribe_gpu_device: Option<String>,
-    #[serde(default)]
-    pub extra_recording_buffer_ms: u64,
-    #[serde(default = "default_vad_enabled")]
-    pub vad_enabled: bool,
-    /// Experimental detector implementation. Silero remains the stable default.
-    #[serde(default)]
-    pub vad_backend: VadBackend,
-    /// Which recording overlay to show: None / Minimal / Live. Streaming mode is
-    /// not gated on this — that follows model capability.
     #[serde(default = "default_overlay_style")]
     pub overlay_style: OverlayStyle,
 }
 
 fn default_model() -> String {
     "".to_string()
-}
-
-fn default_always_on_microphone() -> bool {
-    false
 }
 
 fn default_translate_to_english() -> bool {
@@ -522,16 +488,12 @@ fn default_overlay_position() -> OverlayPosition {
 }
 
 fn default_overlay_style() -> OverlayStyle {
-    // Linux hides the overlay by default; other platforms show the live overlay.
+    // Linux hides the overlay by default; other platforms show the pill.
     // Position is independent and only selects top vs. bottom placement.
     #[cfg(target_os = "linux")]
     return OverlayStyle::None;
     #[cfg(not(target_os = "linux"))]
-    return OverlayStyle::Live;
-}
-
-fn default_vad_enabled() -> bool {
-    true
+    return OverlayStyle::Minimal;
 }
 
 fn default_filler_word_removal_enabled() -> bool {
@@ -836,10 +798,6 @@ pub fn get_default_settings() -> AppSettings {
         autostart_enabled: default_autostart_enabled(),
         selected_model: "".to_string(),
         onboarding_completed: false,
-        always_on_microphone: false,
-        selected_microphone: None,
-        selected_channel: None,
-        clamshell_microphone: None,
         selected_output_device: None,
         translate_to_english: false,
         selected_language: "auto".to_string(),
@@ -862,7 +820,6 @@ pub fn get_default_settings() -> AppSettings {
         post_process_models: default_post_process_models(),
         post_process_prompts: default_post_process_prompts(),
         post_process_selected_prompt_id: None,
-        mute_while_recording: false,
         append_trailing_space: false,
         app_language: default_app_language(),
         theme: default_theme(),
@@ -881,9 +838,6 @@ pub fn get_default_settings() -> AppSettings {
         transcribe_accelerator: TranscribeAcceleratorSetting::default(),
         ort_accelerator: OrtAcceleratorSetting::default(),
         transcribe_gpu_device: default_transcribe_gpu_device(),
-        extra_recording_buffer_ms: 0,
-        vad_enabled: default_vad_enabled(),
-        vad_backend: VadBackend::default(),
         overlay_style: default_overlay_style(),
     }
 }
@@ -1266,9 +1220,16 @@ mod tests {
 
     #[cfg(not(target_os = "linux"))]
     #[test]
-    fn default_overlay_style_is_live_when_overlay_defaults_on() {
+    fn default_overlay_style_is_minimal_when_overlay_defaults_on() {
         let settings = get_default_settings();
-        assert_eq!(settings.overlay_style, OverlayStyle::Live);
+        assert_eq!(settings.overlay_style, OverlayStyle::Minimal);
+    }
+
+    #[test]
+    fn legacy_live_overlay_style_deserializes_to_minimal() {
+        let style: OverlayStyle = serde_json::from_value(serde_json::json!("live"))
+            .expect("legacy \"live\" should deserialize, not error");
+        assert_eq!(style, OverlayStyle::Minimal);
     }
 
     #[test]

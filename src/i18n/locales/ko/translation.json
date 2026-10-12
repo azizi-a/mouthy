@@ -101,16 +101,11 @@
     "permissions": {
       "title": "권한 필요",
       "description": "Mouthy가 제대로 작동하려면 몇 가지 권한이 필요합니다.",
-      "microphone": {
-        "title": "마이크 접근",
-        "description": "음성 인식을 위해 마이크 접근 권한이 필요합니다."
-      },
       "accessibility": {
         "title": "접근성 권한",
         "description": "녹음된 텍스트를 애플리케이션에 입력하기 위해 필요합니다."
       },
       "grant": "권한 부여",
-      "granted": "승인됨",
       "waiting": "대기 중...",
       "allGranted": "모두 설정 완료!",
       "errors": {
@@ -188,18 +183,6 @@
     },
     "sound": {
       "title": "사운드",
-      "microphone": {
-        "title": "마이크",
-        "description": "선호하는 마이크 장치를 선택하세요",
-        "placeholder": "마이크 선택...",
-        "loading": "로딩 중..."
-      },
-      "channel": {
-        "title": "입력 채널",
-        "description": "녹음할 입력 채널을 선택하세요. 오디오 인터페이스에 입력이 여러 개 있는 경우 사용하세요.",
-        "average": "모든 채널 평균",
-        "channel": "채널 {{n}}"
-      },
       "audioFeedback": {
         "label": "오디오 피드백",
         "description": "녹음 시작 및 정지 시 소리 재생"
@@ -282,8 +265,7 @@
           "description": "녹음 오버레이를 선택하세요. '없음'은 오버레이를 숨기고, '간단'은 작은 알약 모양 표시를 보여주며, '실시간'은 말하는 동안 전사 결과를 실시간으로 표시합니다(스트리밍 지원 모델만 해당 — 모델 선택기에서 '스트리밍' 배지를 확인하세요). Linux에서는 '없음'을 권장합니다.",
           "options": {
             "none": "없음",
-            "minimal": "간단",
-            "live": "실시간"
+            "minimal": "간단"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "추가",
         "remove": "{{word}} 제거",
         "duplicate": "\"{{word}}\"이(가) 이미 존재합니다"
-      },
-      "voiceActivityDetection": {
-        "title": "음성 활동 감지",
-        "description": "녹음에서 무음 구간을 걸러냅니다. 스트리밍 지원 모델은 더 긴 VAD 테일을 사용하며, VAD를 끄면 원본 오디오가 그대로 녹음됩니다."
-      },
-      "vadBackend": {
-        "title": "음성 활동 감지 백엔드",
-        "description": "무음을 필터링하는 데 사용할 감지기를 선택합니다. Earshot은 실험적 기능입니다. 음성이 잘리거나 소음이 남는 경우 Silero로 되돌리세요.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "군더더기 표현 제거",
@@ -494,21 +464,9 @@
         "months3": "3개월 후",
         "placeholder": "보관 기간 선택..."
       },
-      "alwaysOnMicrophone": {
-        "label": "항상 켜진 마이크",
-        "description": "더 빠른 응답을 위해 마이크를 활성 상태로 유지"
-      },
-      "clamshellMicrophone": {
-        "title": "클램셸 마이크",
-        "description": "노트북 덮개가 닫혀 있을 때 사용할 마이크"
-      },
       "postProcessingToggle": {
         "label": "후처리",
         "description": "텍스트 변환 후 AI 기반 텍스트 개선 활성화"
-      },
-      "muteWhileRecording": {
-        "label": "녹음 중 음소거",
-        "description": "녹음 중 시스템 오디오 음소거"
       },
       "appendTrailingSpace": {
         "label": "끝 공백 추가",
@@ -530,10 +488,6 @@
       "reliablePaste": {
         "title": "안정적인 붙여넣기 (Beta)",
         "description": "고정된 지연 시간이 아니라 대상 앱이 실제로 전사된 텍스트를 읽은 뒤에만 클립보드를 복원합니다. 시스템 부하가 높을 때 이전 클립보드 내용이 붙여넣어지는 문제를 해결하기 위한 옵션입니다. 클립보드를 사용하는 붙여넣기 방법이 필요하며 macOS와 Windows에서만 지원됩니다."
-      },
-      "recordingBuffer": {
-        "title": "추가 녹음 버퍼",
-        "description": "키를 놓은 후 추가로 녹음을 계속하는 시간(밀리초). 후행 오디오를 캡처하기 위함. 0 = 추가 버퍼 없음."
       },
       "keyboardDiagnostic": {
         "title": "키보드 진단",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "로딩 중...",
     "delete": "삭제",
     "close": "닫기",
     "open": "열기",

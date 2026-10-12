@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Permisos requeridos",
       "description": "Mouthy necesita algunos permisos para funcionar correctamente.",
-      "microphone": {
-        "title": "Acceso al micrófono",
-        "description": "Necesario para escuchar tu voz para la transcripción."
-      },
       "accessibility": {
         "title": "Acceso de accesibilidad",
         "description": "Necesario para escribir el texto transcrito en tus aplicaciones."
       },
       "grant": "Conceder permiso",
-      "granted": "Concedido",
       "waiting": "Esperando...",
       "allGranted": "¡Todo listo!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Sonido",
-      "microphone": {
-        "title": "Micrófono",
-        "description": "Selecciona tu dispositivo de micrófono preferido",
-        "placeholder": "Seleccionar micrófono...",
-        "loading": "Cargando..."
-      },
-      "channel": {
-        "title": "Canal de entrada",
-        "description": "Selecciona el canal de entrada desde el que se grabará. Usa esta opción si tu interfaz de audio tiene varias entradas.",
-        "average": "Promediar todos los canales",
-        "channel": "Canal {{n}}"
-      },
       "audioFeedback": {
         "label": "Retroalimentación de audio",
         "description": "Reproducir sonido cuando la grabación inicia y se detiene"
@@ -282,8 +265,7 @@
           "description": "Elige la superposición de grabación: Ninguna la oculta, Minimalista muestra una píldora compacta, En vivo muestra la transcripción en tiempo real mientras hablas (solo modelos compatibles con streaming — busca la insignia Streaming en el selector de modelos). En Linux se recomienda 'Ninguna'.",
           "options": {
             "none": "Ninguna",
-            "minimal": "Minimalista",
-            "live": "En vivo"
+            "minimal": "Minimalista"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Agregar",
         "remove": "Eliminar {{word}}",
         "duplicate": "\"{{word}}\" ya existe"
-      },
-      "voiceActivityDetection": {
-        "title": "Detección de actividad de voz",
-        "description": "Filtra el silencio de las grabaciones. Los modelos compatibles con streaming usan una cola de VAD más larga; desactivar el VAD graba audio sin procesar."
-      },
-      "vadBackend": {
-        "title": "Backend de detección de voz",
-        "description": "Elige el detector usado para filtrar el silencio. Earshot es experimental; vuelve a Silero si la voz se recorta o se conserva el ruido.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Eliminar muletillas",
@@ -494,21 +464,9 @@
         "months3": "Después de 3 meses",
         "placeholder": "Seleccionar período de retención..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Micrófono siempre activo",
-        "description": "Mantener el micrófono activo para una respuesta más rápida"
-      },
-      "clamshellMicrophone": {
-        "title": "Micrófono en modo clamshell",
-        "description": "Micrófono a usar cuando la tapa del portátil está cerrada"
-      },
       "postProcessingToggle": {
         "label": "Post procesamiento",
         "description": "Habilitar refinamiento de texto impulsado por IA después de la transcripción"
-      },
-      "muteWhileRecording": {
-        "label": "Silenciar durante la grabación",
-        "description": "Silenciar el audio del sistema durante la grabación"
       },
       "appendTrailingSpace": {
         "label": "Agregar espacio final",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Pegado fiable (Beta)",
         "description": "Restaura el portapapeles solo después de que la aplicación de destino lea realmente la transcripción, en lugar de tras un retraso fijo. Pensado para corregir que se pegue el contenido antiguo del portapapeles cuando el sistema está cargado. Requiere un método de pegado por portapapeles; solo macOS y Windows."
-      },
-      "recordingBuffer": {
-        "title": "Búfer de grabación adicional",
-        "description": "Tiempo adicional (en milisegundos) para seguir grabando después de soltar la tecla, para capturar el audio restante. 0 = sin búfer adicional."
       },
       "keyboardDiagnostic": {
         "title": "Diagnóstico del teclado",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Cargando...",
     "delete": "Eliminar",
     "close": "Cerrar",
     "open": "Abrir",

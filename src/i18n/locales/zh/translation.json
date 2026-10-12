@@ -101,16 +101,11 @@
     "permissions": {
       "title": "需要权限",
       "description": "Mouthy 需要一些权限才能正常工作。",
-      "microphone": {
-        "title": "麦克风访问",
-        "description": "需要听取您的语音进行转录。"
-      },
       "accessibility": {
         "title": "辅助功能访问",
         "description": "需要将转录文本输入到您的应用程序中。"
       },
       "grant": "授予权限",
-      "granted": "已授予",
       "waiting": "等待中...",
       "allGranted": "全部完成！",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "声音",
-      "microphone": {
-        "title": "麦克风",
-        "description": "选择您偏好的麦克风设备",
-        "placeholder": "选择麦克风...",
-        "loading": "加载中..."
-      },
-      "channel": {
-        "title": "输入通道",
-        "description": "选择要录制的输入通道。如果您的音频接口有多个输入，请使用此选项。",
-        "average": "所有通道的平均值",
-        "channel": "通道 {{n}}"
-      },
       "audioFeedback": {
         "label": "音频反馈",
         "description": "录制开始和停止时播放声音"
@@ -282,8 +265,7 @@
           "description": "选择录音悬浮窗的样式：「无」会隐藏悬浮窗，「精简」显示小巧的胶囊状指示，「实时」在您说话时实时显示转录内容（仅限支持流式的模型——请在模型选择器中查找「流式」标签）。在 Linux 上建议选择「无」。",
           "options": {
             "none": "无",
-            "minimal": "精简",
-            "live": "实时"
+            "minimal": "精简"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "添加",
         "remove": "删除 {{word}}",
         "duplicate": "\"{{word}}\" 已存在"
-      },
-      "voiceActivityDetection": {
-        "title": "语音活动检测",
-        "description": "过滤录音中的静音。支持流式的模型会使用更长的 VAD 尾段；停用 VAD 则会录制原始音频。"
-      },
-      "vadBackend": {
-        "title": "语音活动检测后端",
-        "description": "选择用于过滤静音的检测器。Earshot 为实验性功能；如果语音被截断或噪音被保留，请切换回 Silero。",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "移除语气词",
@@ -494,21 +464,9 @@
         "months3": "3 个月后",
         "placeholder": "选择保留期限..."
       },
-      "alwaysOnMicrophone": {
-        "label": "麦克风常开",
-        "description": "保持麦克风活跃以获得更快的响应"
-      },
-      "clamshellMicrophone": {
-        "title": "合盖麦克风",
-        "description": "笔记本电脑盖子关闭时使用的麦克风"
-      },
       "postProcessingToggle": {
         "label": "后处理",
         "description": "启用转录后的 AI 文本优化"
-      },
-      "muteWhileRecording": {
-        "label": "录制时静音",
-        "description": "录制期间静音系统音频"
       },
       "appendTrailingSpace": {
         "label": "追加尾部空格",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "可靠粘贴（Beta）",
         "description": "在目标应用程序真正读取转录文本之后再恢复剪贴板，而不是等待固定延迟。用于解决系统负载较高时粘贴旧剪贴板内容的问题。需要使用剪贴板类的粘贴方式；仅支持 macOS 和 Windows。"
-      },
-      "recordingBuffer": {
-        "title": "额外录音缓冲",
-        "description": "放开按键后继续录音的额外时间（毫秒），以捕捉尾音。0 = 无额外缓冲。"
       },
       "keyboardDiagnostic": {
         "title": "键盘诊断",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "加载中...",
     "delete": "删除",
     "close": "关闭",
     "open": "打开",

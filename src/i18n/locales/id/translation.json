@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Izin Diperlukan",
       "description": "Mouthy memerlukan beberapa izin agar dapat berfungsi dengan baik.",
-      "microphone": {
-        "title": "Akses Mikrofon",
-        "description": "Diperlukan untuk menangkap suara Anda agar dapat ditranskripsikan."
-      },
       "accessibility": {
         "title": "Izin Aksesibilitas",
         "description": "Diperlukan untuk mengetik teks hasil transkripsi ke aplikasi Anda."
       },
       "grant": "Berikan Izin",
-      "granted": "Diizinkan",
       "waiting": "Menunggu...",
       "allGranted": "Semua siap!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Suara",
-      "microphone": {
-        "title": "Mikrofon",
-        "description": "Pilih perangkat mikrofon yang Anda inginkan",
-        "placeholder": "Pilih mikrofon...",
-        "loading": "Memuat..."
-      },
-      "channel": {
-        "title": "Kanal Masukan",
-        "description": "Pilih kanal masukan yang akan direkam. Gunakan ini jika antarmuka audio Anda memiliki beberapa masukan.",
-        "average": "Rata-ratakan semua kanal",
-        "channel": "Kanal {{n}}"
-      },
       "audioFeedback": {
         "label": "Umpan Balik Audio",
         "description": "Putar suara saat perekaman dimulai dan dihentikan"
@@ -282,8 +265,7 @@
           "description": "Pilih overlay perekaman: Tidak Ada menyembunyikannya, Minimal menampilkan indikator ringkas, dan Langsung menampilkan transkripsi secara waktu nyata saat Anda berbicara (hanya model yang mendukung streaming — cari lencana Streaming di pemilih model). Di Linux, 'Tidak Ada' direkomendasikan.",
           "options": {
             "none": "Tidak Ada",
-            "minimal": "Minimal",
-            "live": "Waktu Nyata"
+            "minimal": "Minimal"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Tambah",
         "remove": "Hapus {{word}}",
         "duplicate": "\"{{word}}\" sudah ada"
-      },
-      "voiceActivityDetection": {
-        "title": "Deteksi Aktivitas Suara",
-        "description": "Saring keheningan dari rekaman. Model yang mendukung streaming menggunakan ekor VAD yang lebih panjang; menonaktifkan VAD akan merekam audio mentah."
-      },
-      "vadBackend": {
-        "title": "Backend Deteksi Aktivitas Suara",
-        "description": "Pilih detektor yang digunakan untuk menyaring keheningan. Earshot bersifat eksperimental; kembali ke Silero jika ucapan terpotong atau kebisingan tetap terekam.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Hapus Kata Pengisi",
@@ -501,21 +471,9 @@
         "months3": "Setelah 3 bulan",
         "placeholder": "Pilih masa penyimpanan..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Mikrofon Selalu Aktif",
-        "description": "Biarkan mikrofon aktif agar respons lebih cepat"
-      },
-      "clamshellMicrophone": {
-        "title": "Mikrofon Saat Laptop Ditutup",
-        "description": "Mikrofon yang digunakan saat laptop ditutup"
-      },
       "postProcessingToggle": {
         "label": "Pascaproses",
         "description": "Aktifkan penyempurnaan teks berbasis AI setelah transkripsi"
-      },
-      "muteWhileRecording": {
-        "label": "Bisukan Saat Merekam",
-        "description": "Bisukan audio sistem selama perekaman"
       },
       "appendTrailingSpace": {
         "label": "Tambahkan Spasi di Akhir",
@@ -542,10 +500,6 @@
       "reliablePaste": {
         "title": "Tempel Lebih Andal (Beta)",
         "description": "Kembalikan papan klip hanya setelah aplikasi target benar-benar membaca transkripsi, bukan setelah jeda tetap. Ditujukan untuk memperbaiki kasus isi papan klip lama yang tertempel saat sistem sedang terbebani. Memerlukan metode tempel papan klip; hanya macOS dan Windows."
-      },
-      "recordingBuffer": {
-        "title": "Buffer Perekaman Tambahan",
-        "description": "Waktu tambahan (dalam milidetik) untuk terus merekam setelah Anda melepas tombol agar audio di bagian akhir tetap tertangkap. 0 = tanpa buffer tambahan."
       },
       "keyboardDiagnostic": {
         "title": "Diagnostik Keyboard",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Memuat...",
     "delete": "Hapus",
     "close": "Tutup",
     "open": "Buka",

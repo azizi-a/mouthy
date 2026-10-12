@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Machtigingen vereist",
       "description": "Mouthy heeft een aantal machtigingen nodig om goed te kunnen werken.",
-      "microphone": {
-        "title": "Microfoontoegang",
-        "description": "Vereist om je stem op te nemen voor transcriptie."
-      },
       "accessibility": {
         "title": "Toegankelijkheid",
         "description": "Vereist om getranscribeerde tekst in je applicaties te kunnen typen."
       },
       "grant": "Machtiging verlenen",
-      "granted": "Verleend",
       "waiting": "Wachten...",
       "allGranted": "Alles ingesteld!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Geluid",
-      "microphone": {
-        "title": "Microfoon",
-        "description": "Selecteer de gewenste microfoon",
-        "placeholder": "Microfoon selecteren...",
-        "loading": "Laden..."
-      },
-      "channel": {
-        "title": "Ingangskanaal",
-        "description": "Selecteer het ingangskanaal waarvan moet worden opgenomen. Gebruik dit als je audio-interface meerdere ingangen heeft.",
-        "average": "Gemiddelde van alle kanalen",
-        "channel": "Kanaal {{n}}"
-      },
       "audioFeedback": {
         "label": "Geluidsfeedback",
         "description": "Geluid afspelen wanneer de opname start en stopt"
@@ -282,8 +265,7 @@
           "description": "Kies de opname-overlay: 'Geen' verbergt deze, 'Minimaal' toont een compacte balk, 'Live' toont de tekst in realtime tijdens het spreken (alleen voor streaming-modellen). Op Linux wordt 'Geen' aanbevolen.",
           "options": {
             "none": "Geen",
-            "minimal": "Minimaal",
-            "live": "Live"
+            "minimal": "Minimaal"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Toevoegen",
         "remove": "{{word}} verwijderen",
         "duplicate": "\"{{word}}\" bestaat al"
-      },
-      "voiceActivityDetection": {
-        "title": "Spraakactiviteitsdetectie (VAD)",
-        "description": "Filter stilte uit opnames. Streaming-modellen gebruiken een langere VAD-uitloop; het uitschakelen van VAD neemt de ruwe audio op."
-      },
-      "vadBackend": {
-        "title": "VAD-backend",
-        "description": "Kies de detector die stilte filtert. Earshot is experimenteel; schakel terug naar Silero als spraak wordt afgekapt of ruis behouden blijft.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Opvulwoorden verwijderen",
@@ -501,21 +471,9 @@
         "months3": "Na 3 maanden",
         "placeholder": "Selecteer bewaarperiode..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Microfoon altijd aan",
-        "description": "Houd de microfoon actief voor een snellere reactietijd"
-      },
-      "clamshellMicrophone": {
-        "title": "Clamshell-microfoon",
-        "description": "Microfoon die gebruikt moet worden wanneer het laptopscherm gesloten is"
-      },
       "postProcessingToggle": {
         "label": "Naverwerking",
         "description": "Schakel AI-gestuurde tekstverfijning in na transcriptie"
-      },
-      "muteWhileRecording": {
-        "label": "Dempen tijdens opname",
-        "description": "Systeemgeluid dempen tijdens het opnemen"
       },
       "appendTrailingSpace": {
         "label": "Spatie achteraan toevoegen",
@@ -542,10 +500,6 @@
       "reliablePaste": {
         "title": "Betrouwbaar plakken (Beta)",
         "description": "Herstel het klembord pas nadat de doelapp de transcriptie daadwerkelijk heeft gelezen, in plaats van na een vaste vertraging. Bedoeld om te verhelpen dat bij systeembelasting de oude klembordinhoud wordt geplakt. Vereist een plakmethode via het klembord; alleen macOS en Windows."
-      },
-      "recordingBuffer": {
-        "title": "Extra opnamebuffer",
-        "description": "Extra tijd (in milliseconden) om te blijven opnemen nadat je de toets loslaat, om naloopaudio op te vangen. 0 = geen extra buffer."
       },
       "keyboardDiagnostic": {
         "title": "Toetsenborddiagnose",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Laden...",
     "delete": "Verwijderen",
     "close": "Sluiten",
     "open": "Openen",

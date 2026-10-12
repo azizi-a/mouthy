@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Autorisations requises",
       "description": "Mouthy a besoin de quelques autorisations pour fonctionner correctement.",
-      "microphone": {
-        "title": "Accès au microphone",
-        "description": "Nécessaire pour entendre votre voix pour la transcription."
-      },
       "accessibility": {
         "title": "Accès à l'accessibilité",
         "description": "Nécessaire pour taper le texte transcrit dans vos applications."
       },
       "grant": "Accorder l'autorisation",
-      "granted": "Accordé",
       "waiting": "En attente...",
       "allGranted": "Tout est prêt !",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Son",
-      "microphone": {
-        "title": "Microphone",
-        "description": "Sélectionnez votre périphérique d'entrée audio",
-        "placeholder": "Sélectionner un microphone...",
-        "loading": "Chargement..."
-      },
-      "channel": {
-        "title": "Canal d’entrée",
-        "description": "Sélectionnez le canal d’entrée à enregistrer. Utilisez cette option si votre interface audio possède plusieurs entrées.",
-        "average": "Moyenne de tous les canaux",
-        "channel": "Canal {{n}}"
-      },
       "audioFeedback": {
         "label": "Signal sonore",
         "description": "Jouer un son au début et à la fin de l'enregistrement"
@@ -282,8 +265,7 @@
           "description": "Choisissez l'overlay d'enregistrement : « Aucun » le masque, « Minimal » affiche une pilule compacte, « Live » affiche la transcription en temps réel pendant que vous parlez (uniquement pour les modèles compatibles avec le streaming — recherchez le badge Streaming dans le sélecteur de modèle). Sur Linux, « Aucun » est recommandé.",
           "options": {
             "none": "Aucune",
-            "minimal": "Minimal",
-            "live": "Live"
+            "minimal": "Minimal"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Ajouter",
         "remove": "Supprimer {{word}}",
         "duplicate": "\"{{word}}\" existe déjà"
-      },
-      "voiceActivityDetection": {
-        "title": "Détection d'activité vocale (VAD)",
-        "description": "Filtre le silence des enregistrements. Les modèles compatibles avec le streaming utilisent une marge de détection VAD plus longue ; désactiver le VAD enregistre l'audio brut."
-      },
-      "vadBackend": {
-        "title": "Backend de détection vocale",
-        "description": "Choisissez le détecteur utilisé pour filtrer le silence. Earshot est expérimental ; revenez à Silero si la parole est coupée ou si le bruit est conservé.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Supprimer les mots de remplissage",
@@ -494,21 +464,9 @@
         "months3": "Après 3 mois",
         "placeholder": "Sélectionner la période de conservation..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Microphone toujours actif",
-        "description": "Garder le microphone actif pour une réponse plus rapide"
-      },
-      "clamshellMicrophone": {
-        "title": "Microphone en mode fermé",
-        "description": "Microphone à utiliser lorsque le couvercle du portable est fermé"
-      },
       "postProcessingToggle": {
         "label": "Post-traitement",
         "description": "Activer l'affinage du texte par IA après la transcription"
-      },
-      "muteWhileRecording": {
-        "label": "Muet pendant l'enregistrement",
-        "description": "Couper le son du système pendant l'enregistrement"
       },
       "appendTrailingSpace": {
         "label": "Ajouter une espace final",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Collage fiable (Beta)",
         "description": "Restaure le presse-papiers uniquement après que l'application cible a réellement lu la transcription, au lieu d'attendre un délai fixe. Vise à corriger le collage de l'ancien contenu du presse-papiers lorsque le système est chargé. Nécessite une méthode de collage par presse-papiers ; macOS et Windows uniquement."
-      },
-      "recordingBuffer": {
-        "title": "Tampon d'enregistrement supplémentaire",
-        "description": "Temps supplémentaire (en millisecondes) pour continuer l'enregistrement après avoir relâché la touche, pour capturer l'audio restant. 0 = pas de tampon supplémentaire."
       },
       "keyboardDiagnostic": {
         "title": "Diagnostic du clavier",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Chargement...",
     "delete": "Supprimer",
     "close": "Fermer",
     "open": "Ouvrir",

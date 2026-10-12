@@ -3,8 +3,7 @@ use rodio::cpal::{
     traits::{DeviceTrait, HostTrait},
 };
 
-/// An output device for feedback sounds. Microphones are listed by
-/// `handy_recorder::list_input_devices`.
+/// An output device for feedback sounds.
 pub struct OutputDeviceInfo {
     pub index: String,
     pub name: String,

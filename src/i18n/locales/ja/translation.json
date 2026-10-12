@@ -101,16 +101,11 @@
     "permissions": {
       "title": "権限が必要です",
       "description": "Mouthy が正常に動作するにはいくつかの権限が必要です。",
-      "microphone": {
-        "title": "マイクへのアクセス",
-        "description": "文字起こしのためにあなたの声を聞くために必要です。"
-      },
       "accessibility": {
         "title": "アクセシビリティへのアクセス",
         "description": "アプリに文字起こししたテキストを入力するために必要です。"
       },
       "grant": "権限を許可",
-      "granted": "許可済み",
       "waiting": "待機中…",
       "allGranted": "準備完了!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "サウンド",
-      "microphone": {
-        "title": "マイク",
-        "description": "使用するマイクデバイスを選択",
-        "placeholder": "マイクを選択…",
-        "loading": "読み込み中…"
-      },
-      "channel": {
-        "title": "入力チャンネル",
-        "description": "録音に使用する入力チャンネルを選択します。オーディオインターフェースに複数の入力がある場合に使用してください。",
-        "average": "すべてのチャンネルの平均",
-        "channel": "チャンネル{{n}}"
-      },
       "audioFeedback": {
         "label": "オーディオフィードバック",
         "description": "録音の開始と停止時にサウンドを再生"
@@ -282,8 +265,7 @@
           "description": "録音中のオーバーレイを選択します。「なし」は非表示、「ミニマル」はコンパクトなカプセル型表示、「ライブ」はリアルタイムで文字起こしを表示します(ストリーミング対応モデルのみ。モデル選択画面の「ストリーミング」表示を確認してください)。Linux では「なし」を推奨します。",
           "options": {
             "none": "なし",
-            "minimal": "ミニマル",
-            "live": "ライブ"
+            "minimal": "ミニマル"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "追加",
         "remove": "{{word}}を削除",
         "duplicate": "「{{word}}」は既に存在します"
-      },
-      "voiceActivityDetection": {
-        "title": "音声区間検出 (VAD)",
-        "description": "録音から無音部分を除去します。ストリーミング対応モデルはより長い音声検出区間を使用します。VAD を無効にすると音声をそのまま録音します。"
-      },
-      "vadBackend": {
-        "title": "音声区間検出バックエンド",
-        "description": "無音のフィルタリングに使用する検出器を選択します。Earshot は実験的機能です。音声が途切れたりノイズが残る場合は Silero に戻してください。",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "フィラー語を削除",
@@ -494,21 +464,9 @@
         "months3": "3ヶ月後",
         "placeholder": "保持期間を選択…"
       },
-      "alwaysOnMicrophone": {
-        "label": "マイク常時オン",
-        "description": "より速い応答のためにマイクをアクティブに保つ"
-      },
-      "clamshellMicrophone": {
-        "title": "クラムシェルマイク",
-        "description": "ノートパソコンの蓋を閉じたときに使用するマイク"
-      },
       "postProcessingToggle": {
         "label": "後処理",
         "description": "文字起こし後の AI によるテキスト改善を有効化"
-      },
-      "muteWhileRecording": {
-        "label": "録音中にミュート",
-        "description": "録音中にシステムオーディオをミュート"
       },
       "appendTrailingSpace": {
         "label": "末尾にスペースを追加",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "確実な貼り付け(Beta)",
         "description": "固定の遅延ではなく、対象アプリが実際に文字起こしを読み取った後にのみクリップボードを復元します。システム負荷が高いときに古いクリップボードの内容が貼り付けられる問題を解決するための設定です。クリップボードを使う貼り付け方法が必要です。macOS と Windows のみ。"
-      },
-      "recordingBuffer": {
-        "title": "追加録音バッファ",
-        "description": "キーを離した後に録音を続ける追加時間(ミリ秒)。末尾の音声を捕捉するため。0 = 追加バッファなし。"
       },
       "keyboardDiagnostic": {
         "title": "キーボード診断",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "読み込み中…",
     "delete": "削除",
     "close": "閉じる",
     "open": "開く",

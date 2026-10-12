@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Berechtigungen erforderlich",
       "description": "Mouthy benötigt einige Berechtigungen, um richtig zu funktionieren.",
-      "microphone": {
-        "title": "Mikrofonzugriff",
-        "description": "Erforderlich, um deine Stimme für die Transkription zu hören."
-      },
       "accessibility": {
         "title": "Bedienungshilfen-Zugriff",
         "description": "Erforderlich, um transkribierten Text in deine Anwendungen einzugeben."
       },
       "grant": "Berechtigung erteilen",
-      "granted": "Erteilt",
       "waiting": "Warten...",
       "allGranted": "Alles bereit!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Ton",
-      "microphone": {
-        "title": "Mikrofon",
-        "description": "Bevorzugtes Mikrofon auswählen",
-        "placeholder": "Mikrofon auswählen...",
-        "loading": "Wird geladen..."
-      },
-      "channel": {
-        "title": "Eingangskanal",
-        "description": "Wähle den Eingangskanal aus, von dem aufgenommen werden soll. Verwende diese Option, wenn dein Audio-Interface mehrere Eingänge hat.",
-        "average": "Alle Kanäle mitteln",
-        "channel": "Kanal {{n}}"
-      },
       "audioFeedback": {
         "label": "Audio-Feedback",
         "description": "Ton bei Start und Ende der Aufnahme abspielen"
@@ -282,8 +265,7 @@
           "description": "Wähle das Aufnahme-Overlay: „Keine“ blendet es aus, „Minimal“ zeigt ein kompaktes Element, „Live“ zeigt die Transkription in Echtzeit während des Sprechens an (nur für streamingfähige Modelle – suche nach dem Streaming-Badge in der Modellauswahl). Unter Linux wird „Keine“ empfohlen.",
           "options": {
             "none": "Keine",
-            "minimal": "Minimal",
-            "live": "Live"
+            "minimal": "Minimal"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Hinzufügen",
         "remove": "{{word}} entfernen",
         "duplicate": "\"{{word}}\" existiert bereits"
-      },
-      "voiceActivityDetection": {
-        "title": "Sprachaktivitätserkennung (VAD)",
-        "description": "Filtert Stille aus Aufnahmen. Streamingfähige Modelle verwenden ein längeres VAD-Ende; das Deaktivieren von VAD nimmt Rohaudio auf."
-      },
-      "vadBackend": {
-        "title": "VAD-Backend",
-        "description": "Wählt den Detektor zum Herausfiltern von Stille. Earshot ist experimentell; wechseln Sie zurück zu Silero, wenn Sprache abgeschnitten oder Rauschen beibehalten wird.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Füllwörter entfernen",
@@ -494,21 +464,9 @@
         "months3": "Nach 3 Monaten",
         "placeholder": "Aufbewahrungszeitraum auswählen..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Mikrofon immer aktiv",
-        "description": "Mikrofon für schnellere Reaktion aktiv halten"
-      },
-      "clamshellMicrophone": {
-        "title": "Clamshell-Mikrofon",
-        "description": "Mikrofon bei geschlossenem Laptop-Deckel"
-      },
       "postProcessingToggle": {
         "label": "Nachbearbeitung",
         "description": "KI-gestützte Textverfeinerung nach der Transkription aktivieren"
-      },
-      "muteWhileRecording": {
-        "label": "Während Aufnahme stummschalten",
-        "description": "Systemaudio während der Aufnahme stummschalten"
       },
       "appendTrailingSpace": {
         "label": "Leerzeichen anhängen",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Zuverlässiges Einfügen (Beta)",
         "description": "Die Zwischenablage erst wiederherstellen, wenn die Ziel-App die Transkription tatsächlich gelesen hat, statt nach einer festen Verzögerung. Soll verhindern, dass bei Systemlast der alte Inhalt der Zwischenablage eingefügt wird. Erfordert eine Einfügemethode über die Zwischenablage; nur macOS und Windows."
-      },
-      "recordingBuffer": {
-        "title": "Zusätzlicher Aufnahmepuffer",
-        "description": "Zusätzliche Zeit (in Millisekunden), um nach dem Loslassen der Taste weiter aufzunehmen, um nachlaufendes Audio zu erfassen. 0 = kein zusätzlicher Puffer."
       },
       "keyboardDiagnostic": {
         "title": "Tastatur-Diagnose",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Wird geladen...",
     "delete": "Löschen",
     "close": "Schließen",
     "open": "Öffnen",

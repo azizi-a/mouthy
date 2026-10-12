@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Behörigheter krävs",
       "description": "Mouthy behöver ett par behörigheter för att fungera korrekt.",
-      "microphone": {
-        "title": "Mikrofonåtkomst",
-        "description": "Krävs för att höra din röst för transkription."
-      },
       "accessibility": {
         "title": "Hjälpmedelsåtkomst",
         "description": "Krävs för att skriva transkriberad text i dina program."
       },
       "grant": "Bevilja behörighet",
-      "granted": "Beviljad",
       "waiting": "Väntar...",
       "allGranted": "Allt klart!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Ljud",
-      "microphone": {
-        "title": "Mikrofon",
-        "description": "Välj din föredragna mikrofonenhet",
-        "placeholder": "Välj mikrofon...",
-        "loading": "Laddar..."
-      },
-      "channel": {
-        "title": "Ingångskanal",
-        "description": "Välj vilken ingångskanal du vill spela in från. Använd detta om ditt ljudgränssnitt har flera ingångar.",
-        "average": "Medelvärde av alla kanaler",
-        "channel": "Kanal {{n}}"
-      },
       "audioFeedback": {
         "label": "Ljudåterkoppling",
         "description": "Spela upp ljud när inspelningen startar och stoppar"
@@ -282,8 +265,7 @@
           "description": "Välj inspelningsöverlägget: ”Ingen” döljer det, ”Minimal” visar en kompakt indikator, ”Live” visar transkriberingen i realtid medan du talar (endast modeller med streamingstöd — leta efter Streaming-märket i modellväljaren). På Linux rekommenderas ”Ingen”.",
           "options": {
             "none": "Ingen",
-            "minimal": "Minimal",
-            "live": "Live"
+            "minimal": "Minimal"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Lägg till",
         "remove": "Ta bort {{word}}",
         "duplicate": "\"{{word}}\" finns redan"
-      },
-      "voiceActivityDetection": {
-        "title": "Röstaktivitetsdetektering",
-        "description": "Filtrerar bort tystnad från inspelningar. Modeller med streamingstöd använder en längre VAD-svans; om VAD inaktiveras spelas rått ljud in."
-      },
-      "vadBackend": {
-        "title": "Backend för röstdetektering",
-        "description": "Välj detektorn som används för att filtrera bort tystnad. Earshot är experimentell; byt tillbaka till Silero om tal klipps eller brus behålls.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Ta bort utfyllnadsord",
@@ -494,21 +464,9 @@
         "months3": "Efter 3 månader",
         "placeholder": "Välj lagringsperiod..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Alltid påslagen mikrofon",
-        "description": "Håll mikrofonen aktiv för snabbare svar"
-      },
-      "clamshellMicrophone": {
-        "title": "Clamshell-mikrofon",
-        "description": "Mikrofon som ska användas när bärbara datorns lock är stängt"
-      },
       "postProcessingToggle": {
         "label": "Efterbearbetning",
         "description": "Aktivera AI-driven textförfining efter transkription"
-      },
-      "muteWhileRecording": {
-        "label": "Ljudlös under inspelning",
-        "description": "Stäng av systemljudet under inspelning"
       },
       "appendTrailingSpace": {
         "label": "Lägg till avslutande mellanslag",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Tillförlitlig inklistring (Beta)",
         "description": "Återställ urklipp först när målappen faktiskt har läst transkriptionen, i stället för efter en fast fördröjning. Avsett att åtgärda att det gamla urklippsinnehållet klistras in när systemet är belastat. Kräver en klistra-in-metod via urklipp; endast macOS och Windows."
-      },
-      "recordingBuffer": {
-        "title": "Extra inspelningsbuffert",
-        "description": "Extra tid (i millisekunder) för att fortsätta spela in efter att du släppt tangenten, för att fånga upp avslutande ljud. 0 = ingen extra buffert."
       },
       "keyboardDiagnostic": {
         "title": "Tangentbordsdiagnostik",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Laddar...",
     "delete": "Ta bort",
     "close": "Stäng",
     "open": "Öppna",

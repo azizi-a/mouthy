@@ -101,16 +101,11 @@
     "permissions": {
       "title": "需要權限",
       "description": "Mouthy 需要一些權限才能正常運作",
-      "microphone": {
-        "title": "麥克風存取",
-        "description": "需要聽取您的語音進行轉錄"
-      },
       "accessibility": {
         "title": "輔助使用存取",
         "description": "需要將轉錄文字輸入到您的應用程式中"
       },
       "grant": "授予權限",
-      "granted": "已授予",
       "waiting": "等待中...",
       "allGranted": "全部完成！",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "聲音",
-      "microphone": {
-        "title": "麥克風",
-        "description": "選擇您偏好的麥克風裝置",
-        "placeholder": "選擇麥克風...",
-        "loading": "載入中..."
-      },
-      "channel": {
-        "title": "輸入聲道",
-        "description": "選擇要錄音的輸入聲道。如果您的音訊介面有多個輸入，請使用此選項。",
-        "average": "所有聲道的平均值",
-        "channel": "聲道 {{n}}"
-      },
       "audioFeedback": {
         "label": "聲音回饋",
         "description": "錄製開始和停止時播放聲音"
@@ -282,8 +265,7 @@
           "description": "選擇錄音懸浮窗的樣式：「無」會隱藏懸浮窗，「精簡」顯示小巧的膠囊狀指示，「即時」在您說話時即時顯示轉錄內容（僅限支援串流的模型——請在模型選擇器中尋找「串流」標籤）。在 Linux 上建議選擇「無」",
           "options": {
             "none": "無",
-            "minimal": "精簡",
-            "live": "即時"
+            "minimal": "精簡"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "新增",
         "remove": "刪除 {{word}}",
         "duplicate": "「{{word}}」已存在"
-      },
-      "voiceActivityDetection": {
-        "title": "語音活動偵測",
-        "description": "過濾錄音中的靜音。支援串流的模型會使用較長的 VAD 尾段；停用 VAD 則會錄製原始音訊"
-      },
-      "vadBackend": {
-        "title": "語音活動偵測後端",
-        "description": "選擇用於過濾靜音的偵測器。Earshot 為實驗性功能；若語音被截斷或雜訊被保留，請切換回 Silero。",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "移除語助詞",
@@ -494,21 +464,9 @@
         "months3": "3 個月後",
         "placeholder": "選擇保留期限..."
       },
-      "alwaysOnMicrophone": {
-        "label": "麥克風常開",
-        "description": "保持麥克風啟用以獲得更快的回應"
-      },
-      "clamshellMicrophone": {
-        "title": "闔蓋麥克風",
-        "description": "筆記型電腦闔蓋時使用的麥克風"
-      },
       "postProcessingToggle": {
         "label": "後處理",
         "description": "啟用轉錄後的 AI 文字最佳化"
-      },
-      "muteWhileRecording": {
-        "label": "錄製時靜音",
-        "description": "錄製期間靜音系統音訊"
       },
       "appendTrailingSpace": {
         "label": "附加尾部空格",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "可靠貼上（Beta）",
         "description": "在目標應用程式真正讀取轉錄文字之後才還原剪貼簿，而不是等待固定延遲。用於解決系統負載較高時貼上舊剪貼簿內容的問題。需要使用剪貼簿類的貼上方式；僅支援 macOS 與 Windows。"
-      },
-      "recordingBuffer": {
-        "title": "額外錄音緩衝",
-        "description": "放開按鍵後繼續錄音的額外時間（毫秒），以捕捉尾音。0 = 無額外緩衝。"
       },
       "keyboardDiagnostic": {
         "title": "鍵盤診斷",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "載入中...",
     "delete": "刪除",
     "close": "關閉",
     "open": "開啟",

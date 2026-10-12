@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Wymagane uprawnienia",
       "description": "Mouthy potrzebuje kilku uprawnień, aby działać poprawnie.",
-      "microphone": {
-        "title": "Dostęp do mikrofonu",
-        "description": "Wymagany do słyszenia Twojego głosu w celu transkrypcji."
-      },
       "accessibility": {
         "title": "Dostęp do dostępności",
         "description": "Wymagany do wpisywania transkrybowanego tekstu w Twoich aplikacjach."
       },
       "grant": "Przyznaj uprawnienie",
-      "granted": "Przyznano",
       "waiting": "Oczekiwanie...",
       "allGranted": "Wszystko gotowe!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Dźwięk",
-      "microphone": {
-        "title": "Mikrofon",
-        "description": "Wybierz preferowane urządzenie mikrofonowe",
-        "placeholder": "Wybierz mikrofon...",
-        "loading": "Wczytywanie..."
-      },
-      "channel": {
-        "title": "Kanał wejściowy",
-        "description": "Wybierz kanał wejściowy, z którego chcesz nagrywać. Użyj tej opcji, jeśli interfejs audio ma wiele wejść.",
-        "average": "Uśrednij wszystkie kanały",
-        "channel": "Kanał {{n}}"
-      },
       "audioFeedback": {
         "label": "Informacja dźwiękowa",
         "description": "Odtwarzaj dźwięk przy rozpoczęciu i zakończeniu nagrywania"
@@ -282,8 +265,7 @@
           "description": "Wybierz nakładkę nagrywania: „Brak“ ją ukrywa, „Minimalna“ pokazuje kompaktowy wskaźnik, „Na żywo“ wyświetla transkrypcję w czasie rzeczywistym podczas mówienia (tylko modele obsługujące streaming — poszukaj etykiety „Streaming“ w selektorze modeli). W systemie Linux zalecana jest opcja „Brak“.",
           "options": {
             "none": "Brak",
-            "minimal": "Minimalna",
-            "live": "Na żywo"
+            "minimal": "Minimalna"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Dodaj",
         "remove": "Usuń {{word}}",
         "duplicate": "\"{{word}}\" już istnieje"
-      },
-      "voiceActivityDetection": {
-        "title": "Wykrywanie aktywności głosowej",
-        "description": "Odfiltrowuje ciszę z nagrań. Modele obsługujące streaming używają dłuższego marginesu VAD; wyłączenie VAD nagrywa surowy dźwięk."
-      },
-      "vadBackend": {
-        "title": "Backend wykrywania głosu",
-        "description": "Wybierz detektor używany do filtrowania ciszy. Earshot jest eksperymentalny; wróć do Silero, jeśli mowa jest ucinana lub szum jest zachowywany.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Usuń wyrazy wypełniające",
@@ -494,21 +464,9 @@
         "months3": "Po 3 miesiącach",
         "placeholder": "Wybierz okres retencji..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Mikrofon zawsze aktywny",
-        "description": "Utrzymuj mikrofon aktywny dla szybszej reakcji"
-      },
-      "clamshellMicrophone": {
-        "title": "Mikrofon przy zamkniętej pokrywie",
-        "description": "Mikrofon używany, gdy pokrywa laptopa jest zamknięta"
-      },
       "postProcessingToggle": {
         "label": "Postprocess",
         "description": "Włącz AI do ulepszania tekstu po transkrypcji"
-      },
-      "muteWhileRecording": {
-        "label": "Wycisz podczas nagrywania",
-        "description": "Wycisz dźwięk systemu podczas nagrywania"
       },
       "appendTrailingSpace": {
         "label": "Dodaj spację na końcu",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Niezawodne wklejanie (Beta)",
         "description": "Przywracaj schowek dopiero po tym, jak docelowa aplikacja faktycznie odczyta transkrypcję, a nie po ustalonym opóźnieniu. Ma naprawić wklejanie starej zawartości schowka przy obciążeniu systemu. Wymaga metody wklejania przez schowek; tylko macOS i Windows."
-      },
-      "recordingBuffer": {
-        "title": "Dodatkowy bufor nagrywania",
-        "description": "Dodatkowy czas (w milisekundach) na kontynuowanie nagrywania po zwolnieniu klawisza, aby przechwycić końcowy dźwięk. 0 = brak dodatkowego bufora."
       },
       "keyboardDiagnostic": {
         "title": "Diagnostyka klawiatury",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Wczytywanie...",
     "delete": "Usuń",
     "close": "Zamknij",
     "open": "Otwórz",

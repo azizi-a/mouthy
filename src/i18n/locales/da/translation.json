@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Tilladelser påkrævet",
       "description": "Mouthy har brug for et par tilladelser for at fungere korrekt.",
-      "microphone": {
-        "title": "Mikrofonadgang",
-        "description": "Påkrævet for at høre din stemme til transskription."
-      },
       "accessibility": {
         "title": "Tilgængelighedsadgang",
         "description": "Påkrævet for at skrive den transskriberede tekst ind i dine programmer."
       },
       "grant": "Giv tilladelse",
-      "granted": "Givet",
       "waiting": "Venter...",
       "allGranted": "Alt er klar!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Lyd",
-      "microphone": {
-        "title": "Mikrofon",
-        "description": "Vælg din foretrukne mikrofonenhed",
-        "placeholder": "Vælg mikrofon...",
-        "loading": "Indlæser..."
-      },
-      "channel": {
-        "title": "Inputkanal",
-        "description": "Vælg, hvilken inputkanal der skal optages fra. Brug dette, hvis din lydgrænseflade har flere indgange.",
-        "average": "Gennemsnit af alle kanaler",
-        "channel": "Kanal {{n}}"
-      },
       "audioFeedback": {
         "label": "Lydfeedback",
         "description": "Afspil lyd, når optagelse starter og stopper"
@@ -282,8 +265,7 @@
           "description": "Vælg optagelses-overlay: Ingen skjuler det, Minimal viser en kompakt pille, Live viser transskription i realtid, mens du taler (kun modeller med streaming-understøttelse — se efter Streaming-mærket i modelvælgeren). På Linux anbefales 'Ingen'.",
           "options": {
             "none": "Ingen",
-            "minimal": "Minimal",
-            "live": "Live"
+            "minimal": "Minimal"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Tilføj",
         "remove": "Fjern {{word}}",
         "duplicate": "\"{{word}}\" findes allerede"
-      },
-      "voiceActivityDetection": {
-        "title": "Stemmeaktivitetsdetektion",
-        "description": "Filtrer stilhed fra optagelser. Streaming-modeller bruger en længere VAD-hale; deaktivering af VAD optager rå lyd."
-      },
-      "vadBackend": {
-        "title": "Stemmedetektions-backend",
-        "description": "Vælg den detektor, der bruges til at filtrere stilhed. Earshot er eksperimentel; skift tilbage til Silero, hvis tale klippes eller støj bevares.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Fjern fyldord",
@@ -501,21 +471,9 @@
         "months3": "Efter 3 måneder",
         "placeholder": "Vælg opbevaringsperiode..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Altid aktiv mikrofon",
-        "description": "Hold mikrofonen aktiv for hurtigere reaktion"
-      },
-      "clamshellMicrophone": {
-        "title": "Clamshell-mikrofon",
-        "description": "Mikrofon, der skal bruges, når den bærbares låg er lukket"
-      },
       "postProcessingToggle": {
         "label": "Efterbehandling",
         "description": "Aktivér AI-drevet tekstforbedring efter transskription"
-      },
-      "muteWhileRecording": {
-        "label": "Mute under optagelse",
-        "description": "Sluk for systemlyd under optagelse"
       },
       "appendTrailingSpace": {
         "label": "Tilføj efterfølgende mellemrum",
@@ -542,10 +500,6 @@
       "reliablePaste": {
         "title": "Pålidelig indsættelse (Beta)",
         "description": "Gendan først din udklipsholder, når målappen faktisk har læst transskriptionen, i stedet for efter en fast forsinkelse. Skal afhjælpe, at gammelt udklipsholderindhold indsættes, når systemet er belastet. Kræver en indsætningsmetode via udklipsholderen; kun macOS og Windows."
-      },
-      "recordingBuffer": {
-        "title": "Ekstra optagelsesbuffer",
-        "description": "Ekstra tid (i millisekunder) til at fortsætte optagelsen, efter du slipper tasten, for at fange efterfølgende lyd. 0 = ingen ekstra buffer."
       },
       "keyboardDiagnostic": {
         "title": "Tastaturdiagnostik",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Indlæser...",
     "delete": "Slet",
     "close": "Luk",
     "open": "Åbn",

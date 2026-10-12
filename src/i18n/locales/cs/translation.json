@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Vyžadována oprávnění",
       "description": "Mouthy potřebuje několik oprávnění pro správné fungování.",
-      "microphone": {
-        "title": "Přístup k mikrofonu",
-        "description": "Potřebný pro zachycení vašeho hlasu k přepisu."
-      },
       "accessibility": {
         "title": "Přístup k usnadnění",
         "description": "Potřebný pro psaní přepsaného textu do vašich aplikací."
       },
       "grant": "Udělit oprávnění",
-      "granted": "Uděleno",
       "waiting": "Čekání...",
       "allGranted": "Vše připraveno!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Zvuk",
-      "microphone": {
-        "title": "Mikrofon",
-        "description": "Vyberte preferované zařízení mikrofonu",
-        "placeholder": "Vyberte mikrofon...",
-        "loading": "Načítání..."
-      },
-      "channel": {
-        "title": "Vstupní kanál",
-        "description": "Vyberte vstupní kanál, ze kterého se má nahrávat. Tuto možnost použijte, pokud má vaše zvukové rozhraní více vstupů.",
-        "average": "Průměr všech kanálů",
-        "channel": "Kanál {{n}}"
-      },
       "audioFeedback": {
         "label": "Zvuková odezva",
         "description": "Přehrát zvuk při zahájení a ukončení nahrávání"
@@ -282,8 +265,7 @@
           "description": "Vyberte překryv při nahrávání: „Žádné“ jej skryje, „Minimální“ zobrazí kompaktní indikátor, „Živě“ zobrazuje přepis v reálném čase, když mluvíte (pouze modely podporující streaming — hledejte odznak „Streaming“ ve výběru modelů). Na Linuxu se doporučuje „Žádné“.",
           "options": {
             "none": "Žádné",
-            "minimal": "Minimální",
-            "live": "Živě"
+            "minimal": "Minimální"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Přidat",
         "remove": "Odebrat {{word}}",
         "duplicate": "\"{{word}}\" již existuje"
-      },
-      "voiceActivityDetection": {
-        "title": "Detekce hlasové aktivity",
-        "description": "Odfiltruje ticho z nahrávek. Modely podporující streaming používají delší doběh VAD; vypnutí VAD nahrává surový zvuk."
-      },
-      "vadBackend": {
-        "title": "Backend detekce hlasu",
-        "description": "Vyberte detektor používaný k filtrování ticha. Earshot je experimentální; pokud je řeč ořezávána nebo zůstává šum, přepněte zpět na Silero.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Odstranit výplňová slova",
@@ -494,21 +464,9 @@
         "months3": "Po 3 měsících",
         "placeholder": "Vyberte dobu uchování..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Vždy zapnutý mikrofon",
-        "description": "Udržovat mikrofon aktivní pro rychlejší odezvu"
-      },
-      "clamshellMicrophone": {
-        "title": "Mikrofon při zavřeném víku",
-        "description": "Mikrofon, který se použije při zavřeném víku notebooku"
-      },
       "postProcessingToggle": {
         "label": "Následné zpracování",
         "description": "Povolit AI vylepšení textu po přepisu"
-      },
-      "muteWhileRecording": {
-        "label": "Ztlumit při nahrávání",
-        "description": "Ztlumit systémový zvuk během nahrávání"
       },
       "appendTrailingSpace": {
         "label": "Přidat koncovou mezeru",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Spolehlivé vložení (Beta)",
         "description": "Obnoví schránku teprve poté, co cílová aplikace skutečně přečte přepis, místo po pevně daném zpoždění. Má odstranit vkládání starého obsahu schránky při zatížení systému. Vyžaduje způsob vložení přes schránku; pouze macOS a Windows."
-      },
-      "recordingBuffer": {
-        "title": "Extra vyrovnávací paměť nahrávání",
-        "description": "Extra čas (v milisekundách) pro pokračování nahrávání po uvolnění klávesy, pro zachycení zbývajícího zvuku. 0 = žádná extra vyrovnávací paměť."
       },
       "keyboardDiagnostic": {
         "title": "Diagnostika klávesnice",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Načítání...",
     "delete": "Smazat",
     "close": "Zavřít",
     "open": "Otevřít",

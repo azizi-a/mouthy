@@ -101,16 +101,11 @@
     "permissions": {
       "title": "Permisos necessaris",
       "description": "El Mouthy demana alguns permisos per funcionar correctament.",
-      "microphone": {
-        "title": "Accés al micròfon",
-        "description": "Necessari per escoltar la vostra veu i transcriure-la."
-      },
       "accessibility": {
         "title": "Accés a l'accessibilitat",
         "description": "Necessari per escriure el text transcrit a les aplicacions."
       },
       "grant": "Concediu el permís",
-      "granted": "Concedit",
       "waiting": "S'està esperant...",
       "allGranted": "Tot a punt!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "So",
-      "microphone": {
-        "title": "Micròfon",
-        "description": "Selecciona el micròfon preferit",
-        "placeholder": "Seleccionaun micròfon...",
-        "loading": "S'està carregant..."
-      },
-      "channel": {
-        "title": "Canal d'entrada",
-        "description": "Seleccioneu el canal d'entrada des del qual voleu enregistrar. Feu servir aquesta opció si la interfície d'àudio té diverses entrades.",
-        "average": "Fes la mitjana de tots els canals",
-        "channel": "Canal {{n}}"
-      },
       "audioFeedback": {
         "label": "Avisos sonors",
         "description": "Reprodueix un so quan s'inicia i s'atura l'enregistrament"
@@ -282,8 +265,7 @@
           "description": "Tria la finestra superposada d'enregistrament: Cap l'amaga, Mínima mostra un indicador compacte i En directe mostra la transcripció en temps real mentre parleu (només amb models compatibles; cerqueu el distintiu En temps real al selector de models). Al Linux es recomana Cap.",
           "options": {
             "none": "Cap",
-            "minimal": "Mínima",
-            "live": "En directe"
+            "minimal": "Mínima"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Afegiu",
         "remove": "Suprimiu {{word}}",
         "duplicate": "«{{word}}» ja existeix"
-      },
-      "voiceActivityDetection": {
-        "title": "Detecció d'activitat de veu",
-        "description": "Filtra els silencis dels enregistraments. Els models compatibles amb la transcripció en temps real utilitzen un marge final de detecció de veu més llarg; si desactiveu la detecció, s'enregistra l'àudio sense filtrar."
-      },
-      "vadBackend": {
-        "title": "Motor de detecció d'activitat de veu",
-        "description": "Trieu el detector utilitzat per filtrar els silencis. L'Earshot és experimental; torneu al Silero si es corta la parla o es conserva el soroll.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Elimina les falques",
@@ -501,21 +471,9 @@
         "months3": "Al cap de 3 mesos",
         "placeholder": "Selecciona el període de conservació..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Micròfon sempre actiu",
-        "description": "Mantén el micròfon actiu per respondre més de pressa"
-      },
-      "clamshellMicrophone": {
-        "title": "Micròfon amb la tapa tancada",
-        "description": "Micròfon que s'utilitzarà quan la tapa del portàtil estigui tancada"
-      },
       "postProcessingToggle": {
         "label": "Postprocessament",
         "description": "Activa la millora del text amb IA després de la transcripció"
-      },
-      "muteWhileRecording": {
-        "label": "Silencia durant l'enregistrament",
-        "description": "Silencia l'àudio del sistema durant l'enregistrament"
       },
       "appendTrailingSpace": {
         "label": "Afegiu un espai al final",
@@ -542,10 +500,6 @@
       "reliablePaste": {
         "title": "Enganxament fiable (beta)",
         "description": "Restaura el porta-retalls només quan l'aplicació de destinació ha llegit la transcripció, en lloc de fer-ho després d'un retard fix. Pensat per evitar que s'enganxi el contingut antic del porta-retalls quan el sistema està carregat. Requereix un mètode d'enganxament amb el porta-retalls; només al macOS i al Windows."
-      },
-      "recordingBuffer": {
-        "title": "Marge addicional d'enregistrament",
-        "description": "Temps addicional (en mil·lisegons) durant el qual es continua enregistrant després de deixar anar la tecla per capturar l'àudio final. 0 = sense marge addicional."
       },
       "keyboardDiagnostic": {
         "title": "Diagnòstic del teclat",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "S'està carregant...",
     "delete": "Suprimeix",
     "close": "Tanca",
     "open": "Obre",

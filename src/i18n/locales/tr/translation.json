@@ -101,16 +101,11 @@
     "permissions": {
       "title": "İzinler Gerekli",
       "description": "Mouthy'nin düzgün çalışabilmesi için birkaç izne ihtiyacı var.",
-      "microphone": {
-        "title": "Mikrofon Erişimi",
-        "description": "Sesinizi transkripsiyon için alabilmek için gereklidir."
-      },
       "accessibility": {
         "title": "Erişilebilirlik Erişimi",
         "description": "Transkribe edilen metni uygulamalarınıza yazabilmek için gereklidir."
       },
       "grant": "İzin Ver",
-      "granted": "Verildi",
       "waiting": "Bekleniyor...",
       "allGranted": "Her şey hazır!",
       "errors": {
@@ -208,18 +203,6 @@
     },
     "sound": {
       "title": "Ses",
-      "microphone": {
-        "title": "Mikrofon",
-        "description": "Tercih ettiğiniz mikrofon cihazını seçin",
-        "placeholder": "Mikrofon seçin...",
-        "loading": "Yükleniyor..."
-      },
-      "channel": {
-        "title": "Giriş Kanalı",
-        "description": "Kayıt yapılacak giriş kanalını seçin. Ses arabiriminizde birden fazla giriş varsa bu seçeneği kullanın.",
-        "average": "Tüm kanalların ortalaması",
-        "channel": "Kanal {{n}}"
-      },
       "audioFeedback": {
         "label": "Sesli Geri Bildirim",
         "description": "Kayıt başladığında ve bittiğinde ses çalar"
@@ -282,8 +265,7 @@
           "description": "Kayıt sırasında gösterilecek ekran katmanını seçin: 'Yok' katmanı gizler, 'Sade' küçük bir gösterge gösterir, 'Canlı' siz konuşurken transkripsiyonu gerçek zamanlı gösterir (yalnızca akış destekli modeller — model seçicide 'Akış' rozetini arayın). Linux'ta 'Yok' önerilir.",
           "options": {
             "none": "Yok",
-            "minimal": "Sade",
-            "live": "Canlı"
+            "minimal": "Sade"
           }
         },
         "position": {
@@ -359,18 +341,6 @@
         "add": "Ekle",
         "remove": "{{word}} Kaldır",
         "duplicate": "\"{{word}}\" zaten mevcut"
-      },
-      "voiceActivityDetection": {
-        "title": "Ses Etkinliği Algılama",
-        "description": "Kayıtlardaki sessizliği filtreler. Akış destekli modeller daha uzun bir VAD kuyruğu kullanır; VAD devre dışı bırakıldığında ham ses kaydedilir."
-      },
-      "vadBackend": {
-        "title": "Ses Etkinliği Arka Ucu",
-        "description": "Sessizliği filtrelemek için kullanılan algılayıcıyı seçin. Earshot deneyseldir; konuşma kesiliyorsa veya gürültü korunuyorsa Silero'ya geri dönün.",
-        "options": {
-          "silero": "Silero",
-          "earshot": "Earshot"
-        }
       },
       "fillerWordRemoval": {
         "title": "Dolgu Sözcüklerini Kaldır",
@@ -494,21 +464,9 @@
         "months3": "3 ay sonra",
         "placeholder": "Saklama süresi seçin..."
       },
-      "alwaysOnMicrophone": {
-        "label": "Mikrofon Her Zaman Açık",
-        "description": "Daha hızlı yanıt için mikrofonu aktif tutar"
-      },
-      "clamshellMicrophone": {
-        "title": "Kapalı Kapak Mikrofonu",
-        "description": "Dizüstü bilgisayar kapağı kapalıyken kullanılacak mikrofon"
-      },
       "postProcessingToggle": {
         "label": "Son İşlem",
         "description": "Transkripsiyon sonrası yapay zekâ destekli metin iyileştirmeyi etkinleştirir"
-      },
-      "muteWhileRecording": {
-        "label": "Kayıt Sırasında Sessize Al",
-        "description": "Kayıt sırasında sistem sesini kapatır"
       },
       "appendTrailingSpace": {
         "label": "Sonuna Boşluk Ekle",
@@ -535,10 +493,6 @@
       "reliablePaste": {
         "title": "Güvenilir Yapıştırma (Beta)",
         "description": "Panoyu sabit bir gecikmenin ardından değil, hedef uygulama transkripsiyonu gerçekten okuduktan sonra geri yükler. Sistem yükü altında eski pano içeriğinin yapıştırılması sorununu gidermeyi amaçlar. Pano üzerinden çalışan bir yapıştırma yöntemi gerektirir; yalnızca macOS ve Windows."
-      },
-      "recordingBuffer": {
-        "title": "Ekstra Kayıt Tamponu",
-        "description": "Tuşu bıraktıktan sonra arka plandaki sesi yakalamak için kaydı sürdürme süresi (milisaniye). 0 = ekstra tampon yok."
       },
       "keyboardDiagnostic": {
         "title": "Klavye Tanılaması",
@@ -594,7 +548,6 @@
     }
   },
   "common": {
-    "loading": "Yükleniyor...",
     "delete": "Sil",
     "close": "Kapat",
     "open": "Aç",
