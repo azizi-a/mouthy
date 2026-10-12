@@ -374,7 +374,7 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
 
     // Position starts unset — update_overlay_position() sets the correct
     // LogicalPosition before the overlay is shown.
-    let mut builder = WebviewWindowBuilder::new(
+    let builder = WebviewWindowBuilder::new(
         app_handle,
         "recording_overlay",
         tauri::WebviewUrl::App("src/overlay/index.html".into()),
@@ -394,10 +394,6 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
     .focusable(false)
     .focused(false)
     .visible(false);
-
-    if let Some(data_dir) = crate::portable::data_dir() {
-        builder = builder.data_directory(data_dir.join("webview"));
-    }
 
     #[allow(unused_variables)]
     match builder.build() {

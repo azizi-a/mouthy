@@ -15,7 +15,7 @@ pub struct AudioDevice {
 #[specta::specta]
 pub async fn get_available_output_devices() -> Result<Vec<AudioDevice>, String> {
     // cpal device enumeration can stall — run it off the webview/main run loop.
-    tokio::task::spawn_blocking(|| {
+    tauri::async_runtime::spawn_blocking(|| {
         let devices =
             list_output_devices().map_err(|e| format!("Failed to list output devices: {}", e))?;
 

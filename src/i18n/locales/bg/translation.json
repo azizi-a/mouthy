@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Настройки...",
     "copyLastTranscript": "Копиране на последния транскрипт",
-    "unloadModel": "Разтоварване на модела",
-    "model": "Модел",
     "quit": "Изход",
     "cancel": "Отказ",
     "secureInputWarning": "⚠ Бързите клавиши са блокирани от Secure Input"
   },
   "sidebar": {
     "general": "Общи",
-    "models": "Модели",
     "advanced": "Разширени",
     "postProcessing": "Постобработка",
     "history": "История",
@@ -18,86 +15,6 @@
     "about": "За приложението"
   },
   "onboarding": {
-    "subtitle": "За да започнете, изберете модел за транскрипция",
-    "existingModelsTitle": "Съвместими модели",
-    "downloadModelsTitle": "Достъпни за изтегляне",
-    "showAllModels": "Показване на всички {{total}} модела",
-    "showFewerModels": "Показване на по-малко модели",
-    "recommended": "Препоръчан",
-    "customModelDescription": "Не се поддържа официално",
-    "modelCard": {
-      "accuracy": "точност",
-      "speed": "скорост"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Бърз и доста точен."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Добра точност, средна скорост."
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Баланс между точност и скорост."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Добра точност, но по-бавен."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Само английски. Най-добрият модел за носители на английски."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Бърз и точен."
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Много бърз, само английски. Добре обработва акценти."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ултрабърз, само английски."
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Бърз, само английски. Добър баланс между скорост и точност."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Само английски. Високо качество."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Оптимизиран за тайвански мандарин. Поддръжка на смесване на езици."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Много бърз. Китайски, английски, японски, корейски, кантонски."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Разпознаване на руска реч. Бърз и точен."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Много бърз. Английски, немски, испански, френски. Поддържа превод."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Точен многоезичен. 25 европейски езика. Поддържа превод."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "Голям, по-бавен, но много точен многоезичен модел."
-      }
-    },
-    "errors": {
-      "selectModel": "Неуспешно избиране на модел"
-    },
     "permissions": {
       "title": "Необходими разрешения",
       "description": "Mouthy се нуждае от няколко разрешения, за да работи правилно.",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Персонализиран",
-    "streaming": "Стрийминг",
-    "active": "Активен",
-    "switching": "Превключване...",
-    "noModelsAvailable": "Няма налични модели",
-    "verifying": "Проверка на {{modelName}}...",
-    "verifyingGeneric": "Проверка...",
-    "extracting": "Разархивиране на {{modelName}}...",
-    "extractingMultiple": "Разархивиране на {{count}} модела...",
-    "extractingGeneric": "Разархивиране...",
-    "downloading": "Изтегляне {{percentage}}%",
-    "downloadingMultiple": "Изтегляне на {{count}} модела...",
-    "modelReady": "Моделът е готов",
-    "loading": "Зареждане на {{modelName}}...",
-    "loadingGeneric": "Зареждане...",
-    "modelError": "Грешка в модела",
-    "modelUnloaded": "Моделът е разтоварен",
-    "noModelDownloadRequired": "Няма модел – необходимо е изтегляне",
-    "deleteModel": "Изтриване на {{modelName}}",
-    "downloadSpeed": "{{speed}} MB/s",
-    "cancel": "Отказ",
-    "cancelDownload": "Отказ на изтеглянето",
-    "capabilities": {
-      "languageSelection": "Поддържа няколко входни езика",
-      "singleLanguage": "Поддържа само този език",
-      "languageCount": "{{total}} езика",
-      "languageOnly": "Само {{language}}",
-      "translation": "Може да превежда на английски",
-      "translate": "Превод на английски",
-      "streaming": "Показва транскрипция на живо, докато говорите"
-    },
-    "legacy": "Наследен"
-  },
   "settings": {
-    "modelSettings": {
-      "title": "Настройки на {{model}}"
-    },
     "general": {
       "title": "Общи",
       "shortcut": {
@@ -172,33 +52,6 @@
           "set": "Неуспешно задаване на бързия клавиш: {{error}}",
           "reset": "Неуспешно нулиране на бързия клавиш към първоначалната стойност"
         }
-      },
-      "language": {
-        "title": "Език",
-        "description": "Изберете езика за разпознаване на реч. „Автоматично“ определя езика сам, а изборът на конкретен език може да подобри точността за него.",
-        "searchPlaceholder": "Търсене на езици...",
-        "noResults": "Няма намерени езици",
-        "auto": "Автоматично"
-      }
-    },
-    "models": {
-      "title": "Модели за транскрипция",
-      "description": "Изберете модел за транскрипция или изтеглете допълнителни. Различните модели предлагат различна точност и скорост.",
-      "yourModels": "Изтеглени модели",
-      "availableModels": "Налични за изтегляне",
-      "deleteConfirm": "Сигурни ли сте, че искате да изтриете {{modelName}}? Ще трябва да го изтеглите отново, за да го използвате.",
-      "deleteActiveConfirm": "{{modelName}} е вашият активен модел. Изтриването му ще спре транскрипциите, докато не изберете нов модел. Сигурни ли сте?",
-      "deleteTitle": "Изтриване на модел",
-      "filters": {
-        "allLanguages": "Всички езици",
-        "streaming": "Филтриране на моделите, които поддържат транскрипция на живо",
-        "translation": "Филтриране на моделите, които поддържат превод на английски"
-      },
-      "noModelsMatch": "Няма модели, отговарящи на този филтър.",
-      "searchPlaceholder": "Търсене на модели по име…",
-      "rescan": {
-        "label": "Сканиране отново",
-        "tooltip": "Сканиране отново за модели, добавени в папката с модели или кеша на Hugging Face извън Mouthy"
       }
     },
     "sound": {
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Експериментални функции",
         "description": "Включване на експериментални функции, които са още в разработка."
-      },
-      "lazyStreamClose": {
-        "label": "Държане на микрофона отворен между транскрипции",
-        "description": "Държи потокът от микрофона отворен 30 секунди след спиране на записа, което намалява забавянето при поредни транскрипции. Може да влоши качеството на Bluetooth аудио, докато е активно."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "Ускорение за Whisper",
-          "description": "Хардуерно ускорение за моделите Whisper. „Автоматично“ използва GPU при наличност (Metal на macOS, Vulkan на Windows/Linux)."
-        },
-        "ort": {
-          "title": "Ускорение за ONNX",
-          "description": "Хардуерно ускорение за ONNX модели (Parakeet, Canary, Moonshine и др.). DirectML на Windows е експериментален. Моделите може да не транскрибират."
-        },
-        "gpuDevice": {
-          "auto": "Автоматично"
-        }
       },
       "startHidden": {
         "label": "Стартиране скрито",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Превод на английски",
-        "description": "Автоматичен превод на реч от други езици на английски по време на транскрипция."
-      },
-      "modelUnload": {
-        "title": "Разтоварване на модела",
-        "description": "Автоматично освобождаване на памет на GPU/CPU, ако моделът не е използван за зададеното време",
-        "options": {
-          "never": "Никога",
-          "immediately": "Веднага",
-          "min2": "След 2 минути",
-          "min5": "След 5 минути",
-          "min10": "След 10 минути",
-          "min15": "След 15 минути",
-          "hour1": "След 1 час",
-          "sec15": "След 15 секунди (отстраняване)"
         }
       },
       "customWords": {
@@ -433,10 +251,6 @@
         "lineCount": "Редове: {{count}}",
         "empty": "Изчакване на логове… Записите ще се появят тук, щом приложението ги генерира."
       },
-      "wordCorrectionThreshold": {
-        "title": "Праг за корекция на думи",
-        "description": "Чувствителност при корекция на персонализирани думи"
-      },
       "historyLimit": {
         "title": "Лимит на историята",
         "description": "Максимален брой записи в историята за пазене",
@@ -467,7 +281,6 @@
       },
       "paths": {
         "appData": "Данни на приложението:",
-        "models": "Модели:",
         "settings": "Настройки:"
       },
       "pasteDelay": {
@@ -506,7 +319,6 @@
         "title": "Преглед на първоначалната настройка",
         "description": "Прегледайте екраните за първоначална настройка, без да променяте разрешенията, моделите или състоянието на завършване",
         "permissionsButton": "Разрешения",
-        "modelsButton": "Избор на модел",
         "exitButton": "Изход от прегледа"
       }
     },
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Изтриване",
     "close": "Затваряне",
     "open": "Отваряне",
     "copy": "Копиране",
@@ -548,9 +359,7 @@
     "openSettings": "Отваряне на системните настройки"
   },
   "errors": {
-    "loadDirectory": "Грешка при зареждане на папката: {{error}}",
-    "modelLoadFailed": "Зареждането на модела не бе успешно: {{model}}",
-    "modelLoadFailedUnknown": "неизвестен модел"
+    "loadDirectory": "Грешка при зареждане на папката: {{error}}"
   },
   "appLanguage": {
     "title": "Език на приложението",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Транскрибиране...",
-    "processing": "Обработка...",
-    "loadingModel": "Зареждане на модела..."
+    "processing": "Обработка..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} може да блокира 1 бърз клавиш",

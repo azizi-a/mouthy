@@ -128,20 +128,6 @@ pub enum OverlayStyle {
     Minimal,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum ModelUnloadTimeout {
-    Never,
-    Immediately,
-    Min2,
-    #[default]
-    Min5,
-    Min10,
-    Min15,
-    Hour1,
-    Sec15, // Debug mode only
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum PasteMethod {
@@ -218,30 +204,6 @@ impl Default for PasteMethod {
     }
 }
 
-impl ModelUnloadTimeout {
-    pub fn to_minutes(self) -> Option<u64> {
-        match self {
-            ModelUnloadTimeout::Never => None,
-            ModelUnloadTimeout::Immediately => Some(0), // Special case for immediate unloading
-            ModelUnloadTimeout::Min2 => Some(2),
-            ModelUnloadTimeout::Min5 => Some(5),
-            ModelUnloadTimeout::Min10 => Some(10),
-            ModelUnloadTimeout::Min15 => Some(15),
-            ModelUnloadTimeout::Hour1 => Some(60),
-            ModelUnloadTimeout::Sec15 => Some(0), // Special case for debug - handled separately
-        }
-    }
-
-    pub fn to_seconds(self) -> Option<u64> {
-        match self {
-            ModelUnloadTimeout::Never => None,
-            ModelUnloadTimeout::Immediately => Some(0), // Special case for immediate unloading
-            ModelUnloadTimeout::Sec15 => Some(15),
-            _ => self.to_minutes().map(|m| m * 60),
-        }
-    }
-}
-
 /// UI appearance mode. `System` follows the OS `prefers-color-scheme`; `Light`
 /// and `Dark` force one of the two palettes Handy already ships.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
@@ -262,27 +224,6 @@ pub enum TypingTool {
     Dotool,
     Ydotool,
     Xdotool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum TranscribeAcceleratorSetting {
-    #[default]
-    Auto,
-    Cpu,
-    Gpu,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum OrtAcceleratorSetting {
-    #[default]
-    Auto,
-    Cpu,
-    Cuda,
-    #[serde(rename = "directml")]
-    DirectMl,
-    Rocm,
 }
 
 #[derive(Clone, Serialize, Deserialize, Type)]
@@ -331,16 +272,10 @@ pub struct AppSettings {
     pub start_hidden: bool,
     #[serde(default = "default_autostart_enabled")]
     pub autostart_enabled: bool,
-    #[serde(default = "default_model")]
-    pub selected_model: String,
     #[serde(default)]
     pub onboarding_completed: bool,
     #[serde(default)]
     pub selected_output_device: Option<String>,
-    #[serde(default = "default_translate_to_english")]
-    pub translate_to_english: bool,
-    #[serde(default = "default_selected_language")]
-    pub selected_language: String,
     #[serde(default = "default_overlay_position")]
     pub overlay_position: OverlayPosition,
     #[serde(default = "default_debug_mode")]
@@ -349,10 +284,6 @@ pub struct AppSettings {
     pub log_level: LogLevel,
     #[serde(default)]
     pub custom_words: Vec<String>,
-    #[serde(default)]
-    pub model_unload_timeout: ModelUnloadTimeout,
-    #[serde(default = "default_word_correction_threshold")]
-    pub word_correction_threshold: f64,
     #[serde(default = "default_history_limit")]
     pub history_limit: usize,
     #[serde(default = "default_recording_retention_period")]
@@ -388,8 +319,6 @@ pub struct AppSettings {
     #[serde(default)]
     pub experimental_enabled: bool,
     #[serde(default)]
-    pub lazy_stream_close: bool,
-    #[serde(default)]
     pub keyboard_implementation: KeyboardImplementation,
     #[serde(default = "default_show_tray_icon")]
     pub show_tray_icon: bool,
@@ -413,28 +342,8 @@ pub struct AppSettings {
     /// Defaults from the OS locale.
     #[serde(default)]
     pub chinese_script: ChineseScript,
-    #[serde(default)]
-    pub transcribe_accelerator: TranscribeAcceleratorSetting,
-    #[serde(default)]
-    pub ort_accelerator: OrtAcceleratorSetting,
-    /// Stable transcribe.cpp device selector. This is derived from the backend's
-    /// `device_id` when available (or its name for backends such as Metal),
-    /// never from the process-local device registry index.
-    #[serde(
-        default = "default_transcribe_gpu_device",
-        deserialize_with = "deserialize_transcribe_gpu_device"
-    )]
-    pub transcribe_gpu_device: Option<String>,
     #[serde(default = "default_overlay_style")]
     pub overlay_style: OverlayStyle,
-}
-
-fn default_model() -> String {
-    "".to_string()
-}
-
-fn default_translate_to_english() -> bool {
-    false
 }
 
 fn default_start_hidden() -> bool {
@@ -443,10 +352,6 @@ fn default_start_hidden() -> bool {
 
 fn default_autostart_enabled() -> bool {
     false
-}
-
-fn default_selected_language() -> String {
-    "auto".to_string()
 }
 
 fn default_overlay_position() -> OverlayPosition {
@@ -480,10 +385,6 @@ fn default_debug_mode() -> bool {
 
 fn default_log_level() -> LogLevel {
     LogLevel::Debug
-}
-
-fn default_word_correction_threshold() -> f64 {
-    0.18
 }
 
 fn default_paste_delay_ms() -> u64 {
@@ -653,27 +554,6 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
     }]
 }
 
-fn default_transcribe_gpu_device() -> Option<String> {
-    None // automatic device selection
-}
-
-/// Accept the 0.1-era integer registry index but drop it: device indices are
-/// process-local in transcribe.cpp 0.2 and must never be carried across
-/// launches.
-fn deserialize_transcribe_gpu_device<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    match Option::<serde_json::Value>::deserialize(deserializer)? {
-        None => Ok(None),
-        Some(serde_json::Value::String(value)) => Ok(Some(value)),
-        Some(serde_json::Value::Number(_)) => Ok(None),
-        Some(_) => Err(de::Error::custom(
-            "transcribe GPU device must be a string, integer, or null",
-        )),
-    }
-}
-
 fn default_typing_tool() -> TypingTool {
     TypingTool::Auto
 }
@@ -753,17 +633,12 @@ pub fn get_default_settings() -> AppSettings {
         bindings,
         start_hidden: default_start_hidden(),
         autostart_enabled: default_autostart_enabled(),
-        selected_model: "".to_string(),
         onboarding_completed: false,
         selected_output_device: None,
-        translate_to_english: false,
-        selected_language: "auto".to_string(),
         overlay_position: default_overlay_position(),
         debug_mode: false,
         log_level: default_log_level(),
         custom_words: Vec::new(),
-        model_unload_timeout: ModelUnloadTimeout::default(),
-        word_correction_threshold: default_word_correction_threshold(),
         history_limit: default_history_limit(),
         recording_retention_period: default_recording_retention_period(),
         paste_method: PasteMethod::default(),
@@ -781,7 +656,6 @@ pub fn get_default_settings() -> AppSettings {
         app_language: default_app_language(),
         theme: default_theme(),
         experimental_enabled: false,
-        lazy_stream_close: false,
         keyboard_implementation: KeyboardImplementation::default(),
         show_tray_icon: default_show_tray_icon(),
         paste_delay_ms: default_paste_delay_ms(),
@@ -792,9 +666,6 @@ pub fn get_default_settings() -> AppSettings {
         filler_word_removal_enabled: default_filler_word_removal_enabled(),
         custom_filler_words: None,
         chinese_script: default_chinese_script(),
-        transcribe_accelerator: TranscribeAcceleratorSetting::default(),
-        ort_accelerator: OrtAcceleratorSetting::default(),
-        transcribe_gpu_device: default_transcribe_gpu_device(),
         overlay_style: default_overlay_style(),
     }
 }
@@ -839,7 +710,7 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
 
 pub fn get_settings(app: &AppHandle) -> AppSettings {
     let store = app
-        .store(crate::portable::store_path(SETTINGS_STORE_PATH))
+        .store(SETTINGS_STORE_PATH)
         .expect("Failed to initialize store");
 
     // Settings reads also persist salvage and binding sync. Both are
@@ -943,7 +814,7 @@ fn sync_bindings_with_defaults(bindings: &mut HashMap<String, ShortcutBinding>) 
 
 pub fn write_settings(app: &AppHandle, settings: AppSettings) {
     let store = app
-        .store(crate::portable::store_path(SETTINGS_STORE_PATH))
+        .store(SETTINGS_STORE_PATH)
         .expect("Failed to initialize store");
 
     store.set("settings", serde_json::to_value(&settings).unwrap());
@@ -1015,10 +886,7 @@ mod tests {
     fn salvage_preserves_valid_fields_when_one_value_is_invalid() {
         let mut stored = default_settings_json();
         let map = stored.as_object_mut().unwrap();
-        map.insert(
-            "selected_model".into(),
-            serde_json::json!("parakeet-tdt-0.6b-v3"),
-        );
+        map.insert("app_language".into(), serde_json::json!("fr"));
         map.insert("onboarding_completed".into(), serde_json::json!(true));
         // An enum variant this build doesn't know, e.g. written by a newer
         // version before a downgrade.
@@ -1030,7 +898,7 @@ mod tests {
         assert!(serde_json::from_value::<AppSettings>(stored.clone()).is_err());
 
         let salvaged = salvage_settings(&stored);
-        assert_eq!(salvaged.selected_model, "parakeet-tdt-0.6b-v3");
+        assert_eq!(salvaged.app_language, "fr");
         assert!(salvaged.onboarding_completed);
         assert_eq!(salvaged.bindings["cancel"].current_binding, "f13");
         assert_eq!(salvaged.theme, default_theme());
@@ -1062,12 +930,12 @@ mod tests {
             "bindings".into(),
             serde_json::json!({ "cancel": { "id": 42 } }),
         );
-        map.insert("selected_model".into(), serde_json::json!("whisper-small"));
+        map.insert("app_language".into(), serde_json::json!("de"));
 
         assert!(serde_json::from_value::<AppSettings>(stored.clone()).is_err());
 
         let salvaged = salvage_settings(&stored);
-        assert_eq!(salvaged.selected_model, "whisper-small");
+        assert_eq!(salvaged.app_language, "de");
         let defaults = get_default_settings();
         assert_eq!(
             salvaged.bindings["cancel"].current_binding,
@@ -1083,11 +951,11 @@ mod tests {
             "field_from_the_future".into(),
             serde_json::json!({ "nested": true }),
         );
-        map.insert("selected_model".into(), serde_json::json!("kept"));
+        map.insert("app_language".into(), serde_json::json!("kept"));
         map.insert("theme".into(), serde_json::json!("sepia"));
 
         let salvaged = salvage_settings(&stored);
-        assert_eq!(salvaged.selected_model, "kept");
+        assert_eq!(salvaged.app_language, "kept");
         assert_eq!(salvaged.theme, default_theme());
     }
 

@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Configurações...",
     "copyLastTranscript": "Copiar última transcrição",
-    "unloadModel": "Descarregar modelo",
-    "model": "Modelo",
     "quit": "Sair",
     "cancel": "Cancelar",
     "secureInputWarning": "⚠ Atalhos bloqueados pelo Secure Input"
   },
   "sidebar": {
     "general": "Geral",
-    "models": "Modelos",
     "advanced": "Avançado",
     "postProcessing": "Pós-Processamento",
     "history": "Histórico",
@@ -18,86 +15,6 @@
     "about": "Sobre"
   },
   "onboarding": {
-    "subtitle": "Para começar, escolha um modelo de transcrição",
-    "existingModelsTitle": "Modelos compatíveis",
-    "downloadModelsTitle": "Disponíveis para download",
-    "showAllModels": "Mostrar todos os {{total}} modelos",
-    "showFewerModels": "Mostrar menos modelos",
-    "recommended": "Recomendado",
-    "customModelDescription": "Não suportado oficialmente",
-    "modelCard": {
-      "accuracy": "precisão",
-      "speed": "velocidade"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Rápido e razoavelmente preciso."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Boa precisão, velocidade média"
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Precisão e velocidade balanceadas."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Boa precisão, mas lento."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Apenas inglês. O melhor modelo para falantes de inglês."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Rápido e preciso"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Muito rápido, apenas inglês. Lida bem com sotaques."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ultrarrápido, apenas inglês"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Rápido, apenas inglês. Bom equilíbrio entre velocidade e precisão."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Apenas inglês. Alta qualidade."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Otimizado para mandarim taiwanês. Suporte para alternância de código."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Muito rápido. Chinês, inglês, japonês, coreano, cantonês."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Reconhecimento de voz em russo. Rápido e preciso."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Muito rápido. Inglês, alemão, espanhol, francês. Suporta tradução."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Multilíngue preciso. 25 idiomas europeus. Suporta tradução."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "Um modelo grande, mais lento, mas muito preciso e multilíngue."
-      }
-    },
-    "errors": {
-      "selectModel": "Falha ao selecionar o modelo"
-    },
     "permissions": {
       "title": "Permissões Necessárias",
       "description": "O Mouthy precisa de algumas permissões para funcionar corretamente.",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Personalizado",
-    "streaming": "Streaming",
-    "active": "Ativo",
-    "noModelsAvailable": "Nenhum modelo disponível",
-    "verifying": "Verificando {{modelName}}...",
-    "verifyingGeneric": "Verificando...",
-    "extracting": "Extraindo {{modelName}}...",
-    "extractingMultiple": "Extraindo {{count}} modelos...",
-    "extractingGeneric": "Extraindo...",
-    "downloading": "Baixando {{percentage}}%",
-    "downloadingMultiple": "Baixando {{count}} modelos...",
-    "modelReady": "Modelo Pronto",
-    "loading": "Carregando {{modelName}}...",
-    "loadingGeneric": "Carregando...",
-    "modelError": "Erro no Modelo",
-    "modelUnloaded": "Modelo Descarregado",
-    "noModelDownloadRequired": "Sem Modelo - Download Necessário",
-    "deleteModel": "Excluir {{modelName}}",
-    "switching": "Alternando...",
-    "downloadSpeed": "{{speed}} MB/s",
-    "capabilities": {
-      "languageSelection": "Suporta vários idiomas de entrada",
-      "languageCount": "{{total}} idiomas",
-      "translation": "Pode traduzir para inglês",
-      "translate": "Traduzir para inglês",
-      "singleLanguage": "Suporta apenas este idioma",
-      "languageOnly": "Apenas {{language}}",
-      "streaming": "Mostra a transcrição ao vivo enquanto você fala"
-    },
-    "cancel": "Cancelar",
-    "cancelDownload": "Cancelar download",
-    "legacy": "Legado"
-  },
   "settings": {
-    "modelSettings": {
-      "title": "Configurações de {{model}}"
-    },
     "general": {
       "title": "Geral",
       "shortcut": {
@@ -172,33 +52,6 @@
           "set": "Falha ao definir atalho: {{error}}",
           "reset": "Falha ao redefinir atalho para o valor original"
         }
-      },
-      "language": {
-        "title": "Idioma",
-        "description": "Selecione o idioma para reconhecimento de fala. Auto detectará automaticamente o idioma, enquanto selecionar um idioma específico pode melhorar a precisão para esse idioma.",
-        "searchPlaceholder": "Buscar idiomas...",
-        "noResults": "Nenhum idioma encontrado",
-        "auto": "Automático"
-      }
-    },
-    "models": {
-      "title": "Modelos de Transcrição",
-      "description": "Selecione um modelo de transcrição ou baixe modelos adicionais. Diferentes modelos oferecem diferentes níveis de precisão e velocidade.",
-      "deleteConfirm": "Tem certeza de que deseja excluir {{modelName}}? Você precisará baixá-lo novamente para usá-lo.",
-      "deleteActiveConfirm": "{{modelName}} é o seu modelo ativo. Excluí-lo interromperá as transcrições até que você selecione um novo modelo. Tem certeza?",
-      "deleteTitle": "Excluir Modelo",
-      "filters": {
-        "allLanguages": "Todos os Idiomas",
-        "streaming": "Filtrar modelos compatíveis com transcrição ao vivo",
-        "translation": "Filtrar modelos compatíveis com tradução para inglês"
-      },
-      "noModelsMatch": "Nenhum modelo corresponde a este filtro.",
-      "yourModels": "Modelos baixados",
-      "availableModels": "Disponíveis para download",
-      "searchPlaceholder": "Buscar modelos por nome…",
-      "rescan": {
-        "label": "Reescanear",
-        "tooltip": "Reescaneia em busca de modelos adicionados à pasta de modelos ou ao cache do Hugging Face fora do Mouthy"
       }
     },
     "sound": {
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Recursos Experimentais",
         "description": "Ativar recursos experimentais que ainda estão em desenvolvimento."
-      },
-      "lazyStreamClose": {
-        "label": "Manter microfone aberto entre transcrições",
-        "description": "Mantém o fluxo do microfone aberto por 30 segundos após parar a gravação, reduzindo a latência em transcrições consecutivas. Pode degradar a qualidade do áudio Bluetooth enquanto ativo."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "Aceleração Whisper",
-          "description": "Aceleração por hardware para modelos Whisper. Auto usa GPU se disponível (Metal no macOS, Vulkan no Windows/Linux)."
-        },
-        "ort": {
-          "title": "Aceleração ONNX",
-          "description": "Aceleração por hardware para modelos ONNX (Parakeet, Canary, Moonshine, etc.). DirectML no Windows é experimental. Os modelos podem falhar na transcrição."
-        },
-        "gpuDevice": {
-          "auto": "Automático"
-        }
       },
       "startHidden": {
         "label": "Iniciar Oculto",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Traduzir para Inglês",
-        "description": "Traduzir automaticamente fala de outros idiomas para inglês durante a transcrição."
-      },
-      "modelUnload": {
-        "title": "Descarregar Modelo",
-        "description": "Liberar automaticamente memória GPU/CPU quando o modelo não for usado pelo tempo especificado",
-        "options": {
-          "never": "Nunca",
-          "immediately": "Imediatamente",
-          "min2": "Após 2 minutos",
-          "min5": "Após 5 minutos",
-          "min10": "Após 10 minutos",
-          "min15": "Após 15 minutos",
-          "hour1": "Após 1 hora",
-          "sec15": "Após 15 segundos (Depuração)"
         }
       },
       "customWords": {
@@ -433,10 +251,6 @@
         "lineCount": "{{count}} linhas",
         "empty": "Aguardando logs… As entradas aparecem aqui à medida que o app as emite."
       },
-      "wordCorrectionThreshold": {
-        "title": "Limite de Correção de Palavras",
-        "description": "Sensibilidade para correções de palavras personalizadas"
-      },
       "historyLimit": {
         "title": "Limite de Histórico",
         "description": "Número máximo de entradas de histórico a manter",
@@ -467,7 +281,6 @@
       },
       "paths": {
         "appData": "Dados do App:",
-        "models": "Modelos:",
         "settings": "Configurações:"
       },
       "pasteDelay": {
@@ -506,7 +319,6 @@
         "title": "Pré-visualizar configuração inicial",
         "description": "Pré-visualize os ecrãs de configuração sem alterar permissões, modelos ou o estado de conclusão",
         "permissionsButton": "Permissões",
-        "modelsButton": "Seleção de modelo",
         "exitButton": "Sair da pré-visualização"
       }
     },
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Excluir",
     "close": "Fechar",
     "open": "Abrir",
     "copy": "Copiar",
@@ -548,9 +359,7 @@
     "openSettings": "Abrir Configurações do Sistema"
   },
   "errors": {
-    "loadDirectory": "Erro ao carregar diretório: {{error}}",
-    "modelLoadFailed": "Falha ao carregar o modelo: {{model}}",
-    "modelLoadFailedUnknown": "modelo desconhecido"
+    "loadDirectory": "Erro ao carregar diretório: {{error}}"
   },
   "appLanguage": {
     "title": "Idioma da Aplicação",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Transcrevendo...",
-    "processing": "Processando...",
-    "loadingModel": "Carregando modelo..."
+    "processing": "Processando..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} pode estar bloqueando 1 atalho",

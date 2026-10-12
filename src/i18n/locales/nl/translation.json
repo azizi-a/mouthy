@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Instellingen...",
     "copyLastTranscript": "Laatste transcriptie kopiëren",
-    "unloadModel": "Model ontladen",
-    "model": "Model",
     "quit": "Afsluiten",
     "cancel": "Annuleren",
     "secureInputWarning": "⚠ Sneltoetsen geblokkeerd door Secure Input"
   },
   "sidebar": {
     "general": "Algemeen",
-    "models": "Modellen",
     "advanced": "Geavanceerd",
     "postProcessing": "Naverwerking",
     "history": "Geschiedenis",
@@ -18,86 +15,6 @@
     "about": "Over Mouthy"
   },
   "onboarding": {
-    "subtitle": "Kies een transcriptiemodel om aan de slag te gaan",
-    "existingModelsTitle": "Compatibele modellen",
-    "downloadModelsTitle": "Beschikbaar voor download",
-    "showAllModels": "Toon alle {{total}} modellen",
-    "showFewerModels": "Minder modellen tonen",
-    "recommended": "Aanbevolen",
-    "customModelDescription": "Niet officieel ondersteund",
-    "modelCard": {
-      "accuracy": "nauwkeurigheid",
-      "speed": "snelheid"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Snel en redelijk nauwkeurig."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Goede nauwkeurigheid, gemiddelde snelheid."
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Balans tussen nauwkeurigheid en snelheid."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Hoge nauwkeurigheid, maar traag."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Alleen Engels. Het beste model voor Engelstaligen."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Snel en nauwkeurig."
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Zeer snel, alleen Engels. Gaat goed om met accenten."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ultrasnel, alleen Engels."
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Snel, alleen Engels. Goede balans tussen snelheid en nauwkeurigheid."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Alleen Engels. Hoge kwaliteit."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Geoptimaliseerd voor Taiwanees-Mandarijn. Ondersteunt codewisseling."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Zeer snel. Chinees, Engels, Japans, Koreaans, Kantonees."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Russische spraakherkenning. Snel en nauwkeurig."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Zeer snel. Engels, Duits, Spaans, Frans. Ondersteunt vertaling."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Nauwkeurig meertalig. 25 Europese talen. Ondersteunt vertaling."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "Een groot, trager, maar zeer nauwkeurig meertalig model."
-      }
-    },
-    "errors": {
-      "selectModel": "Model selecteren mislukt"
-    },
     "permissions": {
       "title": "Machtigingen vereist",
       "description": "Mouthy heeft een aantal machtigingen nodig om goed te kunnen werken.",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Aangepast",
-    "legacy": "Klassiek",
-    "streaming": "Streaming",
-    "active": "Actief",
-    "switching": "Wisselen...",
-    "noModelsAvailable": "Geen modellen beschikbaar",
-    "verifying": "Verifiëren van {{modelName}}...",
-    "verifyingGeneric": "Verifiëren...",
-    "extracting": "Uitpakken van {{modelName}}...",
-    "extractingMultiple": "Uitpakken van {{count}} modellen...",
-    "extractingGeneric": "Uitpakken...",
-    "downloading": "Downloaden {{percentage}}%",
-    "downloadingMultiple": "Downloaden van {{count}} modellen...",
-    "modelReady": "Model gereed",
-    "loading": "Laden van {{modelName}}...",
-    "loadingGeneric": "Laden...",
-    "modelError": "Modelfout",
-    "modelUnloaded": "Model ontladen",
-    "noModelDownloadRequired": "Geen model - Download vereist",
-    "deleteModel": "{{modelName}} verwijderen",
-    "downloadSpeed": "{{speed}} MB/s",
-    "cancel": "Annuleren",
-    "cancelDownload": "Download annuleren",
-    "capabilities": {
-      "languageSelection": "Ondersteunt meerdere invoertalen",
-      "singleLanguage": "Ondersteunt alleen deze taal",
-      "languageCount": "{{total}} talen",
-      "languageOnly": "Alleen {{language}}",
-      "translation": "Kan vertalen naar het Engels",
-      "translate": "Vertalen",
-      "streaming": "Toont live transcriptie tijdens het spreken"
-    }
-  },
   "settings": {
-    "modelSettings": {
-      "title": "Instellingen voor {{model}}"
-    },
     "general": {
       "title": "Algemeen",
       "shortcut": {
@@ -172,34 +52,7 @@
           "set": "Instellen van sneltoets mislukt: {{error}}",
           "reset": "Sneltoets terugzetten naar standaardwaarde mislukt"
         }
-      },
-      "language": {
-        "title": "Taal",
-        "description": "Selecteer de taal voor spraakherkenning. 'Automatisch' detecteert de taal vanzelf, terwijl het kiezen van een specifieke taal de nauwkeurigheid voor die taal kan verbeteren.",
-        "searchPlaceholder": "Talen zoeken...",
-        "noResults": "Geen talen gevonden",
-        "auto": "Automatisch"
       }
-    },
-    "models": {
-      "title": "Transcriptiemodellen",
-      "description": "Selecteer een transcriptiemodel of download extra modellen. Verschillende modellen bieden variërende niveaus van nauwkeurigheid en snelheid.",
-      "searchPlaceholder": "Modellen zoeken op naam...",
-      "yourModels": "Gedownloade modellen",
-      "availableModels": "Beschikbaar voor download",
-      "deleteConfirm": "Weet je zeker dat je {{modelName}} wilt verwijderen? Je moet het model opnieuw downloaden om het weer te gebruiken.",
-      "deleteActiveConfirm": "{{modelName}} is je actieve model. Als je dit verwijdert, stoppen de transcripties totdat je een nieuw model selecteert. Weet je het zeker?",
-      "deleteTitle": "Model verwijderen",
-      "filters": {
-        "allLanguages": "Alle talen",
-        "streaming": "Filter modellen die live transcriptie ondersteunen",
-        "translation": "Filter modellen die vertaling naar het Engels ondersteunen"
-      },
-      "rescan": {
-        "label": "Opnieuw scannen",
-        "tooltip": "Scannen naar modellen die buiten Mouthy om zijn toegevoegd aan de modellenmap of Hugging Face-cache"
-      },
-      "noModelsMatch": "Geen modellen voldoen aan dit filter."
     },
     "sound": {
       "title": "Geluid",
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Experimentele functies",
         "description": "Schakel experimentele functies in die nog in ontwikkeling zijn."
-      },
-      "lazyStreamClose": {
-        "label": "Microfoon openhouden tussen transcripties",
-        "description": "Houdt de microfoonstream tot 30 seconden open nadat een opname stopt. Dit vermindert de vertraging bij opeenvolgende opnames, maar kan de Bluetooth-audiokwaliteit tijdelijk verminderen."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "transcribe.cpp-versnelling",
-          "description": "Hardwareversnelling voor transcribe.cpp-modellen (Whisper-familie). 'Automatisch' gebruikt de GPU indien beschikbaar (Metal op macOS, Vulkan op Windows/Linux)."
-        },
-        "ort": {
-          "title": "ONNX-versnelling",
-          "description": "Hardwareversnelling voor ONNX-modellen (Parakeet, Canary, Moonshine, etc.). DirectML op Windows is experimenteel; modellen kunnen daardoor haperen."
-        },
-        "gpuDevice": {
-          "auto": "Automatisch"
-        }
       },
       "startHidden": {
         "label": "Geminimaliseerd opstarten",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Vertalen naar het Engels",
-        "description": "Vertaal spraak uit andere talen tijdens het transcriberen automatisch naar het Engels."
-      },
-      "modelUnload": {
-        "title": "Model ontladen",
-        "description": "Geheugen (GPU/CPU) automatisch vrijmaken wanneer het model voor de opgegeven tijd niet is gebruikt",
-        "options": {
-          "never": "Nooit",
-          "immediately": "Direct",
-          "min2": "Na 2 minuten",
-          "min5": "Na 5 minuten",
-          "min10": "Na 10 minuten",
-          "min15": "Na 15 minuten",
-          "hour1": "Na 1 uur",
-          "sec15": "Na 15 seconden (Debug)"
         }
       },
       "customWords": {
@@ -437,12 +255,7 @@
         "title": "Voorbeeld van onboarding",
         "description": "Bekijk de onboardingschermen zonder machtigingen, modellen of de voltooiingsstatus te wijzigen",
         "permissionsButton": "Machtigingen",
-        "modelsButton": "Modelselectie",
         "exitButton": "Voorbeeld sluiten"
-      },
-      "wordCorrectionThreshold": {
-        "title": "Drempelwaarde woordcorrectie",
-        "description": "Gevoeligheid voor eigen woordcorrecties"
       },
       "historyLimit": {
         "title": "Geschiedenislimiet",
@@ -474,7 +287,6 @@
       },
       "paths": {
         "appData": "App-data:",
-        "models": "Modellen:",
         "settings": "Instellingen:"
       },
       "pasteDelay": {
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Verwijderen",
     "close": "Sluiten",
     "open": "Openen",
     "copy": "Kopiëren",
@@ -548,9 +359,7 @@
     "openSettings": "Systeeminstellingen openen"
   },
   "errors": {
-    "loadDirectory": "Fout bij laden van map: {{error}}",
-    "modelLoadFailed": "Model laden mislukt: {{model}}",
-    "modelLoadFailedUnknown": "onbekend model"
+    "loadDirectory": "Fout bij laden van map: {{error}}"
   },
   "appLanguage": {
     "title": "Interfacetaal",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Transcriberen...",
-    "processing": "Verwerken...",
-    "loadingModel": "Model laden..."
+    "processing": "Verwerken..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokkeert mogelijk 1 sneltoets",

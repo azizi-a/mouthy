@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Einstellungen...",
     "copyLastTranscript": "Letzte Transkription kopieren",
-    "unloadModel": "Modell entladen",
-    "model": "Modell",
     "quit": "Beenden",
     "cancel": "Abbrechen",
     "secureInputWarning": "⚠ Tastenkürzel durch Secure Input blockiert"
   },
   "sidebar": {
     "general": "Allgemein",
-    "models": "Modelle",
     "advanced": "Erweitert",
     "postProcessing": "Nachbearbeitung",
     "history": "Verlauf",
@@ -18,86 +15,6 @@
     "about": "Info"
   },
   "onboarding": {
-    "subtitle": "Wähle ein Transkriptionsmodell, um loszulegen",
-    "existingModelsTitle": "Kompatible Modelle",
-    "downloadModelsTitle": "Verfügbar zum Download",
-    "showAllModels": "Alle {{total}} Modelle anzeigen",
-    "showFewerModels": "Weniger Modelle anzeigen",
-    "recommended": "Empfohlen",
-    "customModelDescription": "Nicht offiziell unterstützt",
-    "modelCard": {
-      "accuracy": "Genauigkeit",
-      "speed": "Geschwindigkeit"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Schnell und recht genau."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Gute Genauigkeit, mittlere Geschwindigkeit"
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Ausgewogene Genauigkeit und Geschwindigkeit."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Gute Genauigkeit, aber langsam."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Nur Englisch. Das beste Modell für englischsprachige Nutzer."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Schnell und genau"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Sehr schnell, nur Englisch. Verarbeitet Akzente gut."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ultraschnell, nur Englisch"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Schnell, nur Englisch. Gute Balance zwischen Geschwindigkeit und Genauigkeit."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Nur Englisch. Hohe Qualität."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Optimiert für taiwanesisches Mandarin. Unterstützung für Code-Switching."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Sehr schnell. Chinesisch, Englisch, Japanisch, Koreanisch, Kantonesisch."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Russische Spracherkennung. Schnell und präzise."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Sehr schnell. Englisch, Deutsch, Spanisch, Französisch. Unterstützt Übersetzung."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Genaue mehrsprachige Erkennung. 25 europäische Sprachen. Unterstützt Übersetzung."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "Ein großes, langsameres, aber sehr genaues mehrsprachiges Modell."
-      }
-    },
-    "errors": {
-      "selectModel": "Modellauswahl fehlgeschlagen"
-    },
     "permissions": {
       "title": "Berechtigungen erforderlich",
       "description": "Mouthy benötigt einige Berechtigungen, um richtig zu funktionieren.",
@@ -114,64 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Benutzerdefiniert",
-    "streaming": "Streaming",
-    "active": "Aktiv",
-    "switching": "Wechseln...",
-    "noModelsAvailable": "Keine Modelle verfügbar",
-    "verifying": "Überprüfung von {{modelName}}...",
-    "verifyingGeneric": "Überprüfung...",
-    "extracting": "Entpacke {{modelName}}...",
-    "extractingMultiple": "Entpacke {{count}} Modelle...",
-    "extractingGeneric": "Wird entpackt...",
-    "downloading": "Herunterladen {{percentage}}%",
-    "downloadingMultiple": "Lade {{count}} Modelle herunter...",
-    "modelReady": "Modell bereit",
-    "loading": "Lade {{modelName}}...",
-    "loadingGeneric": "Wird geladen...",
-    "modelError": "Modellfehler",
-    "modelUnloaded": "Modell entladen",
-    "noModelDownloadRequired": "Kein Modell - Download erforderlich",
-    "deleteModel": "{{modelName}} löschen",
-    "downloadSpeed": "{{speed}} MB/s",
-    "capabilities": {
-      "languageSelection": "Unterstützt mehrere Eingabesprachen",
-      "languageCount": "{{total}} Sprachen",
-      "translation": "Kann ins Englische übersetzen",
-      "translate": "Ins Englische übersetzen",
-      "singleLanguage": "Unterstützt nur diese Sprache",
-      "languageOnly": "Nur {{language}}",
-      "streaming": "Zeigt die Transkription live während des Sprechens an"
-    },
-    "cancel": "Abbrechen",
-    "cancelDownload": "Download abbrechen",
-    "legacy": "Veraltet"
-  },
   "settings": {
-    "modelSettings": {
-      "title": "{{model}}-Einstellungen"
-    },
-    "models": {
-      "title": "Transkriptionsmodelle",
-      "description": "Wähle ein Transkriptionsmodell aus oder lade zusätzliche Modelle herunter. Verschiedene Modelle bieten unterschiedliche Genauigkeits- und Geschwindigkeitsstufen.",
-      "deleteConfirm": "Bist du sicher, dass du {{modelName}} löschen möchtest? Du musst es erneut herunterladen, um es zu verwenden.",
-      "deleteActiveConfirm": "{{modelName}} ist dein aktives Modell. Das Löschen stoppt Transkriptionen, bis du ein neues Modell auswählst. Bist du sicher?",
-      "deleteTitle": "Modell löschen",
-      "filters": {
-        "allLanguages": "Alle Sprachen",
-        "streaming": "Modelle filtern, die Live-Transkription unterstützen",
-        "translation": "Modelle filtern, die Übersetzungen ins Englische unterstützen"
-      },
-      "noModelsMatch": "Keine Modelle entsprechen diesem Filter.",
-      "yourModels": "Heruntergeladene Modelle",
-      "availableModels": "Zum Download verfügbar",
-      "searchPlaceholder": "Modelle nach Namen suchen…",
-      "rescan": {
-        "label": "Neu scannen",
-        "tooltip": "Erneut nach Modellen scannen, die außerhalb von Mouthy zum Modellordner oder Hugging-Face-Cache hinzugefügt wurden"
-      }
-    },
     "general": {
       "title": "Allgemein",
       "shortcut": {
@@ -192,13 +52,6 @@
           "set": "Tastenkürzel konnte nicht gesetzt werden: {{error}}",
           "reset": "Tastenkürzel konnte nicht auf Originalwert zurückgesetzt werden"
         }
-      },
-      "language": {
-        "title": "Sprache",
-        "description": "Wähle die Sprache für die Spracherkennung. Auto erkennt die Sprache automatisch, die Auswahl einer bestimmten Sprache kann die Genauigkeit verbessern.",
-        "searchPlaceholder": "Sprachen suchen...",
-        "noResults": "Keine Sprachen gefunden",
-        "auto": "Automatisch"
       }
     },
     "sound": {
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Experimentelle Funktionen",
         "description": "Experimentelle Funktionen aktivieren, die sich noch in Entwicklung befinden."
-      },
-      "lazyStreamClose": {
-        "label": "Mikrofon zwischen Transkriptionen offen halten",
-        "description": "Hält den Mikrofon-Stream nach dem Aufnahmestopp 30 Sekunden lang offen, um die Latenz bei aufeinanderfolgenden Transkriptionen zu verringern. Kann die Bluetooth-Audioqualität beeinträchtigen."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "Whisper-Beschleunigung",
-          "description": "Hardwarebeschleunigung für Whisper-Modelle. Automatisch nutzt GPU falls verfügbar (Metal auf macOS, Vulkan auf Windows/Linux)."
-        },
-        "ort": {
-          "title": "ONNX-Beschleunigung",
-          "description": "Hardwarebeschleunigung für ONNX-Modelle (Parakeet, Canary, Moonshine usw.). DirectML unter Windows ist experimentell. Modelle können bei der Transkription fehlschlagen."
-        },
-        "gpuDevice": {
-          "auto": "Automatisch"
-        }
       },
       "startHidden": {
         "label": "Versteckt starten",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Ins Englische übersetzen",
-        "description": "Sprache aus anderen Sprachen automatisch während der Transkription ins Englische übersetzen."
-      },
-      "modelUnload": {
-        "title": "Modell entladen",
-        "description": "GPU/CPU-Speicher automatisch freigeben, wenn das Modell für die angegebene Zeit nicht verwendet wurde",
-        "options": {
-          "never": "Nie",
-          "immediately": "Sofort",
-          "min2": "Nach 2 Minuten",
-          "min5": "Nach 5 Minuten",
-          "min10": "Nach 10 Minuten",
-          "min15": "Nach 15 Minuten",
-          "hour1": "Nach 1 Stunde",
-          "sec15": "Nach 15 Sekunden (Debug)"
         }
       },
       "customWords": {
@@ -433,10 +251,6 @@
         "lineCount": "{{count}} Zeilen",
         "empty": "Warte auf Logs … Einträge erscheinen hier, sobald die App sie ausgibt."
       },
-      "wordCorrectionThreshold": {
-        "title": "Wortkorrektur-Schwelle",
-        "description": "Empfindlichkeit für benutzerdefinierte Wortkorrekturen"
-      },
       "historyLimit": {
         "title": "Verlaufslimit",
         "description": "Maximale Anzahl der Verlaufseinträge",
@@ -467,7 +281,6 @@
       },
       "paths": {
         "appData": "App-Daten:",
-        "models": "Modelle:",
         "settings": "Einstellungen:"
       },
       "pasteDelay": {
@@ -506,7 +319,6 @@
         "title": "Ersteinrichtung ansehen",
         "description": "Vorschau der Einrichtungsbildschirme, ohne Berechtigungen, Modelle oder den Abschlussstatus zu ändern",
         "permissionsButton": "Berechtigungen",
-        "modelsButton": "Modellauswahl",
         "exitButton": "Vorschau beenden"
       }
     },
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Löschen",
     "close": "Schließen",
     "open": "Öffnen",
     "copy": "Kopieren",
@@ -548,9 +359,7 @@
     "openSettings": "Systemeinstellungen öffnen"
   },
   "errors": {
-    "loadDirectory": "Fehler beim Laden des Verzeichnisses: {{error}}",
-    "modelLoadFailed": "Modell konnte nicht geladen werden: {{model}}",
-    "modelLoadFailedUnknown": "unbekanntes Modell"
+    "loadDirectory": "Fehler beim Laden des Verzeichnisses: {{error}}"
   },
   "appLanguage": {
     "title": "Anwendungssprache",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Transkribiere...",
-    "processing": "Verarbeite...",
-    "loadingModel": "Modell wird geladen..."
+    "processing": "Verarbeite..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blockiert möglicherweise 1 Tastenkürzel",

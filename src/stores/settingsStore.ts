@@ -5,8 +5,6 @@ import type {
   AppSettings as Settings,
   AudioDevice,
   ChineseScript,
-  TranscribeAcceleratorSetting,
-  OrtAcceleratorSetting,
 } from "@/bindings";
 import { commands } from "@/bindings";
 
@@ -81,16 +79,10 @@ const settingUpdaters: {
     ),
   recording_retention_period: (value) =>
     commands.updateRecordingRetentionPeriod(value as string),
-  translate_to_english: (value) =>
-    commands.changeTranslateToEnglishSetting(value as boolean),
-  selected_language: (value) =>
-    commands.changeSelectedLanguageSetting(value as string),
   overlay_position: (value) =>
     commands.changeOverlayPositionSetting(value as string),
   debug_mode: (value) => commands.changeDebugModeSetting(value as boolean),
   custom_words: (value) => commands.updateCustomWords(value as string[]),
-  word_correction_threshold: (value) =>
-    commands.changeWordCorrectionThresholdSetting(value as number),
   paste_delay_ms: (value) =>
     commands.changePasteDelayMsSetting(value as number),
   paste_delay_after_ms: (value) =>
@@ -118,8 +110,6 @@ const settingUpdaters: {
   theme: (value) => commands.changeThemeSetting(value as string),
   experimental_enabled: (value) =>
     commands.changeExperimentalEnabledSetting(value as boolean),
-  lazy_stream_close: (value) =>
-    commands.changeLazyStreamCloseSetting(value as boolean),
   overlay_style: (value) => commands.changeOverlayStyleSetting(value as string),
   filler_word_removal_enabled: (value) =>
     commands.changeFillerWordRemovalEnabledSetting(value as boolean),
@@ -127,14 +117,8 @@ const settingUpdaters: {
     commands.changeChineseScriptSetting(value as ChineseScript),
   show_tray_icon: (value) =>
     commands.changeShowTrayIconSetting(value as boolean),
-  transcribe_accelerator: (value) =>
-    commands.changeTranscribeAcceleratorSetting(
-      value as TranscribeAcceleratorSetting,
-    ),
-  ort_accelerator: (value) =>
-    commands.changeOrtAcceleratorSetting(value as OrtAcceleratorSetting),
-  transcribe_gpu_device: (value) =>
-    commands.changeTranscribeGpuDevice(value as string | null),
+  onboarding_completed: (value) =>
+    commands.changeOnboardingCompletedSetting(value as boolean),
 };
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -222,7 +206,7 @@ export const useSettingsStore = create<SettingsStore>()(
         const updater = settingUpdaters[key];
         if (updater) {
           await updater(value);
-        } else if (key !== "bindings" && key !== "selected_model") {
+        } else if (key !== "bindings") {
           console.warn(`No handler for setting: ${String(key)}`);
         }
       } catch (error) {
@@ -514,11 +498,8 @@ export const useSettingsStore = create<SettingsStore>()(
       // calls refreshOutputDevices after onboarding completes.
       await Promise.all([loadDefaultSettings(), refreshSettings()]);
 
-      // Re-fetch settings when the backend changes them (e.g. language
-      // reset during model switch). The backend is the source of truth.
-      listen("model-state-changed", () => {
-        get().refreshSettings();
-      });
+      // Re-fetch settings when the backend changes them. The backend is the
+      // source of truth.
       listen("settings-changed", () => {
         get().refreshSettings();
       });

@@ -586,25 +586,6 @@ Function .onInit
   ${EndIf}
 
 
-  ; --- PORTABLE MODE --- Auto-detect portable mode during updates.
-  ; Preserve portable installs that use either the current magic-string marker
-  ; or the legacy empty marker created by older releases. Require Data/
-  ; for the legacy empty-marker case so stale scoop side-effect files do not
-  ; accidentally opt an updater run into portable mode.
-  ${If} $PortableMode <> 1
-  ${AndIf} $UpdateMode = 1
-  ${AndIf} ${FileExists} "$INSTDIR\portable"
-    FileOpen $1 "$INSTDIR\portable" r
-    FileRead $1 $2
-    FileClose $1
-    ${If} $2 == "Mouthy Portable Mode"
-      StrCpy $PortableMode 1
-    ${OrIf} $2 == ""
-    ${AndIf} ${FileExists} "$INSTDIR\Data"
-      StrCpy $PortableMode 1
-    ${EndIf}
-  ${EndIf}
-
   !if "${INSTALLMODE}" == "both"
     !insertmacro MULTIUSER_INIT
   !endif
@@ -763,15 +744,6 @@ Section Install
       WriteRegStr SHCTX "Software\Classes\\{{protocol}}\DefaultIcon" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\",0"
       WriteRegStr SHCTX "Software\Classes\\{{protocol}}\shell\open\command" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
     {{/each}}
-  ${EndIf}
-
-  ; --- PORTABLE MODE --- Create portable marker and Data directory
-  ${If} $PortableMode = 1
-    FileOpen $0 "$INSTDIR\portable" w
-    FileWrite $0 "Mouthy Portable Mode"
-    FileClose $0
-    CreateDirectory "$INSTDIR\Data"
-    DetailPrint "Portable mode: created marker file and Data directory."
   ${EndIf}
 
   ; --- PORTABLE MODE --- Skip uninstaller, registry, and shortcuts for portable installs

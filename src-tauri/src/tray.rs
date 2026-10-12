@@ -21,8 +21,6 @@
 //! icon/menu/tooltip, so those must only ever be set through the applier.
 
 use crate::managers::history::{HistoryEntry, HistoryManager};
-use crate::managers::model::ModelManager;
-use crate::managers::transcription::TranscriptionManager;
 use crate::settings;
 use crate::tray_i18n::get_tray_translations;
 use log::{debug, error, info, trace, warn};
@@ -31,7 +29,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 use tauri::image::Image;
-use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIcon;
 use tauri::{AppHandle, Manager, Theme};
 use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -44,8 +42,8 @@ pub enum TrayIconState {
 }
 
 impl TrayIconState {
-    /// Recording and Transcribing share the same menu ("Cancel" instead of the
-    /// model submenu), so only the idle/busy distinction matters for the menu.
+    /// Recording and Transcribing share the same menu (with "Cancel"), so only
+    /// the idle/busy distinction matters for the menu.
     fn is_busy(self) -> bool {
         self != TrayIconState::Idle
     }
@@ -57,10 +55,6 @@ impl TrayIconState {
 struct MenuInputs {
     busy: bool,
     warning: bool,
-    model_loaded: bool,
-    selected_model: String,
-    /// `(id, name)` of downloaded models, sorted by name.
-    downloaded_models: Vec<(String, String)>,
     locale: String,
 }
 
@@ -213,7 +207,7 @@ pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'
     }
 }
 
-/// Sets the recording state shown by the tray (icon + Cancel/model menu).
+/// Sets the recording state shown by the tray (icon + Cancel menu item).
 pub fn set_tray_state(app: &AppHandle, state: TrayIconState) {
     sync_tray_with(app, |inner| inner.icon_state = state);
 }
@@ -224,8 +218,8 @@ pub fn refresh_tray_icon(app: &AppHandle) {
     sync_tray(app);
 }
 
-/// Re-syncs the tray after something the menu depends on changed (model
-/// list/selection/loaded state, language, settings).
+/// Re-syncs the tray after something the menu depends on changed (language,
+/// settings).
 pub fn update_tray_menu(app: &AppHandle) {
     sync_tray(app);
 }
@@ -234,9 +228,9 @@ pub fn update_tray_menu(app: &AppHandle) {
 /// thread (or lets an already-pending apply pick it up). Never blocks on the
 /// main thread.
 ///
-/// The snapshot (settings, model list, loaded state) is computed on the
-/// *calling* thread on purpose: the main-thread applier must not take manager
-/// locks that a worker may hold across slow work (see #1716).
+/// The snapshot (settings, Secure Input state) is computed on the *calling*
+/// thread on purpose: the main-thread applier must not take locks that a
+/// worker may hold across slow work (see cjpais/Handy#1716).
 pub fn sync_tray(app: &AppHandle) {
     sync_tray_with(app, |_| {});
 }
@@ -312,25 +306,12 @@ fn compute_desired(app: &AppHandle, icon_state: TrayIconState) -> TrayDesired {
     let settings = settings::get_settings(app);
     let theme = get_current_theme(app);
     let warning = crate::secure_input::tray_warning_active(app);
-    let model_loaded = app.state::<Arc<TranscriptionManager>>().is_model_loaded();
-
-    let mut downloaded_models: Vec<(String, String)> = app
-        .state::<Arc<ModelManager>>()
-        .get_available_models()
-        .into_iter()
-        .filter(|m| m.is_downloaded)
-        .map(|m| (m.id, m.name))
-        .collect();
-    downloaded_models.sort_by(|a, b| a.1.cmp(&b.1));
 
     TrayDesired {
         icon_path: get_icon_path(theme, icon_state, warning),
         menu: MenuInputs {
             busy: icon_state.is_busy(),
             warning,
-            model_loaded,
-            selected_model: settings.selected_model,
-            downloaded_models,
             locale: settings.app_language,
         },
     }
@@ -518,39 +499,12 @@ fn build_menu(app: &AppHandle, inputs: &MenuInputs) -> tauri::Result<(Menu<tauri
             ],
         )?
     } else {
-        // Build model submenu — label is the active model name
-        let submenu_label = inputs
-            .downloaded_models
-            .iter()
-            .find(|(id, _)| *id == inputs.selected_model)
-            .map(|(_, name)| name.clone())
-            .unwrap_or_else(|| strings.model.clone());
-
-        let model_submenu = Submenu::with_id(app, "model_submenu", &submenu_label, true)?;
-        for (id, name) in &inputs.downloaded_models {
-            let is_active = *id == inputs.selected_model;
-            let item_id = format!("model_select:{}", id);
-            let item = CheckMenuItem::with_id(app, &item_id, name, true, is_active, None::<&str>)?;
-            model_submenu.append(&item)?;
-        }
-
-        let unload_model_i = MenuItem::with_id(
-            app,
-            "unload_model",
-            &strings.unload_model,
-            inputs.model_loaded,
-            None::<&str>,
-        )?;
-
         Menu::with_items(
             app,
             &[
                 &version_i,
                 &separator()?,
                 &copy_last_transcript_i,
-                &separator()?,
-                &model_submenu,
-                &unload_model_i,
                 &separator()?,
                 &settings_i,
                 &separator()?,
@@ -666,9 +620,6 @@ mod tests {
         MenuInputs {
             busy,
             warning: false,
-            model_loaded: true,
-            selected_model: "small".to_string(),
-            downloaded_models: vec![("small".to_string(), "Small".to_string())],
             locale: "en".to_string(),
         }
     }

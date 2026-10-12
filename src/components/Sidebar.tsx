@@ -6,7 +6,6 @@ import {
   History,
   Info,
   Sparkles,
-  Cpu,
   SlidersHorizontal,
 } from "lucide-react";
 import MouthyWordmark from "./icons/MouthyWordmark";
@@ -18,7 +17,6 @@ import {
   DebugSettings,
   AboutSettings,
   PostProcessingSettings,
-  ModelsSettings,
 } from "./settings";
 
 export type SidebarSection = keyof typeof SECTIONS_CONFIG;
@@ -49,12 +47,6 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.history",
     icon: History,
     component: HistorySettings,
-    enabled: () => true,
-  },
-  models: {
-    labelKey: "sidebar.models",
-    icon: Cpu,
-    component: ModelsSettings,
     enabled: () => true,
   },
   advanced: {

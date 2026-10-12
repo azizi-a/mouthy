@@ -16,3 +16,4 @@ All notable changes to this project are documented here. The format follows [Kee
 - Speech-to-text hotkeys (push-to-talk, hold and toggle modes), the hold threshold, history re-transcribe, and Handy's settings migrations. Hotkeys do nothing until the speak action lands.
 - Microphone capture, voice activity detection, the Live overlay style, and the microphone permission prompt. Onboarding now asks only for Accessibility, and the app no longer declares microphone access.
 - Start/stop sound feedback, sound themes, custom sounds, and the feedback volume. The output device setting stays for speech playback.
+- Speech recognition engines (whisper/transcribe.cpp and ONNX), the model catalog, downloader and Models page, model selection and unloading (settings, footer and tray), acceleration and language settings, the headless `--transcribe-file`/`--list-devices`/`--list-models` CLI, and Windows portable mode. Onboarding now finishes after the Accessibility step.

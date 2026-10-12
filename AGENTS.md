@@ -71,7 +71,7 @@ Phase 1 synthesises through an external OpenAI-compatible HTTP server (default `
 
 - `App.tsx` - Main component with onboarding (Accessibility permission)
 - `components/settings/` - Settings UI: `general/`, `advanced/`, `debug/`, `about/`
-- `components/onboarding/`, `shared/`, `ui/`, `icons/`, `footer/`
+- `components/onboarding/`, `ui/`, `icons/`, `footer/`
 - `overlay/` - Overlay window entry point and UI
 - `hooks/useSettings.ts`, `stores/settingsStore.ts` - Settings state (Zustand)
 - `bindings.ts` - Generated Tauri type bindings (tauri-specta)

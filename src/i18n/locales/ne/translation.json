@@ -2,15 +2,12 @@
   "tray": {
     "settings": "सेटिङहरू...",
     "copyLastTranscript": "पछिल्लो ट्रान्सक्रिप्ट कपी गर्नुहोस्",
-    "unloadModel": "मोडेल अनलोड गर्नुहोस्",
-    "model": "मोडेल",
     "quit": "बाहिर निस्कनुहोस्",
     "cancel": "रद्द गर्नुहोस्",
     "secureInputWarning": "⚠ Secure Input ले सर्टकटहरू रोकेको छ"
   },
   "sidebar": {
     "general": "सामान्य",
-    "models": "मोडेलहरू",
     "advanced": "उन्नत",
     "postProcessing": "पोस्ट प्रोसेस",
     "history": "हिस्ट्री",
@@ -18,86 +15,6 @@
     "about": "बारेमा"
   },
   "onboarding": {
-    "subtitle": "सुरु गर्न, एउटा ट्रान्सक्रिप्सन मोडेल छान्नुहोस्",
-    "existingModelsTitle": "मिल्दा मोडेलहरू",
-    "downloadModelsTitle": "डाउनलोड गर्न उपलब्ध",
-    "showAllModels": "सबै {{total}} मोडेलहरू देखाउनुहोस्",
-    "showFewerModels": "थोरै मोडेलहरू देखाउनुहोस्",
-    "recommended": "सिफारिस गरिएको",
-    "customModelDescription": "आधिकारिक रूपमा समर्थित छैन",
-    "modelCard": {
-      "accuracy": "शुद्धता",
-      "speed": "गति"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "छिटो र राम्रै सटीक।"
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "राम्रो शुद्धता, मध्यम गति"
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "शुद्धता र गतिको सन्तुलन।"
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "राम्रो शुद्धता, तर ढिलो।"
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "अङ्ग्रेजी मात्र। अङ्ग्रेजी वक्ताहरूका लागि उत्कृष्ट मोडेल।"
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "छिटो र सटीक"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "धेरै छिटो, अङ्ग्रेजी मात्र। उच्चारण शैलीहरू राम्रोसँग सम्हाल्छ।"
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "अति छिटो, अङ्ग्रेजी मात्र"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "छिटो, अङ्ग्रेजी मात्र। गति र शुद्धताको राम्रो सन्तुलन।"
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "अङ्ग्रेजी मात्र। उच्च गुणस्तर।"
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "ताइवानी मन्डारिनका लागि अनुकूलित। कोड-स्विचिङ समर्थन।"
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "धेरै छिटो। चिनियाँ, अङ्ग्रेजी, जापानी, कोरियाली, क्यान्टोनिज।"
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "रुसी वाक् पहिचान। छिटो र सटीक।"
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "धेरै छिटो। अङ्ग्रेजी, जर्मन, स्पेनी, फ्रान्सेली। अनुवाद समर्थन गर्छ।"
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "सटीक बहुभाषिक। 25 युरोपेली भाषाहरू। अनुवाद समर्थन गर्छ।"
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "ठूलो, अलि ढिलो, तर धेरै सटीक बहुभाषिक मोडेल।"
-      }
-    },
-    "errors": {
-      "selectModel": "मोडेल चयन गर्न सकिएन"
-    },
     "permissions": {
       "title": "अनुमतिहरू आवश्यक छन्",
       "description": "Mouthy लाई राम्रोसँग काम गर्न केही अनुमतिहरू चाहिन्छ।",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "कस्टम",
-    "legacy": "लिगेसी",
-    "streaming": "स्ट्रिमिङ",
-    "active": "सक्रिय",
-    "switching": "बदलिँदैछ...",
-    "noModelsAvailable": "कुनै मोडेल उपलब्ध छैन",
-    "verifying": "{{modelName}} प्रमाणित गरिँदैछ...",
-    "verifyingGeneric": "प्रमाणित गरिँदैछ...",
-    "extracting": "{{modelName}} एक्स्ट्र्याक्ट गरिँदैछ...",
-    "extractingMultiple": "{{count}} वटा मोडेल एक्स्ट्र्याक्ट गरिँदैछ...",
-    "extractingGeneric": "एक्स्ट्र्याक्ट गरिँदैछ...",
-    "downloading": "डाउनलोड गरिँदैछ {{percentage}}%",
-    "downloadingMultiple": "{{count}} वटा मोडेल डाउनलोड गरिँदैछ...",
-    "modelReady": "मोडेल तयार छ",
-    "loading": "{{modelName}} लोड गरिँदैछ...",
-    "loadingGeneric": "लोड गरिँदैछ...",
-    "modelError": "मोडेल त्रुटि",
-    "modelUnloaded": "मोडेल अनलोड गरियो",
-    "noModelDownloadRequired": "मोडेल छैन - डाउनलोड आवश्यक",
-    "deleteModel": "{{modelName}} मेटाउनुहोस्",
-    "downloadSpeed": "{{speed}} MB/s",
-    "cancel": "रद्द गर्नुहोस्",
-    "cancelDownload": "डाउनलोड रद्द गर्नुहोस्",
-    "capabilities": {
-      "languageSelection": "धेरै इनपुट भाषाहरू समर्थन गर्छ",
-      "singleLanguage": "यो भाषा मात्र समर्थन गर्छ",
-      "languageCount": "{{total}} भाषाहरू",
-      "languageOnly": "{{language}} मात्र",
-      "translation": "अङ्ग्रेजीमा अनुवाद गर्न सक्छ",
-      "translate": "अनुवाद",
-      "streaming": "बोल्दै गर्दा लाइभ ट्रान्सक्रिप्सन देखाउँछ"
-    }
-  },
   "settings": {
-    "modelSettings": {
-      "title": "{{model}} सेटिङहरू"
-    },
     "general": {
       "title": "सामान्य",
       "shortcut": {
@@ -172,34 +52,7 @@
           "set": "सर्टकट सेट गर्न सकिएन: {{error}}",
           "reset": "सर्टकटलाई मूल मानमा रिसेट गर्न सकिएन"
         }
-      },
-      "language": {
-        "title": "भाषा",
-        "description": "वाक् पहिचानका लागि भाषा चयन गर्नुहोस्। Auto ले भाषा स्वतः निर्धारण गर्छ, भने कुनै निश्चित भाषा चयन गर्दा त्यस भाषाको शुद्धता सुधार हुन सक्छ।",
-        "searchPlaceholder": "भाषाहरू खोज्नुहोस्...",
-        "noResults": "कुनै भाषा भेटिएन",
-        "auto": "स्वतः"
       }
-    },
-    "models": {
-      "title": "ट्रान्सक्रिप्सन मोडेलहरू",
-      "description": "ट्रान्सक्रिप्सन मोडेल चयन गर्नुहोस् वा थप मोडेलहरू डाउनलोड गर्नुहोस्। फरक मोडेलहरूले फरक स्तरको शुद्धता र गति दिन्छन्।",
-      "searchPlaceholder": "नामद्वारा मोडेल खोज्नुहोस्…",
-      "yourModels": "डाउनलोड गरिएका मोडेलहरू",
-      "availableModels": "डाउनलोड गर्न उपलब्ध",
-      "deleteConfirm": "के तपाईं साँच्चै {{modelName}} मेटाउन चाहनुहुन्छ? यसलाई फेरि प्रयोग गर्न फेरि डाउनलोड गर्नुपर्नेछ।",
-      "deleteActiveConfirm": "{{modelName}} तपाईंको सक्रिय मोडेल हो। यसलाई मेटाउँदा नयाँ मोडेल चयन नगरेसम्म ट्रान्सक्रिप्सन रोकिनेछ। के तपाईं साँच्चै मेटाउन चाहनुहुन्छ?",
-      "deleteTitle": "मोडेल मेटाउनुहोस्",
-      "filters": {
-        "allLanguages": "सबै भाषाहरू",
-        "streaming": "लाइभ ट्रान्सक्रिप्सन समर्थन गर्ने मोडेलहरू फिल्टर गर्नुहोस्",
-        "translation": "अङ्ग्रेजीमा अनुवाद समर्थन गर्ने मोडेलहरू फिल्टर गर्नुहोस्"
-      },
-      "rescan": {
-        "label": "फेरि स्क्यान गर्नुहोस्",
-        "tooltip": "Mouthy बाहिरबाट मोडेल फोल्डर वा Hugging Face क्यासमा थपिएका मोडेलहरू फेरि स्क्यान गर्नुहोस्"
-      },
-      "noModelsMatch": "यो फिल्टरसँग कुनै मोडेल मिल्दैन।"
     },
     "sound": {
       "title": "साउन्ड",
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "प्रयोगात्मक सुविधाहरू",
         "description": "अझै विकासमा रहेका प्रयोगात्मक सुविधाहरू अन गर्नुहोस्।"
-      },
-      "lazyStreamClose": {
-        "label": "ट्रान्सक्रिप्सनहरूबीच माइक खुला राख्नुहोस्",
-        "description": "रेकर्डिङ रोकिएपछि 30 सेकेन्डसम्म माइक्रोफोन स्ट्रिम खुला राख्छ, जसले लगातारका ट्रान्सक्रिप्सनहरूको ढिलाइ घटाउँछ। सक्रिय हुँदा Bluetooth अडियो गुणस्तर घट्न सक्छ।"
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "transcribe.cpp एक्सेलेरेसन",
-          "description": "transcribe.cpp (Whisper परिवार) मोडेलहरूका लागि हार्डवेयर एक्सेलेरेसन। Auto ले उपलब्ध भए GPU प्रयोग गर्छ (macOS मा Metal, Windows/Linux मा Vulkan)।"
-        },
-        "ort": {
-          "title": "ONNX एक्सेलेरेसन",
-          "description": "ONNX मोडेलहरू (Parakeet, Canary, Moonshine, आदि) का लागि हार्डवेयर एक्सेलेरेसन। Windows मा DirectML प्रयोगात्मक छ। मोडेलहरूले ट्रान्सक्राइब गर्न नसक्न सक्छन्।"
-        },
-        "gpuDevice": {
-          "auto": "स्वतः"
-        }
       },
       "startHidden": {
         "label": "लुकेर सुरु गर्नुहोस्",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "अङ्ग्रेजीमा अनुवाद गर्नुहोस्",
-        "description": "ट्रान्सक्रिप्सनका बेला अन्य भाषाको बोलीलाई स्वतः अङ्ग्रेजीमा अनुवाद गर्नुहोस्।"
-      },
-      "modelUnload": {
-        "title": "मोडेल अनलोड",
-        "description": "तोकिएको समयसम्म मोडेल प्रयोग नभएमा GPU/CPU मेमोरी स्वतः खाली गर्नुहोस्",
-        "options": {
-          "never": "कहिल्यै होइन",
-          "immediately": "तुरुन्तै",
-          "min2": "2 मिनेटपछि",
-          "min5": "5 मिनेटपछि",
-          "min10": "10 मिनेटपछि",
-          "min15": "15 मिनेटपछि",
-          "hour1": "1 घण्टापछि",
-          "sec15": "15 सेकेन्डपछि (डिबग)"
         }
       },
       "customWords": {
@@ -437,12 +255,7 @@
         "title": "प्रारम्भिक सेटअप पूर्वावलोकन",
         "description": "अनुमति, मोडेल वा सम्पन्न स्थिति परिवर्तन नगरी प्रारम्भिक सेटअप स्क्रिनहरू पूर्वावलोकन गर्नुहोस्",
         "permissionsButton": "अनुमतिहरू",
-        "modelsButton": "मोडेल चयन",
         "exitButton": "पूर्वावलोकन बन्द गर्नुहोस्"
-      },
-      "wordCorrectionThreshold": {
-        "title": "शब्द सुधार थ्रेसहोल्ड",
-        "description": "कस्टम शब्द सुधारको संवेदनशीलता"
       },
       "historyLimit": {
         "title": "हिस्ट्री सीमा",
@@ -474,7 +287,6 @@
       },
       "paths": {
         "appData": "एप डेटा:",
-        "models": "मोडेलहरू:",
         "settings": "सेटिङहरू:"
       },
       "pasteDelay": {
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "मेटाउनुहोस्",
     "close": "बन्द गर्नुहोस्",
     "open": "खोल्नुहोस्",
     "copy": "कपी गर्नुहोस्",
@@ -548,9 +359,7 @@
     "openSettings": "सिस्टम सेटिङहरू खोल्नुहोस्"
   },
   "errors": {
-    "loadDirectory": "डाइरेक्टरी लोड गर्दा त्रुटि: {{error}}",
-    "modelLoadFailed": "मोडेल लोड गर्न सकिएन: {{model}}",
-    "modelLoadFailedUnknown": "अज्ञात मोडेल"
+    "loadDirectory": "डाइरेक्टरी लोड गर्दा त्रुटि: {{error}}"
   },
   "appLanguage": {
     "title": "एपको भाषा",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "ट्रान्सक्राइब गरिँदैछ...",
-    "processing": "प्रशोधन गरिँदैछ...",
-    "loadingModel": "मोडेल लोड गरिँदैछ..."
+    "processing": "प्रशोधन गरिँदैछ..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} ले 1 सर्टकट रोकिरहेको हुन सक्छ",

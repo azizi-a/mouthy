@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../ui/Button";
 import { SettingContainer } from "../../ui/SettingContainer";
 
-export type OnboardingPreviewStep = "accessibility" | "model";
+export type OnboardingPreviewStep = "accessibility";
 
 interface OnboardingPreviewProps {
   onPreview: (step: OnboardingPreviewStep) => void;
@@ -32,13 +32,6 @@ export const OnboardingPreview: React.FC<OnboardingPreviewProps> = ({
           onClick={() => onPreview("accessibility")}
         >
           {t("settings.debug.onboardingPreview.permissionsButton")}
-        </Button>
-        <Button
-          variant="secondary"
-          size="md"
-          onClick={() => onPreview("model")}
-        >
-          {t("settings.debug.onboardingPreview.modelsButton")}
         </Button>
       </div>
     </SettingContainer>

@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import "./RecordingOverlay.css";
 import { commands } from "@/bindings";
 import i18n, { syncLanguageFromSettings } from "@/i18n";
-import type { ModelStateEvent } from "@/lib/types/events";
 import { getLanguageDirection } from "@/lib/utils/rtl";
 
 type OverlayState = "recording" | "transcribing" | "processing";
@@ -16,7 +15,6 @@ const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [state, setState] = useState<OverlayState>("recording");
-  const [modelLoading, setModelLoading] = useState(false);
   // Overlay placement (top vs bottom of the screen); the card sits flush to
   // that edge.
   const [position, setPosition] = useState<"top" | "bottom">("bottom");
@@ -45,29 +43,9 @@ const RecordingOverlay: React.FC = () => {
         setIsVisible(false);
       });
 
-      // The backend ends every `loading_started` with exactly one of completed
-      // or failed, so only those end a load. Other events (e.g. `unloaded` from
-      // the idle watcher) aren't ordered against an in-flight load and must not
-      // clear it.
-      const unlistenModel = await listen<ModelStateEvent>(
-        "model-state-changed",
-        (event) => {
-          const type = event.payload.event_type;
-          if (type === "loading_started") {
-            setModelLoading(true);
-          } else if (
-            type === "loading_completed" ||
-            type === "loading_failed"
-          ) {
-            setModelLoading(false);
-          }
-        },
-      );
-
       return () => {
         unlistenShow();
         unlistenHide();
-        unlistenModel();
       };
     };
 
@@ -75,10 +53,6 @@ const RecordingOverlay: React.FC = () => {
   }, []);
 
   if (!isVisible) return null;
-
-  const transcribingLabel = modelLoading
-    ? t("overlay.loadingModel")
-    : t("overlay.transcribing");
 
   const cancelBtn = (
     <button
@@ -129,7 +103,9 @@ const RecordingOverlay: React.FC = () => {
   // cancel button is in both rows so it stays put.
   const working = state === "transcribing" || state === "processing";
   const workLabel =
-    state === "processing" ? t("overlay.processing") : transcribingLabel;
+    state === "processing"
+      ? t("overlay.processing")
+      : t("overlay.transcribing");
 
   return (
     <div

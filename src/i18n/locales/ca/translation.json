@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Configuració...",
     "copyLastTranscript": "Copia l'última transcripció",
-    "unloadModel": "Allibera el model de la memòria",
-    "model": "Model",
     "quit": "Surt",
     "cancel": "Cancel·la",
     "secureInputWarning": "⚠ Dreceres blocades per l'entrada segura"
   },
   "sidebar": {
     "general": "General",
-    "models": "Models",
     "advanced": "Avançat",
     "postProcessing": "Postprocessament",
     "history": "Historial",
@@ -18,86 +15,6 @@
     "about": "Quant a"
   },
   "onboarding": {
-    "subtitle": "Per començar, trieu un model de transcripció",
-    "existingModelsTitle": "Models compatibles",
-    "downloadModelsTitle": "Disponibles per baixar",
-    "showAllModels": "Mostra tots els {{total}} models",
-    "showFewerModels": "Mostra menys models",
-    "recommended": "Recomanat",
-    "customModelDescription": "Sense suport oficial",
-    "modelCard": {
-      "accuracy": "precisió",
-      "speed": "velocitat"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Ràpid i força precís."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Bona precisió i velocitat mitjana."
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Equilibri entre precisió i velocitat."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Bona precisió, però lent."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Només anglès. El millor model per a parlants d'anglès."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Ràpid i precís."
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Molt ràpid, només anglès. Reconeix bé els accents."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ultraràpid, només anglès."
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Ràpid, només anglès. Bon equilibri entre velocitat i precisió."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Només anglès. Alta qualitat."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Optimitzat per al xinès mandarí de Taiwan. Admet l'alternança de llengües."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Molt ràpid. Xinès, anglès, japonès, coreà i cantonès."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Reconeixement de la parla en rus. Ràpid i precís."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Molt ràpid. Anglès, alemany, castellà i francès. Admet la traducció."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Multilingüe i precís. 25 llengües europees. Admet la traducció."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "Un model multilingüe gran, més lent, però molt precís."
-      }
-    },
-    "errors": {
-      "selectModel": "No s'ha pogut seleccionar el model"
-    },
     "permissions": {
       "title": "Permisos necessaris",
       "description": "El Mouthy demana alguns permisos per funcionar correctament.",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Personalitzat",
-    "legacy": "Antic",
-    "streaming": "En temps real",
-    "active": "Actiu",
-    "switching": "S'està canviant...",
-    "noModelsAvailable": "No hi ha models disponibles",
-    "verifying": "S'està verificant {{modelName}}...",
-    "verifyingGeneric": "S'està verificant...",
-    "extracting": "S'està extraient {{modelName}}...",
-    "extractingMultiple": "S'estan extraient {{count}} models...",
-    "extractingGeneric": "S'està extraient...",
-    "downloading": "S'està baixant: {{percentage}}%",
-    "downloadingMultiple": "S'estan baixant {{count}} models...",
-    "modelReady": "Model a punt",
-    "loading": "S'està carregant {{modelName}}...",
-    "loadingGeneric": "S'està carregant...",
-    "modelError": "Error del model",
-    "modelUnloaded": "Model alliberat de la memòria",
-    "noModelDownloadRequired": "No hi ha cap model: cal baixar-ne un",
-    "deleteModel": "Suprimiu {{modelName}}",
-    "downloadSpeed": "{{speed}} MB/s",
-    "cancel": "Cancel·la",
-    "cancelDownload": "Cancel·la la baixada",
-    "capabilities": {
-      "languageSelection": "Admet diverses llengües d'entrada",
-      "singleLanguage": "Només admet aquesta llengua",
-      "languageCount": "{{total}} llengües",
-      "languageOnly": "Només {{language}}",
-      "translation": "Pot traduir a l'anglès",
-      "translate": "Tradueix",
-      "streaming": "Mostra la transcripció en temps real mentre parleu"
-    }
-  },
   "settings": {
-    "modelSettings": {
-      "title": "Configuració de {{model}}"
-    },
     "general": {
       "title": "General",
       "shortcut": {
@@ -172,34 +52,7 @@
           "set": "No s'ha pogut definir la drecera: {{error}}",
           "reset": "No s'ha pogut restablir la drecera al valor original"
         }
-      },
-      "language": {
-        "title": "Llengua",
-        "description": "Seleccioneu la llengua per al reconeixement de la parla. L'opció automàtica detecta la llengua, mentre que seleccionar-ne una d'específica pot millorar-ne la precisió.",
-        "searchPlaceholder": "Cerca llengües...",
-        "noResults": "No s'ha trobat cap llengua",
-        "auto": "Automàtica"
       }
-    },
-    "models": {
-      "title": "Models de transcripció",
-      "description": "Seleccioneu un model de transcripció o baixeu-ne més. Els models ofereixen diferents nivells de precisió i velocitat.",
-      "searchPlaceholder": "Cerqueu models pel nom…",
-      "yourModels": "Models baixats",
-      "availableModels": "Disponibles per baixar",
-      "deleteConfirm": "Segur que voleu suprimir {{modelName}}? Haureu de tornar-lo a baixar per utilitzar-lo.",
-      "deleteActiveConfirm": "{{modelName}} és el model actiu. Si el suprimiu, no podreu fer transcripcions fins que seleccioneu un altre model. N'esteu segur?",
-      "deleteTitle": "Suprimeix el model",
-      "filters": {
-        "allLanguages": "Totes les llengües",
-        "streaming": "Filtra els models que admeten la transcripció en temps real",
-        "translation": "Filtra els models que admeten la traducció a l'anglès"
-      },
-      "rescan": {
-        "label": "Torna a cercar",
-        "tooltip": "Torna a cercar models afegits a la carpeta de models o a la memòria cau de Hugging Face des de fora del Mouthy"
-      },
-      "noModelsMatch": "Cap model no coincideix amb aquest filtre."
     },
     "sound": {
       "title": "So",
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Funcions experimentals",
         "description": "Activa les funcions experimentals que encara estan en desenvolupament."
-      },
-      "lazyStreamClose": {
-        "label": "Mantén el micròfon obert entre transcripcions",
-        "description": "Manté el flux d'àudio del micròfon obert durant 30 segons després d'aturar l'enregistrament per reduir la latència entre transcripcions consecutives. Mentre és actiu, pot reduir la qualitat de l'àudio Bluetooth."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "Acceleració del transcribe.cpp",
-          "description": "Acceleració per maquinari dels models del transcribe.cpp (família Whisper). L'opció automàtica utilitza la GPU si està disponible (Metal al macOS, Vulkan al Windows i al Linux)."
-        },
-        "ort": {
-          "title": "Acceleració ONNX",
-          "description": "Acceleració per maquinari dels models ONNX (Parakeet, Canary, Moonshine, etc.). El DirectML al Windows és experimental. És possible que els models no puguin transcriure."
-        },
-        "gpuDevice": {
-          "auto": "Automàtica"
-        }
       },
       "startHidden": {
         "label": "Inicia ocult",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Traduïu a l'anglès",
-        "description": "Tradueix automàticament la parla d'altres llengües a l'anglès durant la transcripció."
-      },
-      "modelUnload": {
-        "title": "Allibera el model de la memòria",
-        "description": "Allibera automàticament la memòria de la GPU i de la CPU quan el model no s'ha utilitzat durant el temps especificat",
-        "options": {
-          "never": "Mai",
-          "immediately": "Immediatament",
-          "min2": "Al cap de 2 minuts",
-          "min5": "Al cap de 5 minuts",
-          "min10": "Al cap de 10 minuts",
-          "min15": "Al cap de 15 minuts",
-          "hour1": "Al cap d'1 hora",
-          "sec15": "Al cap de 15 segons (depuració)"
         }
       },
       "customWords": {
@@ -437,12 +255,7 @@
         "title": "Previsualització de la configuració inicial",
         "description": "Previsualitza les pantalles de configuració inicial sense canviar els permisos, os models ni l'estat de compleció",
         "permissionsButton": "Permisos",
-        "modelsButton": "Selecció del model",
         "exitButton": "Sortiu de la previsualització"
-      },
-      "wordCorrectionThreshold": {
-        "title": "Llindar de correcció de paraules",
-        "description": "Sensibilitat de les correccions de paraules personalitzades"
       },
       "historyLimit": {
         "title": "Límit de l'historial",
@@ -474,7 +287,6 @@
       },
       "paths": {
         "appData": "Dades de l'aplicació:",
-        "models": "Models:",
         "settings": "Configuració:"
       },
       "pasteDelay": {
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Suprimeix",
     "close": "Tanca",
     "open": "Obre",
     "copy": "Copia",
@@ -548,9 +359,7 @@
     "openSettings": "Obriu la configuració del sistema"
   },
   "errors": {
-    "loadDirectory": "Error en carregar el directori: {{error}}",
-    "modelLoadFailed": "No s'ha pogut carregar el model: {{model}}",
-    "modelLoadFailedUnknown": "model desconegut"
+    "loadDirectory": "Error en carregar el directori: {{error}}"
   },
   "appLanguage": {
     "title": "Llengua de l'aplicació",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "S'està transcrivint...",
-    "processing": "S'està processant...",
-    "loadingModel": "S'està carregant el model..."
+    "processing": "S'està processant..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} pot estar blocant 1 drecera",

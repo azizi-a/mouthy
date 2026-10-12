@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Indstillinger...",
     "copyLastTranscript": "Kopiér seneste transskription",
-    "unloadModel": "Frigør model",
-    "model": "Model",
     "quit": "Afslut",
     "cancel": "Annuller",
     "secureInputWarning": "⚠ Genveje blokeret af Secure Input"
   },
   "sidebar": {
     "general": "Generelt",
-    "models": "Modeller",
     "advanced": "Avanceret",
     "postProcessing": "Efterbehandling",
     "history": "Historik",
@@ -18,86 +15,6 @@
     "about": "Om"
   },
   "onboarding": {
-    "subtitle": "For at komme i gang skal du vælge en transskriptionsmodel",
-    "existingModelsTitle": "Kompatible modeller",
-    "downloadModelsTitle": "Tilgængelig til download",
-    "showAllModels": "Vis alle {{total}} modeller",
-    "showFewerModels": "Vis færre modeller",
-    "recommended": "Anbefalet",
-    "customModelDescription": "Ikke officielt understøttet",
-    "modelCard": {
-      "accuracy": "nøjagtighed",
-      "speed": "hastighed"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Hurtig og ret nøjagtig."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "God nøjagtighed, middel hastighed"
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Afbalanceret nøjagtighed og hastighed."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "God nøjagtighed, men langsom."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Kun engelsk. Den bedste model for engelsktalende."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Hurtig og nøjagtig"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Meget hurtig, kun engelsk. Håndterer accenter godt."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Ultrahurtig, kun engelsk"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Hurtig, kun engelsk. God balance mellem hastighed og nøjagtighed."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Kun engelsk. Høj kvalitet."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Optimeret til taiwansk mandarin. Understøtter kodeskift."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Meget hurtig. Kinesisk, engelsk, japansk, koreansk, kantonesisk."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Russisk talegenkendelse. Hurtig og nøjagtig."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Meget hurtig. Engelsk, tysk, spansk, fransk. Understøtter oversættelse."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Nøjagtig, flersproget. 25 europæiske sprog. Understøtter oversættelse."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "En stor, langsommere, men meget nøjagtig flersproget model."
-      }
-    },
-    "errors": {
-      "selectModel": "Kunne ikke vælge model"
-    },
     "permissions": {
       "title": "Tilladelser påkrævet",
       "description": "Mouthy har brug for et par tilladelser for at fungere korrekt.",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Brugerdefineret",
-    "legacy": "Forældet",
-    "streaming": "Streaming",
-    "active": "Aktiv",
-    "switching": "Skifter...",
-    "noModelsAvailable": "Ingen modeller tilgængelige",
-    "verifying": "Verificerer {{modelName}}...",
-    "verifyingGeneric": "Verificerer...",
-    "extracting": "Udpakker {{modelName}}...",
-    "extractingMultiple": "Udpakker {{count}} modeller...",
-    "extractingGeneric": "Udpakker...",
-    "downloading": "Downloader {{percentage}}%",
-    "downloadingMultiple": "Downloader {{count}} modeller...",
-    "modelReady": "Model klar",
-    "loading": "Indlæser {{modelName}}...",
-    "loadingGeneric": "Indlæser...",
-    "modelError": "Modelfejl",
-    "modelUnloaded": "Model frigjort",
-    "noModelDownloadRequired": "Ingen model - download påkrævet",
-    "deleteModel": "Slet {{modelName}}",
-    "downloadSpeed": "{{speed}} MB/s",
-    "cancel": "Annuller",
-    "cancelDownload": "Annuller download",
-    "capabilities": {
-      "languageSelection": "Understøtter flere inputsprog",
-      "singleLanguage": "Understøtter kun dette sprog",
-      "languageCount": "{{total}} sprog",
-      "languageOnly": "Kun {{language}}",
-      "translation": "Kan oversætte til engelsk",
-      "translate": "Oversæt",
-      "streaming": "Viser live transskription, mens du taler"
-    }
-  },
   "settings": {
-    "modelSettings": {
-      "title": "{{model}}-indstillinger"
-    },
     "general": {
       "title": "Generelt",
       "shortcut": {
@@ -172,34 +52,7 @@
           "set": "Kunne ikke indstille genvej: {{error}}",
           "reset": "Kunne ikke nulstille genvej til oprindelig indstilling"
         }
-      },
-      "language": {
-        "title": "Sprog",
-        "description": "Vælg sproget til talegenkendelse. Auto tyder automatisk sproget, mens valg af et specifikt sprog kan forbedre nøjagtigheden for det pågældende sprog.",
-        "searchPlaceholder": "Søg efter sprog...",
-        "noResults": "Ingen sprog fundet",
-        "auto": "Automatisk"
       }
-    },
-    "models": {
-      "title": "Transskriptionsmodeller",
-      "description": "Vælg en transskriptionsmodel, eller download flere modeller. Forskellige modeller tilbyder varierende niveauer af nøjagtighed og hastighed.",
-      "searchPlaceholder": "Søg efter modeller ved navn…",
-      "yourModels": "Downloadede modeller",
-      "availableModels": "Tilgængelig til download",
-      "deleteConfirm": "Er du sikker på, at du vil slette {{modelName}}? Du skal downloade den igen for at bruge den.",
-      "deleteActiveConfirm": "{{modelName}} er din aktive model. Sletning af den vil stoppe transskriptioner, indtil du vælger en ny model. Er du sikker?",
-      "deleteTitle": "Slet model",
-      "filters": {
-        "allLanguages": "Alle sprog",
-        "streaming": "Filtrer modeller, der understøtter live transskription",
-        "translation": "Filtrer modeller, der understøtter oversættelse til engelsk"
-      },
-      "rescan": {
-        "label": "Søg igen",
-        "tooltip": "Søg igen efter modeller, der er tilføjet til modelmappen eller Hugging Face-cachen uden for Mouthy"
-      },
-      "noModelsMatch": "Ingen modeller matcher dette filter."
     },
     "sound": {
       "title": "Lyd",
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Eksperimentelle funktioner",
         "description": "Aktivér eksperimentelle funktioner, der stadig er under udvikling."
-      },
-      "lazyStreamClose": {
-        "label": "Hold mikrofon åben mellem transskriptioner",
-        "description": "Holder mikrofonstrømmen åben i 30 sekunder, efter at optagelsen stopper, hvilket reducerer ventetid ved transskriptioner lige efter hinanden. Kan forringe Bluetooth-lydkvaliteten, mens den er aktiv."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "transcribe.cpp-acceleration",
-          "description": "Hardwareacceleration til transcribe.cpp-modeller (Whisper-familien). Auto bruger GPU, hvis tilgængelig (Metal på macOS, Vulkan på Windows/Linux)."
-        },
-        "ort": {
-          "title": "ONNX-acceleration",
-          "description": "Hardwareacceleration til ONNX-modeller (Parakeet, Canary, Moonshine osv.). DirectML på Windows er eksperimentelt. Modeller kan fejle under transskription."
-        },
-        "gpuDevice": {
-          "auto": "Automatisk"
-        }
       },
       "startHidden": {
         "label": "Start skjult",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Oversæt til engelsk",
-        "description": "Oversæt automatisk tale fra andre sprog til engelsk under transskription."
-      },
-      "modelUnload": {
-        "title": "Frigør model",
-        "description": "Frigør automatisk GPU-/CPU-hukommelse, når modellen ikke har været brugt i den angivne tid",
-        "options": {
-          "never": "Aldrig",
-          "immediately": "Med det samme",
-          "min2": "Efter 2 minutter",
-          "min5": "Efter 5 minutter",
-          "min10": "Efter 10 minutter",
-          "min15": "Efter 15 minutter",
-          "hour1": "Efter 1 time",
-          "sec15": "Efter 15 sekunder (fejlfinding)"
         }
       },
       "customWords": {
@@ -437,12 +255,7 @@
         "title": "Forhåndsvis introduktion",
         "description": "Forhåndsvis introduktionsskærmene uden at ændre tilladelser, modeller eller fuldførelsesstatus",
         "permissionsButton": "Tilladelser",
-        "modelsButton": "Modelvalg",
         "exitButton": "Afslut forhåndsvisning"
-      },
-      "wordCorrectionThreshold": {
-        "title": "Tærskel for ordkorrektion",
-        "description": "Følsomhed for brugerdefinerede ordkorrektioner"
       },
       "historyLimit": {
         "title": "Historikgrænse",
@@ -474,7 +287,6 @@
       },
       "paths": {
         "appData": "Appdata:",
-        "models": "Modeller:",
         "settings": "Indstillinger:"
       },
       "pasteDelay": {
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Slet",
     "close": "Luk",
     "open": "Åbn",
     "copy": "Kopiér",
@@ -548,9 +359,7 @@
     "openSettings": "Åbn systemindstillinger"
   },
   "errors": {
-    "loadDirectory": "Fejl ved indlæsning af mappe: {{error}}",
-    "modelLoadFailed": "Kunne ikke indlæse model: {{model}}",
-    "modelLoadFailedUnknown": "ukendt model"
+    "loadDirectory": "Fejl ved indlæsning af mappe: {{error}}"
   },
   "appLanguage": {
     "title": "Applikationssprog",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Transskriberer...",
-    "processing": "Behandler...",
-    "loadingModel": "Indlæser model..."
+    "processing": "Behandler..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokerer muligvis 1 genvej",

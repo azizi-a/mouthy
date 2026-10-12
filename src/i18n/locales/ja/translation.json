@@ -2,15 +2,12 @@
   "tray": {
     "settings": "設定…",
     "copyLastTranscript": "最新の文字起こしをコピー",
-    "unloadModel": "モデルをアンロード",
-    "model": "モデル",
     "quit": "終了",
     "cancel": "キャンセル",
     "secureInputWarning": "⚠ Secure Input でショートカットがブロック中"
   },
   "sidebar": {
     "general": "一般",
-    "models": "モデル",
     "advanced": "詳細設定",
     "postProcessing": "後処理",
     "history": "履歴",
@@ -18,86 +15,6 @@
     "about": "概要"
   },
   "onboarding": {
-    "subtitle": "開始するには、文字起こしのモデルを選択してください",
-    "existingModelsTitle": "互換性のあるモデル",
-    "downloadModelsTitle": "ダウンロード可能",
-    "showAllModels": "すべての{{total}}個のモデルを表示",
-    "showFewerModels": "表示を減らす",
-    "recommended": "おすすめ",
-    "customModelDescription": "公式サポート対象外",
-    "modelCard": {
-      "accuracy": "精度",
-      "speed": "速度"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "高速でそこそこ正確。"
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "良好な精度、中程度の速度"
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "精度と速度のバランスが良い。"
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "良好な精度、ただし低速。"
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "英語のみ。英語話者に最適なモデル。"
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "高速で正確"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "非常に高速、英語のみ。アクセントにも対応。"
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "超高速、英語のみ"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "高速、英語のみ。速度と精度のバランスが良い。"
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "英語のみ。高品質。"
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "台湾華語に最適化。コードスイッチングに対応。"
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "非常に高速。中国語、英語、日本語、韓国語、広東語。"
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "ロシア語音声認識。高速かつ高精度。"
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "非常に高速。英語、ドイツ語、スペイン語、フランス語。翻訳対応。"
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "高精度な多言語対応。25のヨーロッパ言語。翻訳対応。"
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "大型で低速ですが、非常に高精度な多言語モデル。"
-      }
-    },
-    "errors": {
-      "selectModel": "モデルの選択に失敗しました"
-    },
     "permissions": {
       "title": "権限が必要です",
       "description": "Mouthy が正常に動作するにはいくつかの権限が必要です。",
@@ -114,64 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "カスタム",
-    "streaming": "ストリーミング",
-    "active": "アクティブ",
-    "switching": "切替中…",
-    "noModelsAvailable": "利用可能なモデルがありません",
-    "verifying": "{{modelName}}を検証中…",
-    "verifyingGeneric": "検証中…",
-    "extracting": "{{modelName}}を展開中…",
-    "extractingMultiple": "{{count}}個のモデルを展開中…",
-    "extractingGeneric": "展開中…",
-    "downloading": "ダウンロード中 {{percentage}}%",
-    "downloadingMultiple": "{{count}}個のモデルをダウンロード中…",
-    "modelReady": "モデル準備完了",
-    "loading": "{{modelName}}を読み込み中…",
-    "loadingGeneric": "読み込み中…",
-    "modelError": "モデルエラー",
-    "modelUnloaded": "モデルがアンロードされました",
-    "noModelDownloadRequired": "モデルなし - ダウンロードが必要",
-    "deleteModel": "{{modelName}}を削除",
-    "downloadSpeed": "{{speed}} MB/s",
-    "capabilities": {
-      "languageSelection": "複数の入力言語をサポート",
-      "languageCount": "{{total}}言語",
-      "translation": "英語への翻訳が可能",
-      "translate": "英語に翻訳",
-      "singleLanguage": "この言語のみ対応",
-      "languageOnly": "{{language}}のみ",
-      "streaming": "話しながらリアルタイムで文字起こしを表示"
-    },
-    "cancel": "キャンセル",
-    "cancelDownload": "ダウンロードをキャンセル",
-    "legacy": "旧式"
-  },
   "settings": {
-    "modelSettings": {
-      "title": "{{model}} の設定"
-    },
-    "models": {
-      "title": "文字起こしのモデル",
-      "description": "文字起こしのモデルを選択するか、追加のモデルをダウンロードします。異なるモデルは精度と速度のレベルが異なります。",
-      "deleteConfirm": "{{modelName}}を削除してもよろしいですか? 再度使用するにはダウンロードが必要です。",
-      "deleteActiveConfirm": "{{modelName}}は現在使用中のモデルです。削除すると、新しいモデルを選択するまで文字起こしが停止します。本当に削除しますか?",
-      "deleteTitle": "モデルを削除",
-      "filters": {
-        "allLanguages": "すべての言語",
-        "streaming": "リアルタイム文字起こしに対応するモデルを絞り込む",
-        "translation": "英語への翻訳に対応するモデルを絞り込む"
-      },
-      "noModelsMatch": "このフィルターに一致するモデルがありません。",
-      "yourModels": "ダウンロード済みモデル",
-      "availableModels": "ダウンロード可能",
-      "searchPlaceholder": "モデルを名前で検索…",
-      "rescan": {
-        "label": "再スキャン",
-        "tooltip": "Mouthy を使わずに models フォルダーまたは Hugging Face キャッシュに追加されたモデルを再スキャンします"
-      }
-    },
     "general": {
       "title": "一般",
       "shortcut": {
@@ -192,13 +52,6 @@
           "set": "ショートカットを設定できませんでした: {{error}}",
           "reset": "ショートカットを元の値にリセットできませんでした"
         }
-      },
-      "language": {
-        "title": "言語",
-        "description": "音声認識の言語を選択してください。自動を選択すると言語を自動的に判定します。特定の言語を選択すると、その言語の精度が向上する場合があります。",
-        "searchPlaceholder": "言語を検索…",
-        "noResults": "言語が見つかりません",
-        "auto": "自動"
       }
     },
     "sound": {
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "実験的な機能",
         "description": "まだ開発中の実験的な機能を有効にします。"
-      },
-      "lazyStreamClose": {
-        "label": "文字起こし間でマイクを有効にする",
-        "description": "録音停止後マイクを30秒間有効なままにし、連続した文字起こしの遅延を軽減します。Bluetooth 音声品質に影響する場合があります。"
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "transcribe.cpp アクセラレーション",
-          "description": "transcribe.cpp (Whisper 系) モデルのハードウェアアクセラレーション。「自動」では利用可能な場合 GPU を使用します (macOS では Metal、Windows/Linux では Vulkan)。"
-        },
-        "ort": {
-          "title": "ONNX アクセラレーション",
-          "description": "ONNX モデルのハードウェアアクセラレーション (Parakeet、Canary、Moonshine など)。Windows の DirectML は実験的です。モデルの文字起こしに失敗する場合があります。"
-        },
-        "gpuDevice": {
-          "auto": "自動"
-        }
       },
       "startHidden": {
         "label": "非表示で起動",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "英語に翻訳",
-        "description": "文字起こし中に他の言語から英語に自動的に翻訳。"
-      },
-      "modelUnload": {
-        "title": "モデルのアンロード",
-        "description": "指定時間モデルが使用されていない場合、GPU/CPU メモリを自動的に解放",
-        "options": {
-          "never": "しない",
-          "immediately": "即座に",
-          "min2": "2分後",
-          "min5": "5分後",
-          "min10": "10分後",
-          "min15": "15分後",
-          "hour1": "1時間後",
-          "sec15": "15秒後 (デバッグ)"
         }
       },
       "customWords": {
@@ -433,10 +251,6 @@
         "lineCount": "{{count}}行",
         "empty": "ログを待機中… アプリが出力すると、ここにエントリが表示されます。"
       },
-      "wordCorrectionThreshold": {
-        "title": "単語修正しきい値",
-        "description": "カスタム単語修正の感度"
-      },
       "historyLimit": {
         "title": "履歴上限",
         "description": "保持する履歴エントリーの最大数",
@@ -467,7 +281,6 @@
       },
       "paths": {
         "appData": "アプリデータ:",
-        "models": "モデル:",
         "settings": "設定:"
       },
       "pasteDelay": {
@@ -506,7 +319,6 @@
         "title": "オンボーディングをプレビュー",
         "description": "権限、モデル、完了状態を変更せずにオンボーディング画面をプレビューします",
         "permissionsButton": "権限",
-        "modelsButton": "モデル選択",
         "exitButton": "プレビューを終了"
       }
     },
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "削除",
     "close": "閉じる",
     "open": "開く",
     "copy": "コピー",
@@ -548,9 +359,7 @@
     "openSettings": "システム設定を開く"
   },
   "errors": {
-    "loadDirectory": "ディレクトリの読み込みエラー: {{error}}",
-    "modelLoadFailed": "モデルの読み込みに失敗しました: {{model}}",
-    "modelLoadFailedUnknown": "不明なモデル"
+    "loadDirectory": "ディレクトリの読み込みエラー: {{error}}"
   },
   "appLanguage": {
     "title": "アプリの言語",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "文字起こし中…",
-    "processing": "処理中…",
-    "loadingModel": "モデルを読み込み中…"
+    "processing": "処理中…"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} が1個のショートカットをブロックしている可能性があります",

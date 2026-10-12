@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Inställningar...",
     "copyLastTranscript": "Kopiera senaste transkriptionen",
-    "unloadModel": "Avlasta modell",
-    "model": "Modell",
     "quit": "Avsluta",
     "cancel": "Avbryt",
     "secureInputWarning": "⚠ Kortkommandon blockeras av Secure Input"
   },
   "sidebar": {
     "general": "Allmänt",
-    "models": "Modeller",
     "advanced": "Avancerat",
     "postProcessing": "Efterbearbetning",
     "history": "Historik",
@@ -18,86 +15,6 @@
     "about": "Om"
   },
   "onboarding": {
-    "subtitle": "För att komma igång, välj en transkriptionsmodell",
-    "existingModelsTitle": "Kompatibla modeller",
-    "downloadModelsTitle": "Tillgängliga för nedladdning",
-    "showAllModels": "Visa alla {{total}} modeller",
-    "showFewerModels": "Visa färre modeller",
-    "recommended": "Rekommenderat",
-    "customModelDescription": "Stöds inte officiellt",
-    "modelCard": {
-      "accuracy": "noggrannhet",
-      "speed": "hastighet"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Snabb och ganska noggrann."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Bra noggrannhet, medelhög hastighet"
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Balanserad noggrannhet och hastighet."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Bra noggrannhet, men långsam."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Endast engelska. Den bästa modellen för engelsktalande."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Snabb och noggrann"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Mycket snabb, endast engelska. Hanterar accenter bra."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Blixtsnabb, endast engelska"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Snabb, endast engelska. Bra balans mellan hastighet och noggrannhet."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Endast engelska. Hög kvalitet."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Optimerad för taiwanesisk mandarin. Stöd för kodväxling."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Mycket snabb. Kinesiska, engelska, japanska, koreanska, kantonesiska."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Rysk taligenkänning. Snabb och noggrann."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Mycket snabb. Engelska, tyska, spanska, franska. Stöder översättning."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Noggrann flerspråkig. 25 europeiska språk. Stöder översättning."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "En stor, långsammare, men mycket noggrann flerspråkig modell."
-      }
-    },
-    "errors": {
-      "selectModel": "Det gick inte att välja modell"
-    },
     "permissions": {
       "title": "Behörigheter krävs",
       "description": "Mouthy behöver ett par behörigheter för att fungera korrekt.",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Anpassad",
-    "streaming": "Streaming",
-    "active": "Aktiv",
-    "switching": "Byter...",
-    "noModelsAvailable": "Inga modeller tillgängliga",
-    "verifying": "Verifierar {{modelName}}...",
-    "verifyingGeneric": "Verifierar...",
-    "extracting": "Extraherar {{modelName}}...",
-    "extractingMultiple": "Extraherar {{count}} modeller...",
-    "extractingGeneric": "Extraherar...",
-    "downloading": "Laddar ner {{percentage}}%",
-    "downloadingMultiple": "Laddar ner {{count}} modeller...",
-    "modelReady": "Modell klar",
-    "loading": "Laddar {{modelName}}...",
-    "loadingGeneric": "Laddar...",
-    "modelError": "Modellfel",
-    "modelUnloaded": "Modell avlastad",
-    "noModelDownloadRequired": "Ingen modell - Nedladdning krävs",
-    "deleteModel": "Ta bort {{modelName}}",
-    "downloadSpeed": "{{speed}} MB/s",
-    "cancel": "Avbryt",
-    "cancelDownload": "Avbryt nedladdning",
-    "capabilities": {
-      "languageSelection": "Stöder flera indataspråk",
-      "singleLanguage": "Stöder endast detta språk",
-      "languageCount": "{{total}} språk",
-      "languageOnly": "Endast {{language}}",
-      "translation": "Kan översätta till engelska",
-      "translate": "Översätt till engelska",
-      "streaming": "Visar transkription i realtid medan du talar"
-    },
-    "legacy": "Äldre"
-  },
   "settings": {
-    "modelSettings": {
-      "title": "{{model}}-inställningar"
-    },
     "general": {
       "title": "Allmänt",
       "shortcut": {
@@ -172,33 +52,6 @@
           "set": "Misslyckades med att ställa in kortkommando: {{error}}",
           "reset": "Misslyckades med att återställa kortkommando till ursprungsvärdet"
         }
-      },
-      "language": {
-        "title": "Språk",
-        "description": "Välj språk för taligenkänning. Auto kommer automatiskt att bestämma språket, medan val av ett specifikt språk kan förbättra noggrannheten för det språket.",
-        "searchPlaceholder": "Sök språk...",
-        "noResults": "Inga språk hittades",
-        "auto": "Automatiskt"
-      }
-    },
-    "models": {
-      "title": "Transkriptionsmodeller",
-      "description": "Välj en transkriptionsmodell eller ladda ner ytterligare modeller. Olika modeller erbjuder varierande nivåer av noggrannhet och hastighet.",
-      "yourModels": "Nedladdade modeller",
-      "availableModels": "Tillgängliga att ladda ner",
-      "deleteConfirm": "Är du säker på att du vill ta bort {{modelName}}? Du måste ladda ner den igen för att använda den.",
-      "deleteActiveConfirm": "{{modelName}} är din aktiva modell. Om du tar bort den avbryts transkriptioner tills du väljer en ny modell. Är du säker?",
-      "deleteTitle": "Ta bort modell",
-      "filters": {
-        "allLanguages": "Alla språk",
-        "streaming": "Filtrera modeller som stöder transkription i realtid",
-        "translation": "Filtrera modeller som stöder översättning till engelska"
-      },
-      "noModelsMatch": "Inga modeller matchar detta filter.",
-      "searchPlaceholder": "Sök modeller efter namn…",
-      "rescan": {
-        "label": "Skanna om",
-        "tooltip": "Skanna om efter modeller som lagts till i modellmappen eller Hugging Face-cachen utanför Mouthy"
       }
     },
     "sound": {
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Experimentella funktioner",
         "description": "Aktivera experimentella funktioner som fortfarande är under utveckling."
-      },
-      "lazyStreamClose": {
-        "label": "Håll mikrofonen öppen mellan transkriptioner",
-        "description": "Håller mikrofonströmmen öppen i 30 sekunder efter att inspelningen avslutats, vilket minskar latensen för transkriptioner efter varandra. Kan försämra Bluetooth-ljudkvaliteten medan den är aktiv."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "Whisper-acceleration",
-          "description": "Hårdvaruacceleration för Whisper-modeller. Auto använder GPU om tillgängligt (Metal på macOS, Vulkan på Windows/Linux)."
-        },
-        "ort": {
-          "title": "ONNX-acceleration",
-          "description": "Hårdvaruacceleration för ONNX-modeller (Parakeet, Canary, Moonshine, etc.). DirectML på Windows är experimentellt. Modeller kan misslyckas med att transkribera."
-        },
-        "gpuDevice": {
-          "auto": "Automatiskt"
-        }
       },
       "startHidden": {
         "label": "Starta dold",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Översätt till engelska",
-        "description": "Översätt automatiskt tal från andra språk till engelska under transkription."
-      },
-      "modelUnload": {
-        "title": "Avlasta modell",
-        "description": "Frigör automatiskt GPU/CPU-minne när modellen inte har använts under den angivna tiden",
-        "options": {
-          "never": "Aldrig",
-          "immediately": "Omedelbart",
-          "min2": "Efter 2 minuter",
-          "min5": "Efter 5 minuter",
-          "min10": "Efter 10 minuter",
-          "min15": "Efter 15 minuter",
-          "hour1": "Efter 1 timme",
-          "sec15": "Efter 15 sekunder (Felsökning)"
         }
       },
       "customWords": {
@@ -433,10 +251,6 @@
         "lineCount": "{{count}} rader",
         "empty": "Väntar på loggar… Poster visas här när appen skickar dem."
       },
-      "wordCorrectionThreshold": {
-        "title": "Tröskelvärde för ordkorrigering",
-        "description": "Känslighet för anpassade ordkorrigeringar"
-      },
       "historyLimit": {
         "title": "Historikgräns",
         "description": "Maximalt antal historikposter som ska sparas",
@@ -467,7 +281,6 @@
       },
       "paths": {
         "appData": "Appdata:",
-        "models": "Modeller:",
         "settings": "Inställningar:"
       },
       "pasteDelay": {
@@ -506,7 +319,6 @@
         "title": "Förhandsvisa introduktionen",
         "description": "Förhandsvisa introduktionsskärmarna utan att ändra behörigheter, modeller eller slutförandestatus",
         "permissionsButton": "Behörigheter",
-        "modelsButton": "Modellval",
         "exitButton": "Avsluta förhandsvisning"
       }
     },
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Ta bort",
     "close": "Stäng",
     "open": "Öppna",
     "copy": "Kopiera",
@@ -548,9 +359,7 @@
     "openSettings": "Öppna systeminställningar"
   },
   "errors": {
-    "loadDirectory": "Fel vid laddning av mapp: {{error}}",
-    "modelLoadFailed": "Misslyckades med att ladda modell: {{model}}",
-    "modelLoadFailedUnknown": "okänd modell"
+    "loadDirectory": "Fel vid laddning av mapp: {{error}}"
   },
   "appLanguage": {
     "title": "Applikationsspråk",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Transkriberar...",
-    "processing": "Bearbetar...",
-    "loadingModel": "Laddar modell..."
+    "processing": "Bearbetar..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} kanske blockerar 1 kortkommando",

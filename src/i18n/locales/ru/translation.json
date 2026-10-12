@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Настройки...",
     "copyLastTranscript": "Скопировать последнюю транскрипцию",
-    "unloadModel": "Выгрузить модель",
-    "model": "Модель",
     "quit": "Выход",
     "cancel": "Отмена",
     "secureInputWarning": "⚠ Сочетания клавиш заблокированы Secure Input"
   },
   "sidebar": {
     "general": "Общие",
-    "models": "Модели",
     "advanced": "Продвинутые",
     "postProcessing": "Постобработка",
     "history": "История",
@@ -18,86 +15,6 @@
     "about": "О программе"
   },
   "onboarding": {
-    "subtitle": "Для начала выберите модель транскрипции",
-    "existingModelsTitle": "Совместимые модели",
-    "downloadModelsTitle": "Доступны для загрузки",
-    "showAllModels": "Показать все модели ({{total}})",
-    "showFewerModels": "Показать меньше моделей",
-    "recommended": "Рекомендуется",
-    "customModelDescription": "Официально не поддерживается",
-    "modelCard": {
-      "accuracy": "точность",
-      "speed": "скорость"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Быстрая и достаточно точная."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Хорошая точность, средняя скорость."
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Сбалансированная точность и скорость."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Хорошая точность, но медленная."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Только английский. Лучшая модель для англоговорящих."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Быстрая и точная"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Очень быстрая, только английский. Хорошо справляется с акцентами."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Сверхбыстрая, только английский"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Быстрая, только английский. Хороший баланс скорости и точности."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Только английский. Высокое качество."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Оптимизирована для тайваньского мандаринского. Поддержка переключения языков."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Очень быстрая. Китайский, английский, японский, корейский, кантонский."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Распознавание русской речи. Быстро и точно."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Очень быстрая. Английский, немецкий, испанский, французский. Поддержка перевода."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Точная многоязычная. 25 европейских языков. Поддержка перевода."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "Большая, медленная, но очень точная многоязычная модель."
-      }
-    },
-    "errors": {
-      "selectModel": "Не удалось выбрать модель"
-    },
     "permissions": {
       "title": "Требуются разрешения",
       "description": "Mouthy требуются некоторые разрешения для корректной работы.",
@@ -114,64 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Пользовательская",
-    "streaming": "Потоковый",
-    "active": "Активный",
-    "switching": "Переключение...",
-    "noModelsAvailable": "Нет доступных моделей",
-    "verifying": "Проверка {{modelName}}...",
-    "verifyingGeneric": "Проверка...",
-    "extracting": "Извлечение {{modelName}}...",
-    "extractingMultiple": "Извлечение моделей {{count}}...",
-    "extractingGeneric": "Извлечение...",
-    "downloading": "Загрузка {{percentage}} %",
-    "downloadingMultiple": "Загрузка моделей {{count}}...",
-    "modelReady": "Модель готова",
-    "loading": "Загрузка {{modelName}}...",
-    "loadingGeneric": "Загрузка...",
-    "modelError": "Ошибка модели",
-    "modelUnloaded": "Модель выгружена",
-    "noModelDownloadRequired": "Нет модели – требуется загрузка",
-    "deleteModel": "Удалить {{modelName}}",
-    "downloadSpeed": "{{speed}} МБ/с",
-    "capabilities": {
-      "languageSelection": "Поддерживает несколько языков ввода",
-      "languageCount": "{{total}} языков",
-      "translation": "Может переводить на английский",
-      "translate": "Перевод на английский",
-      "singleLanguage": "Поддерживает только этот язык",
-      "languageOnly": "Только {{language}}",
-      "streaming": "Показывает транскрипцию в реальном времени во время речи"
-    },
-    "cancel": "Отмена",
-    "cancelDownload": "Отменить загрузку",
-    "legacy": "Устаревшее"
-  },
   "settings": {
-    "modelSettings": {
-      "title": "Настройки {{model}}"
-    },
-    "models": {
-      "title": "Модели транскрипции",
-      "description": "Выберите модель транскрипции или загрузите дополнительные модели. Разные модели предлагают разные уровни точности и скорости.",
-      "deleteConfirm": "Вы уверены, что хотите удалить {{modelName}}? Вам нужно будет загрузить её снова, чтобы использовать.",
-      "deleteActiveConfirm": "{{modelName}} — ваша активная модель. Удаление остановит транскрипцию, пока вы не выберете новую модель. Вы уверены?",
-      "deleteTitle": "Удалить модель",
-      "filters": {
-        "allLanguages": "Все языки",
-        "streaming": "Фильтровать модели с поддержкой транскрипции в реальном времени",
-        "translation": "Фильтровать модели с поддержкой перевода на английский"
-      },
-      "noModelsMatch": "Нет моделей, соответствующих этому фильтру.",
-      "yourModels": "Загруженные модели",
-      "availableModels": "Доступны для загрузки",
-      "searchPlaceholder": "Поиск моделей по имени…",
-      "rescan": {
-        "label": "Пересканировать",
-        "tooltip": "Пересканировать модели, добавленные в папку моделей или кэш Hugging Face вне Mouthy"
-      }
-    },
     "general": {
       "title": "Общие",
       "shortcut": {
@@ -192,13 +52,6 @@
           "set": "Не удалось установить ярлык: {{error}}",
           "reset": "Не удалось сбросить ярлык до исходного значения"
         }
-      },
-      "language": {
-        "title": "Язык",
-        "description": "Выберите язык для распознавания речи. «Авто» автоматически определит язык, а выбор конкретного языка может повысить точность определения этого языка.",
-        "searchPlaceholder": "Поиск языков...",
-        "noResults": "Языки не найдены",
-        "auto": "Авто"
       }
     },
     "sound": {
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Экспериментальные функции",
         "description": "Включить экспериментальные функции, которые находятся в разработке."
-      },
-      "lazyStreamClose": {
-        "label": "Оставлять микрофон включённым между транскрипциями",
-        "description": "Оставляет поток микрофона открытым в течение 30 секунд после остановки записи, уменьшая задержку при последовательных транскрипциях. Может ухудшить качество звука Bluetooth."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "Ускорение Whisper",
-          "description": "Аппаратное ускорение для моделей Whisper. Автоматический режим использует GPU при наличии (Metal на macOS, Vulkan на Windows/Linux)."
-        },
-        "ort": {
-          "title": "Ускорение ONNX",
-          "description": "Аппаратное ускорение для моделей ONNX (Parakeet, Canary, Moonshine и др.). DirectML на Windows является экспериментальным. Модели могут не выполнять транскрипцию."
-        },
-        "gpuDevice": {
-          "auto": "Авто"
-        }
       },
       "startHidden": {
         "label": "Скрыть при запуске",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Ввод",
           "superEnter": "Super+Ввод",
           "ctrlEnter": "Ctrl+Ввод"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Перевести на английский",
-        "description": "Автоматически переводить речь с других языков на английский во время транскрипции."
-      },
-      "modelUnload": {
-        "title": "Выгрузить модель",
-        "description": "Автоматически освобождать память, если модель не использовалась в течение указанного времени.",
-        "options": {
-          "never": "Никогда",
-          "immediately": "Немедленно",
-          "min2": "Через 2 минуты",
-          "min5": "Через 5 минут",
-          "min10": "Через 10 минут",
-          "min15": "Через 15 минут",
-          "hour1": "Через 1 час",
-          "sec15": "Через 15 секунд (отладка)"
         }
       },
       "customWords": {
@@ -433,10 +251,6 @@
         "lineCount": "Строк: {{count}}",
         "empty": "Ожидание журналов… Записи появятся здесь, как только приложение их создаст."
       },
-      "wordCorrectionThreshold": {
-        "title": "Порог исправления слов",
-        "description": "Чувствительность к пользовательским исправлениям слов"
-      },
       "historyLimit": {
         "title": "Размер истории",
         "description": "Максимальное количество записей истории, которые можно сохранить",
@@ -467,7 +281,6 @@
       },
       "paths": {
         "appData": "Данные приложения:",
-        "models": "Модели:",
         "settings": "Настройки:"
       },
       "pasteDelay": {
@@ -506,7 +319,6 @@
         "title": "Предпросмотр первоначальной настройки",
         "description": "Просмотрите экраны первоначальной настройки, не изменяя разрешения, модели или статус завершения",
         "permissionsButton": "Разрешения",
-        "modelsButton": "Выбор модели",
         "exitButton": "Выйти из предпросмотра"
       }
     },
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Удалить",
     "close": "Закрывать",
     "open": "Открыть",
     "copy": "Копировать",
@@ -548,9 +359,7 @@
     "openSettings": "Открыть настройки системы"
   },
   "errors": {
-    "loadDirectory": "Ошибка загрузки каталога: {{error}}.",
-    "modelLoadFailed": "Не удалось загрузить модель: {{model}}",
-    "modelLoadFailedUnknown": "неизвестная модель"
+    "loadDirectory": "Ошибка загрузки каталога: {{error}}."
   },
   "appLanguage": {
     "title": "Язык приложения",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Расшифровка...",
-    "processing": "Обработка...",
-    "loadingModel": "Загрузка модели..."
+    "processing": "Обработка..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} может блокировать 1 сочетание клавиш",

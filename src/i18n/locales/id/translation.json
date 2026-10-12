@@ -2,15 +2,12 @@
   "tray": {
     "settings": "Pengaturan...",
     "copyLastTranscript": "Salin Transkripsi Terakhir",
-    "unloadModel": "Keluarkan Model dari Memori",
-    "model": "Model",
     "quit": "Keluar",
     "cancel": "Batal",
     "secureInputWarning": "⚠ Pintasan diblokir oleh Secure Input"
   },
   "sidebar": {
     "general": "Umum",
-    "models": "Model",
     "advanced": "Lanjutan",
     "postProcessing": "Pascaproses",
     "history": "Riwayat",
@@ -18,86 +15,6 @@
     "about": "Tentang"
   },
   "onboarding": {
-    "subtitle": "Untuk memulai, pilih model transkripsi",
-    "existingModelsTitle": "Model yang Kompatibel",
-    "downloadModelsTitle": "Tersedia untuk Diunduh",
-    "showAllModels": "Tampilkan semua {{total}} model",
-    "showFewerModels": "Tampilkan lebih sedikit model",
-    "recommended": "Direkomendasikan",
-    "customModelDescription": "Tidak didukung secara resmi",
-    "modelCard": {
-      "accuracy": "akurasi",
-      "speed": "kecepatan"
-    },
-    "models": {
-      "small": {
-        "name": "Whisper Small",
-        "description": "Cepat dan cukup akurat."
-      },
-      "medium": {
-        "name": "Whisper Medium",
-        "description": "Akurasi baik, kecepatan sedang"
-      },
-      "turbo": {
-        "name": "Whisper Turbo",
-        "description": "Seimbang antara akurasi dan kecepatan."
-      },
-      "large": {
-        "name": "Whisper Large",
-        "description": "Akurasi baik, tetapi lambat."
-      },
-      "parakeet-tdt-0.6b-v2": {
-        "name": "Parakeet V2",
-        "description": "Hanya bahasa Inggris. Model terbaik untuk penutur bahasa Inggris."
-      },
-      "parakeet-tdt-0.6b-v3": {
-        "name": "Parakeet V3",
-        "description": "Cepat dan akurat"
-      },
-      "moonshine-base": {
-        "name": "Moonshine Base",
-        "description": "Sangat cepat, hanya bahasa Inggris. Mengenali aksen dengan baik."
-      },
-      "moonshine-tiny-streaming-en": {
-        "name": "Moonshine V2 Tiny",
-        "description": "Sangat cepat, hanya bahasa Inggris"
-      },
-      "moonshine-small-streaming-en": {
-        "name": "Moonshine V2 Small",
-        "description": "Cepat, hanya bahasa Inggris. Keseimbangan yang baik antara kecepatan dan akurasi."
-      },
-      "moonshine-medium-streaming-en": {
-        "name": "Moonshine V2 Medium",
-        "description": "Hanya bahasa Inggris. Kualitas tinggi."
-      },
-      "breeze-asr": {
-        "name": "Breeze ASR",
-        "description": "Dioptimalkan untuk Mandarin Taiwan. Mendukung alih kode."
-      },
-      "sense-voice-int8": {
-        "name": "SenseVoice",
-        "description": "Sangat cepat. Bahasa Mandarin, Inggris, Jepang, Korea, dan Kanton."
-      },
-      "gigaam-v3-e2e-ctc": {
-        "name": "GigaAM v3",
-        "description": "Pengenalan ucapan bahasa Rusia. Cepat dan akurat."
-      },
-      "canary-180m-flash": {
-        "name": "Canary 180M Flash",
-        "description": "Sangat cepat. Bahasa Inggris, Jerman, Spanyol, dan Prancis. Mendukung penerjemahan."
-      },
-      "canary-1b-v2": {
-        "name": "Canary 1B v2",
-        "description": "Akurat dan multibahasa. Mendukung 25 bahasa Eropa serta penerjemahan."
-      },
-      "cohere-int8": {
-        "name": "Cohere",
-        "description": "Model multibahasa yang besar dan lebih lambat, tetapi sangat akurat."
-      }
-    },
-    "errors": {
-      "selectModel": "Gagal memilih model"
-    },
     "permissions": {
       "title": "Izin Diperlukan",
       "description": "Mouthy memerlukan beberapa izin agar dapat berfungsi dengan baik.",
@@ -114,44 +31,7 @@
       }
     }
   },
-  "modelSelector": {
-    "custom": "Kustom",
-    "legacy": "Legacy",
-    "streaming": "Streaming",
-    "active": "Aktif",
-    "switching": "Beralih...",
-    "noModelsAvailable": "Tidak ada model yang tersedia",
-    "verifying": "Memverifikasi {{modelName}}...",
-    "verifyingGeneric": "Memverifikasi...",
-    "extracting": "Mengekstrak {{modelName}}...",
-    "extractingMultiple": "Mengekstrak {{count}} model...",
-    "extractingGeneric": "Mengekstrak...",
-    "downloading": "Mengunduh {{percentage}}%",
-    "downloadingMultiple": "Mengunduh {{count}} model...",
-    "modelReady": "Model Siap",
-    "loading": "Memuat {{modelName}}...",
-    "loadingGeneric": "Memuat...",
-    "modelError": "Kesalahan Model",
-    "modelUnloaded": "Model Dikeluarkan dari Memori",
-    "noModelDownloadRequired": "Model Belum Tersedia — Perlu Diunduh",
-    "deleteModel": "Hapus {{modelName}}",
-    "downloadSpeed": "{{speed}} MB/s",
-    "cancel": "Batal",
-    "cancelDownload": "Batalkan unduhan",
-    "capabilities": {
-      "languageSelection": "Mendukung beberapa bahasa masukan",
-      "singleLanguage": "Hanya mendukung bahasa ini",
-      "languageCount": "{{total}} bahasa",
-      "languageOnly": "Hanya {{language}}",
-      "translation": "Dapat menerjemahkan ke bahasa Inggris",
-      "translate": "Terjemahkan",
-      "streaming": "Menampilkan transkripsi langsung saat Anda berbicara"
-    }
-  },
   "settings": {
-    "modelSettings": {
-      "title": "Pengaturan {{model}}"
-    },
     "general": {
       "title": "Umum",
       "shortcut": {
@@ -172,34 +52,7 @@
           "set": "Gagal mengatur pintasan: {{error}}",
           "reset": "Gagal mengembalikan pintasan ke nilai awal"
         }
-      },
-      "language": {
-        "title": "Bahasa",
-        "description": "Pilih bahasa untuk pengenalan ucapan. Opsi Otomatis akan mendeteksi bahasa, sedangkan memilih bahasa tertentu dapat meningkatkan akurasi untuk bahasa tersebut.",
-        "searchPlaceholder": "Cari bahasa...",
-        "noResults": "Bahasa tidak ditemukan",
-        "auto": "Otomatis"
       }
-    },
-    "models": {
-      "title": "Model Transkripsi",
-      "description": "Pilih model transkripsi atau unduh model tambahan. Setiap model menawarkan tingkat akurasi dan kecepatan yang berbeda.",
-      "searchPlaceholder": "Cari model berdasarkan nama…",
-      "yourModels": "Model yang Diunduh",
-      "availableModels": "Tersedia untuk Diunduh",
-      "deleteConfirm": "Yakin ingin menghapus {{modelName}}? Anda harus mengunduhnya lagi untuk menggunakannya.",
-      "deleteActiveConfirm": "{{modelName}} adalah model aktif Anda. Menghapusnya akan menghentikan transkripsi sampai Anda memilih model baru. Yakin ingin melanjutkan?",
-      "deleteTitle": "Hapus Model",
-      "filters": {
-        "allLanguages": "Semua Bahasa",
-        "streaming": "Saring model yang mendukung transkripsi waktu nyata",
-        "translation": "Saring model yang mendukung penerjemahan ke bahasa Inggris"
-      },
-      "rescan": {
-        "label": "Pindai Ulang",
-        "tooltip": "Pindai ulang model yang ditambahkan ke folder model atau cache Hugging Face dari luar Mouthy"
-      },
-      "noModelsMatch": "Tidak ada model yang cocok dengan kriteria ini."
     },
     "sound": {
       "title": "Suara",
@@ -221,23 +74,6 @@
       "experimentalToggle": {
         "label": "Fitur Eksperimental",
         "description": "Aktifkan fitur eksperimental yang masih dalam pengembangan."
-      },
-      "lazyStreamClose": {
-        "label": "Biarkan Mikrofon Tetap Aktif di Antara Transkripsi",
-        "description": "Membiarkan aliran mikrofon tetap terbuka selama 30 detik setelah perekaman berhenti untuk mengurangi latensi pada transkripsi beruntun. Dapat menurunkan kualitas audio Bluetooth saat aktif."
-      },
-      "acceleration": {
-        "transcribe": {
-          "title": "Akselerasi transcribe.cpp",
-          "description": "Akselerasi perangkat keras untuk model transcribe.cpp (keluarga Whisper). Otomatis menggunakan GPU jika tersedia (Metal di macOS, Vulkan di Windows/Linux)."
-        },
-        "ort": {
-          "title": "Akselerasi ONNX",
-          "description": "Akselerasi perangkat keras untuk model ONNX (Parakeet, Canary, Moonshine, dll.). DirectML di Windows bersifat eksperimental. Model mungkin gagal mentranskripsikan."
-        },
-        "gpuDevice": {
-          "auto": "Otomatis"
-        }
       },
       "startHidden": {
         "label": "Mulai dalam Keadaan Tersembunyi",
@@ -306,24 +142,6 @@
           "cmdEnter": "Cmd+Enter",
           "superEnter": "Super+Enter",
           "ctrlEnter": "Ctrl+Enter"
-        }
-      },
-      "translateToEnglish": {
-        "label": "Terjemahkan ke Bahasa Inggris",
-        "description": "Terjemahkan ucapan dari bahasa lain ke bahasa Inggris secara otomatis selama transkripsi."
-      },
-      "modelUnload": {
-        "title": "Keluarkan Model dari Memori",
-        "description": "Bebaskan memori GPU/CPU secara otomatis jika model tidak digunakan selama waktu yang ditentukan",
-        "options": {
-          "never": "Tidak Pernah",
-          "immediately": "Segera",
-          "min2": "Setelah 2 menit",
-          "min5": "Setelah 5 menit",
-          "min10": "Setelah 10 menit",
-          "min15": "Setelah 15 menit",
-          "hour1": "Setelah 1 jam",
-          "sec15": "Setelah 15 detik (Debug)"
         }
       },
       "customWords": {
@@ -437,12 +255,7 @@
         "title": "Pratinjau Penyiapan Awal",
         "description": "Pratinjau layar penyiapan awal tanpa mengubah izin, model, atau status penyelesaian",
         "permissionsButton": "Izin",
-        "modelsButton": "Pemilihan Model",
         "exitButton": "Keluar dari Pratinjau"
-      },
-      "wordCorrectionThreshold": {
-        "title": "Ambang Koreksi Kata",
-        "description": "Sensitivitas untuk koreksi kata khusus"
       },
       "historyLimit": {
         "title": "Batas Riwayat",
@@ -474,7 +287,6 @@
       },
       "paths": {
         "appData": "Data Aplikasi:",
-        "models": "Model:",
         "settings": "Pengaturan:"
       },
       "pasteDelay": {
@@ -536,7 +348,6 @@
     }
   },
   "common": {
-    "delete": "Hapus",
     "close": "Tutup",
     "open": "Buka",
     "copy": "Salin",
@@ -548,9 +359,7 @@
     "openSettings": "Buka Pengaturan Sistem"
   },
   "errors": {
-    "loadDirectory": "Kesalahan saat memuat direktori: {{error}}",
-    "modelLoadFailed": "Gagal memuat model: {{model}}",
-    "modelLoadFailedUnknown": "model tidak dikenal"
+    "loadDirectory": "Kesalahan saat memuat direktori: {{error}}"
   },
   "appLanguage": {
     "title": "Bahasa Aplikasi",
@@ -567,8 +376,7 @@
   },
   "overlay": {
     "transcribing": "Mentranskripsikan...",
-    "processing": "Memproses...",
-    "loadingModel": "Memuat model..."
+    "processing": "Memproses..."
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} mungkin memblokir 1 pintasan",
