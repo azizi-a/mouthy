@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Forked from [Handy](https://github.com/cjpais/Handy) (cjpais, MIT) at upstream commit 7b2a28a; added the Phase 1 plan and agent docs.
 
+### Added
+
+- Speech building blocks, not yet on the hotkey: clean-up of selected text for reading aloud (links, markdown, whitespace), sentence chunking, and a client for OpenAI-compatible speech servers such as Kokoro-FastAPI.
+
 ### Changed
 
 - Rebranded to Mouthy: new name, bundle identifier `com.azizi.mouthy`, placeholder icons, and attribution to Handy in README and LICENSE. Removed Handy's sponsor images, donate link, CI workflows and Nix packaging.
