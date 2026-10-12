@@ -4,39 +4,35 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-- Forked from [Handy](https://github.com/cjpais/Handy) (cjpais, MIT) at upstream commit 7b2a28a; added the Phase 1 plan and agent docs.
+Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MIT) at upstream commit 7b2a28a, with speech-to-text replaced by text-to-speech. The release app bundle is 9.6 MB on Apple Silicon (debug binary 62 MB, down from Handy's 152 MB).
 
 ### Added
 
-- Speech building blocks: clean-up of selected text for reading aloud (links, markdown, whitespace), sentence chunking, and a client for OpenAI-compatible speech servers such as Kokoro-FastAPI.
-- Speak selection: press ⌥⎋ (Alt+Esc on Windows/Linux) to read the selected text aloud, and press again to stop. Playback starts after the first sentence is ready while the rest is still being synthesised. Also available from the tray (Speak Selection / Stop), the `--speak-selection` and `--stop` flags, and `SIGUSR2` (speak) / `SIGUSR1` (stop, macOS only). The clipboard is restored exactly after the copy, including rich text and password-manager privacy markers. The overlay shows speaking, "nothing selected" and error states.
-- Speech settings on the General page: server URL, voice (typed, or picked from the server's voice list when it has one), speed (0.5×–2×) and volume. Launch on startup, start hidden and the overlay settings moved to the General page too.
-- The error overlay has an Open Settings button.
+- Speak selection: press ⌥⎋ (Alt+Esc on Windows/Linux) to read the selected text aloud, and press again to stop. Playback starts once the first sentence is ready while the rest is still being synthesised.
+- Speech through any local OpenAI-compatible server such as Kokoro-FastAPI (default `http://127.0.0.1:8880`, voice `bm_lewis`). Errors show the server's own message, and a system proxy does not get in the way.
+- Text clean-up before reading: links become "link", markdown symbols and extra whitespace go, lines without punctuation (headings, bullets) read as separate sentences, and common abbreviations such as "Dr." do not end a sentence. A sentence the server cannot speak is skipped.
+- Selection capture that restores the clipboard afterwards, including rich content and password-manager privacy markers. It waits briefly for the hotkey's modifiers to be released before copying. Clipboards over 16 MB are not restored.
+- Overlay states for speaking, "nothing selected" and errors, with an Open Settings button and a stop button.
+- Tray items Speak Selection and Stop, the `--speak-selection` and `--stop` flags, and the signals `SIGUSR2` (speak) and `SIGUSR1` (stop, macOS only).
+- Speech settings: server URL, voice (typed, or picked from the server's voice list), speed (0.5×–2×) and volume.
 
 ### Changed
 
-- Rebranded to Mouthy: new name, bundle identifier `com.azizi.mouthy`, placeholder icons, and attribution to Handy in README and LICENSE. Removed Handy's sponsor images, donate link, CI workflows and Nix packaging.
-- New compact speaking overlay, and an indigo placeholder accent instead of Handy's pink.
-- Wording no longer mentions transcription, recording or feedback sounds; text whose meaning changed shows in English in other languages until translated. About credits Handy, Kokoro and rodio instead of ggml.
-- The overlay keeps one size for every state with its card centred, and dragging the speed or volume slider no longer reloads all settings on each step. The server URL and voice fields save without surrounding spaces.
+- Rebranded to Mouthy: name, bundle identifier `com.azizi.mouthy`, placeholder icons, an indigo accent, and attribution to Handy in README, LICENSE and About.
+- Launch at login, start hidden and the overlay settings live on the General page with the hotkey and speech settings.
+- Wording no longer mentions transcription, recording or feedback sounds. Text whose meaning changed shows in English in other languages until translated.
+- The Windows installer uses Tauri's standard template.
 
 ### Removed
 
-- Auto-updater, "Check for Updates" tray item, What's New release notes, and the process plugin. Updates return in Phase 3 with a Mouthy signing key.
-- Speech-to-text hotkeys (push-to-talk, hold and toggle modes), the hold threshold, history re-transcribe, and Handy's settings migrations. Hotkeys do nothing until the speak action lands.
-- Microphone capture, voice activity detection, the Live overlay style, and the microphone permission prompt. Onboarding now asks only for Accessibility, and the app no longer declares microphone access.
-- Start/stop sound feedback, sound themes, custom sounds, and the feedback volume. The output device setting stays for speech playback.
-- Speech recognition engines (whisper/transcribe.cpp and ONNX), the model catalog, downloader and Models page, model selection and unloading (settings, footer and tray), acceleration and language settings, the headless `--transcribe-file`/`--list-devices`/`--list-models` CLI, and Windows portable mode. Onboarding now finishes after the Accessibility step.
-- Text post-processing: LLM cleanup (OpenAI-compatible providers and Apple Intelligence), custom words, filler-word removal, Chinese script conversion, language detection, the Post Process page, and the `--toggle-post-process` flag with its macOS `SIGUSR1` trigger (`SIGUSR1` now stops speech).
-- Transcript history: the History page, saved recordings and their SQLite database, history limit and auto-delete settings, and the tray "Copy Last Transcript" item. Mouthy no longer creates `history.db` or `recordings/` in its data folder.
-- The Cancel shortcut, the `--toggle-transcription` and `--cancel` flags, and the tray Cancel item; Speak Selection and Stop replace them.
-- Text output: pasting or typing into the focused app, the paste method, typing tool, clipboard handling, auto-submit, trailing-space, paste delay and Reliable Paste settings, the Linux typing/clipboard tool integrations, and the clipboard plugin.
-- Unused dependencies and code left over from Handy: `rdev` (and the 28 crates it pulled in, which removes a future-Rust incompatibility warning), `react-select`, unused UI components, icons and theme colours, and an unused translation string. CMake is no longer a build requirement.
+- Speech-to-text: microphone capture, voice activity detection, recognition engines, the model catalog, downloader and Models page, and the microphone permission.
+- Post-processing (LLM clean-up, Apple Intelligence, custom words, filler-word removal, Chinese script conversion, language detection) and transcript history.
+- Pasting or typing text into the focused app and every paste-related setting.
+- Start/stop sounds and sound themes; the output device setting stays.
+- The Cancel shortcut, push-to-talk and hold modes, and the `--toggle-transcription`, `--toggle-post-process`, `--cancel`, `--transcribe-file`, `--list-devices` and `--list-models` flags.
+- The auto-updater, What's New notes, Windows portable mode and settings migrations from Handy.
+- Handy's sponsor images, donate link, CI workflows and Nix packaging, plus dependencies left unused by the above.
 
 ### Fixed
 
-- Speech plays on output devices that reject rodio's default 50 ms buffer, such as Bluetooth headsets.
-- Speech reaches a local server even when a system proxy is configured, a server URL ending in `/v1` works, and server errors show the server's own message.
-- Reading text aloud: lines without punctuation (headings, bullets) are read as separate sentences, abbreviations such as "Dr." and "U.S." no longer end a sentence, long sentences are not cut inside numbers such as "$1,500" or "10:30", code such as `handlers[0](event)` is no longer mistaken for a link, large selections such as JSON no longer stall or lose text, and a selection with nothing to pronounce ("...", dashes, emoji) shows "nothing selected". A sentence the server finds unspeakable is skipped instead of ending playback.
-- Selection capture: the copy waits up to 0.3 s for the hotkey's ⌥/⌃/⇧ to be released, so a slowly released hotkey no longer sends ⌥⌘C or fires again. Pressing the hotkey while Mouthy's own window is in front shows "nothing selected" instead of copying from it. A clipboard written to while it is being saved is saved again; one over 16 MB is not held for restoring, so the copied selection stays on it.
-- A notice hiding itself can no longer hide a speaking overlay that appeared at the same moment, and a selection the server finds entirely unspeakable shows "nothing selected" instead of ending silently.
+- Speech plays on output devices that reject the default 50 ms buffer, such as Bluetooth headsets.
