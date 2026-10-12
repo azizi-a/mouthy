@@ -282,6 +282,12 @@ fn synthesize(
         let chunk = tauri::async_runtime::block_on(tts::http::synthesize(
             &client, &base_url, &voice, speed, sentence,
         ));
+        if let Err(e) = &chunk {
+            if tts::http::is_unspeakable(e) {
+                debug!("Skipping a sentence with no speakable text: {sentence:?}");
+                continue;
+            }
+        }
         let failed = chunk.is_err();
         // A send error means playback has ended.
         if tx.send(chunk).is_err() || failed {

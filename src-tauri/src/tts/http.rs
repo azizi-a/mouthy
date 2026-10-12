@@ -8,8 +8,13 @@ use std::time::Duration;
 /// Rate of the headerless s16le mono audio returned for `response_format: "pcm"`.
 pub const SAMPLE_RATE: u32 = 24_000;
 
+/// From the 400 Kokoro-FastAPI returns for input with nothing to say, such as "...".
+const NO_SPEAKABLE_TEXT: &str = "no speakable text";
+
 pub fn client() -> reqwest::Client {
     reqwest::Client::builder()
+        // System proxies can swallow loopback traffic, and the server is local.
+        .no_proxy()
         .connect_timeout(Duration::from_secs(2))
         .timeout(Duration::from_secs(60))
         .build()
@@ -52,17 +57,40 @@ async fn send(request: reqwest::RequestBuilder, base_url: &str) -> Result<Vec<u8
         .map_err(|e| request_error(base_url, e))?;
     let status = response.status();
     if !status.is_success() {
-        debug!(
-            "TTS server error body: {}",
-            response.text().await.unwrap_or_default()
-        );
-        return Err(format!("TTS server returned {}", status));
+        let body = response.text().await.unwrap_or_default();
+        debug!("TTS server error body: {}", body);
+        return Err(match error_message(&body) {
+            Some(message) => format!("TTS server returned {}: {}", status, message),
+            None => format!("TTS server returned {}", status),
+        });
     }
     let body = response
         .bytes()
         .await
         .map_err(|e| request_error(base_url, e))?;
     Ok(body.to_vec())
+}
+
+/// True for the error a sentence such as "..." gets; skip it rather than fail.
+pub fn is_unspeakable(error: &str) -> bool {
+    error.starts_with("TTS server returned 400") && error.contains(NO_SPEAKABLE_TEXT)
+}
+
+#[derive(Deserialize)]
+struct ErrorBody {
+    detail: ErrorDetail,
+}
+
+#[derive(Deserialize)]
+struct ErrorDetail {
+    message: String,
+}
+
+/// Kokoro-FastAPI errors look like `{"detail": {"message": "…", …}}`.
+fn error_message(body: &str) -> Option<String> {
+    serde_json::from_str::<ErrorBody>(body)
+        .ok()
+        .map(|body| body.detail.message)
 }
 
 fn request_error(base_url: &str, error: reqwest::Error) -> String {
@@ -78,8 +106,10 @@ fn request_error(base_url: &str, error: reqwest::Error) -> String {
     }
 }
 
+/// Accepts the base URL with or without the `/v1` that OpenAI clients expect.
 fn trim_base_url(base_url: &str) -> &str {
-    base_url.trim().trim_end_matches('/')
+    let base_url = base_url.trim().trim_end_matches('/');
+    base_url.strip_suffix("/v1").unwrap_or(base_url)
 }
 
 fn endpoint(base_url: &str, path: &str) -> String {
@@ -118,6 +148,7 @@ fn parse_voices(body: &[u8]) -> Result<Vec<String>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::net::TcpListener;
     use std::time::Instant;
 
     #[test]
@@ -149,6 +180,38 @@ mod tests {
             endpoint(" http://127.0.0.1:8880// ", "/v1/audio/speech"),
             expected
         );
+        assert_eq!(
+            endpoint("http://127.0.0.1:8880/v1/", "/v1/audio/speech"),
+            expected
+        );
+    }
+
+    #[test]
+    fn error_message_reads_detail_message() {
+        let body = r#"{"detail":{"error":"validation_error","message":"Input contains no speakable text","type":"invalid_request_error"}}"#;
+        assert_eq!(
+            error_message(body),
+            Some("Input contains no speakable text".to_string())
+        );
+        // FastAPI's own 422s carry a list in `detail`.
+        assert_eq!(
+            error_message(r#"{"detail":[{"msg":"field required"}]}"#),
+            None
+        );
+        assert_eq!(error_message("Internal Server Error"), None);
+    }
+
+    #[test]
+    fn unspeakable_only_for_a_400_with_that_message() {
+        assert!(is_unspeakable(
+            "TTS server returned 400 Bad Request: Input contains no speakable text"
+        ));
+        assert!(!is_unspeakable(
+            "TTS server returned 400 Bad Request: Voice 'x' not found"
+        ));
+        assert!(!is_unspeakable(
+            "TTS server returned 500 Internal Server Error: no speakable text"
+        ));
     }
 
     #[test]
@@ -168,17 +231,23 @@ mod tests {
 
     #[test]
     fn unreachable_server_reports_base_url() {
-        // Port 9 (discard) is closed on a normal machine, so the connect fails fast.
+        // A port the OS just handed out and released is closed, so the connect fails fast.
+        let port = TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let base_url = format!("http://127.0.0.1:{}", port);
         let result = tauri::async_runtime::block_on(synthesize(
             &client(),
-            "http://127.0.0.1:9/",
+            &format!("{}/", base_url),
             "bm_lewis",
             1.0,
             "Hello.",
         ));
         assert_eq!(
             result,
-            Err("Cannot reach TTS server at http://127.0.0.1:9".to_string())
+            Err(format!("Cannot reach TTS server at {}", base_url))
         );
     }
 
