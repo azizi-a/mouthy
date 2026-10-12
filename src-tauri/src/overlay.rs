@@ -594,13 +594,7 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, view: OverlayView) {
         let _ = overlay_window.emit("show-overlay", &view);
 
         if let Some(delay) = view.auto_hide() {
-            let handle = app_handle.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(delay);
-                if OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst) == shown_at {
-                    hide_overlay(&handle);
-                }
-            });
+            hide_if_current_after(app_handle, shown_at, delay, hide_overlay);
         }
     }
 }
@@ -650,7 +644,8 @@ static OVERLAY_SHOW_GENERATION: AtomicU64 = AtomicU64::new(0);
 /// Window size of the view last shown, so a position change keeps it centred.
 static OVERLAY_SIZE: Mutex<(f64, f64)> = Mutex::new((OVERLAY_WIDTH, OVERLAY_HEIGHT));
 
-/// Hides the overlay window with fade-out animation
+/// Hides the overlay window with fade-out animation. Call on the main thread,
+/// where shows run, so none can land between the snapshot and the fade.
 pub fn hide_overlay(app_handle: &AppHandle) {
     // Always hide the overlay regardless of settings - if the setting was
     // changed while it was showing, we still want to hide it properly
@@ -662,16 +657,40 @@ pub fn hide_overlay(app_handle: &AppHandle) {
         let _ = overlay_window.emit("hide-overlay", ());
         // Hide the window after a short delay to allow animation to complete,
         // unless a newer session has shown the overlay again by then.
-        let window_clone = overlay_window.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(300));
-            if OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst) != scheduled_at {
-                log::debug!("Skipping stale overlay hide: a newer session is showing the overlay");
-                return;
-            }
-            let _ = window_clone.hide();
-        });
+        hide_if_current_after(
+            app_handle,
+            scheduled_at,
+            Duration::from_millis(300),
+            |app| {
+                if let Some(overlay_window) = app.get_webview_window(OVERLAY_LABEL) {
+                    let _ = overlay_window.hide();
+                }
+            },
+        );
     }
+}
+
+/// Runs `hide` on the main thread after `delay`, unless the overlay was shown
+/// since `generation`. Shows run on the main thread too, so none can land
+/// between the check and the hide.
+fn hide_if_current_after(
+    app_handle: &AppHandle,
+    generation: u64,
+    delay: Duration,
+    hide: impl FnOnce(&AppHandle) + Send + 'static,
+) {
+    let handle = app_handle.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(delay);
+        let app = handle.clone();
+        let _ = handle.run_on_main_thread(move || {
+            if OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst) == generation {
+                hide(&app);
+            } else {
+                log::debug!("Skipping stale overlay hide: the overlay was shown again");
+            }
+        });
+    });
 }
 
 /// Tracks whether gtk-layer-shell was successfully initialized (Linux only).

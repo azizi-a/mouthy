@@ -2,6 +2,9 @@ use std::time::Duration;
 use tauri::AppHandle;
 
 #[cfg(target_os = "macos")]
+use objc2_app_kit::NSEventModifierFlags;
+
+#[cfg(target_os = "macos")]
 fn with_enigo<T>(
     app_handle: &AppHandle,
     f: impl FnOnce(&mut enigo::Enigo) -> Result<T, String>,
@@ -24,6 +27,11 @@ const COPY_HOLD_MS: u64 = 30;
 /// How long to wait for the copy to land on the clipboard.
 const COPY_TIMEOUT: Duration = Duration::from_millis(200);
 const COPY_POLL_INTERVAL: Duration = Duration::from_millis(10);
+/// How long to wait for the hotkey's ⌥/⌃/⇧ to come up before copying anyway.
+/// Held, they can turn the copy into ⌥⌘C, and the hotkey listener takes our
+/// synthetic keys for the hotkey's release, so it can fire again.
+#[cfg(target_os = "macos")]
+const MODIFIER_RELEASE_TIMEOUT: Duration = Duration::from_millis(300);
 
 /// Copies the current selection in the frontmost app and returns its text,
 /// leaving the clipboard as it was. `Ok(None)` when nothing was copied or the
@@ -32,11 +40,56 @@ const COPY_POLL_INTERVAL: Duration = Duration::from_millis(10);
 /// Must run on the main thread on macOS (keyboard layout lookup).
 #[cfg(target_os = "macos")]
 pub fn capture_selection(app_handle: &AppHandle) -> Result<Option<String>, String> {
+    use log::{debug, info, warn};
+    use objc2_app_kit::{NSApplication, NSEvent};
+
+    let Some(mtm) = objc2::MainThreadMarker::new() else {
+        return Err("Selection capture must run on the main thread".into());
+    };
+    // Our own window would get the ⌘C only once this returns: too late to be
+    // read, in time to overwrite the clipboard.
+    if NSApplication::sharedApplication(mtm).isActive() {
+        info!("Mouthy is the active app, so there is no selection to copy");
+        return Ok(None);
+    }
+
+    let waited = std::time::Instant::now();
+    if wait_for_modifier_release(MODIFIER_RELEASE_TIMEOUT, NSEvent::modifierFlags_class) {
+        debug!("Modifier keys up after {:?}", waited.elapsed());
+    } else {
+        warn!(
+            "Modifier keys still down after {:?}; copying anyway",
+            waited.elapsed()
+        );
+    }
+
     pasteboard::capture(|| {
         with_enigo(app_handle, |enigo| {
             crate::input::send_copy(enigo, COPY_HOLD_MS)
         })
     })
+}
+
+/// True when none of ⌥, ⌃ and ⇧ is down. ⌘ is part of the copy anyway, and
+/// Caps Lock stays on without a key held.
+#[cfg(target_os = "macos")]
+fn modifiers_clear(flags: NSEventModifierFlags) -> bool {
+    !flags.intersects(
+        NSEventModifierFlags::Option | NSEventModifierFlags::Control | NSEventModifierFlags::Shift,
+    )
+}
+
+/// Waits up to `timeout` for `flags` to report ⌥, ⌃ and ⇧ all up. False if
+/// they were still down when it gave up.
+#[cfg(target_os = "macos")]
+fn wait_for_modifier_release(
+    timeout: Duration,
+    mut flags: impl FnMut() -> NSEventModifierFlags,
+) -> bool {
+    poll(timeout, COPY_POLL_INTERVAL, || {
+        modifiers_clear(flags()).then_some(())
+    })
+    .is_some()
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -99,34 +152,81 @@ mod pasteboard {
     use log::{debug, info, warn};
     use objc2::rc::{autoreleasepool, Retained};
     use objc2::runtime::ProtocolObject;
-    use objc2::MainThreadMarker;
     use objc2_app_kit::{
         NSPasteboard, NSPasteboardItem, NSPasteboardType, NSPasteboardTypeString,
         NSPasteboardWriting,
     };
     use objc2_foundation::{NSArray, NSData};
+    use std::time::Instant;
 
     /// Every pasteboard item with the data of each of its types. Restoring all
     /// types keeps rich text and files, and the concealed/transient markers
     /// that keep clipboard managers from recording passwords.
     type Snapshot = Vec<Vec<(Retained<NSPasteboardType>, Retained<NSData>)>>;
 
-    fn snapshot(pasteboard: &NSPasteboard) -> Snapshot {
+    /// Most clipboard data held in memory for the restore. A bigger clipboard
+    /// is not restored: the copied selection stays on it.
+    const SNAPSHOT_CAP_BYTES: usize = 16 * 1024 * 1024;
+    /// A clipboard written to while it is read may come back torn, so it is
+    /// read once more before giving up on restoring it.
+    const SNAPSHOT_ATTEMPTS: usize = 2;
+
+    /// `total + len`, or `None` once that passes the cap.
+    pub(super) fn add_within_cap(total: usize, len: usize) -> Option<usize> {
+        total
+            .checked_add(len)
+            .filter(|&sum| sum <= SNAPSHOT_CAP_BYTES)
+    }
+
+    /// The snapshot and its size in bytes, or `None` as soon as it passes the cap.
+    fn snapshot(pasteboard: &NSPasteboard) -> Option<(Snapshot, usize)> {
         let Some(items) = pasteboard.pasteboardItems() else {
-            return Vec::new();
+            return Some((Vec::new(), 0));
         };
-        items
-            .iter()
-            .map(|item| {
-                item.types()
-                    .iter()
-                    .filter_map(|data_type| {
-                        let data = item.dataForType(&data_type)?;
-                        Some((data_type, data))
-                    })
-                    .collect()
-            })
-            .collect()
+        let mut total = 0;
+        let mut saved = Vec::with_capacity(items.len());
+        for item in items.iter() {
+            let mut types = Vec::new();
+            for data_type in item.types().iter() {
+                if let Some(data) = item.dataForType(&data_type) {
+                    total = add_within_cap(total, data.len())?;
+                    types.push((data_type, data));
+                }
+            }
+            saved.push(types);
+        }
+        Some((saved, total))
+    }
+
+    /// Snapshots the clipboard and returns the `changeCount` the copy is
+    /// measured from. `Err` says why there is nothing to restore; the copy
+    /// goes ahead either way.
+    fn save(pasteboard: &NSPasteboard) -> (isize, Result<Snapshot, String>) {
+        let mut count = pasteboard.changeCount();
+        for _ in 0..SNAPSHOT_ATTEMPTS {
+            let started = Instant::now();
+            let saved = snapshot(pasteboard);
+            let elapsed = started.elapsed();
+            match &saved {
+                Some((items, bytes)) => debug!(
+                    "Saved the clipboard: {} items, {bytes} bytes in {elapsed:?}",
+                    items.len()
+                ),
+                None => debug!(
+                    "Stopped saving the clipboard after {elapsed:?}: over {SNAPSHOT_CAP_BYTES} bytes"
+                ),
+            }
+            let after = pasteboard.changeCount();
+            if after == count {
+                let saved = saved.map(|(items, _)| items).ok_or_else(|| {
+                    format!("it holds over {} MB", SNAPSHOT_CAP_BYTES / (1024 * 1024))
+                });
+                return (count, saved);
+            }
+            debug!("Clipboard changed while it was being saved");
+            count = after;
+        }
+        (count, Err("it kept changing while being saved".into()))
     }
 
     fn restore(pasteboard: &NSPasteboard, snapshot: &Snapshot) {
@@ -150,14 +250,9 @@ mod pasteboard {
     pub(super) fn capture(
         send_copy: impl FnOnce() -> Result<(), String>,
     ) -> Result<Option<String>, String> {
-        if MainThreadMarker::new().is_none() {
-            return Err("Selection capture must run on the main thread".into());
-        }
-
         autoreleasepool(|_| {
             let pasteboard = NSPasteboard::generalPasteboard();
-            let before = pasteboard.changeCount();
-            let saved = snapshot(&pasteboard);
+            let (before, saved) = save(&pasteboard);
 
             send_copy()?;
 
@@ -182,7 +277,12 @@ mod pasteboard {
                     debug!("Copy left the clipboard unchanged: nothing selected");
                     return Ok(None);
                 }
-                RestoreAction::Restore => restore(&pasteboard, &saved),
+                RestoreAction::Restore => match &saved {
+                    Ok(snapshot) => restore(&pasteboard, snapshot),
+                    Err(reason) => warn!(
+                        "Not restoring the clipboard: {reason}. The copied selection stays on it."
+                    ),
+                },
                 RestoreAction::LeaveAlone => {
                     info!("Clipboard changed again after the copy; leaving it as is");
                 }
@@ -252,5 +352,72 @@ mod tests {
     fn restore_decision_restores_only_when_the_count_has_not_moved_since_our_read() {
         assert_eq!(restore_decision(7, Some(8), 8), RestoreAction::Restore);
         assert_eq!(restore_decision(7, Some(8), 9), RestoreAction::LeaveAlone);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn only_option_control_and_shift_hold_up_the_copy() {
+        use NSEventModifierFlags as Flags;
+        assert!(modifiers_clear(Flags::empty()));
+        for held in [Flags::Option, Flags::Control, Flags::Shift] {
+            assert!(!modifiers_clear(held), "{held:?}");
+            assert!(!modifiers_clear(held | Flags::Command), "{held:?} with ⌘");
+        }
+        assert!(modifiers_clear(Flags::Command));
+        assert!(modifiers_clear(Flags::CapsLock));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn modifier_wait_reads_once_when_nothing_is_held() {
+        let reads = Cell::new(0);
+        let released = wait_for_modifier_release(Duration::from_secs(5), || {
+            reads.set(reads.get() + 1);
+            NSEventModifierFlags::CapsLock
+        });
+        assert!(released);
+        assert_eq!(reads.get(), 1);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn modifier_wait_ends_as_soon_as_the_keys_are_up() {
+        let reads = Cell::new(0);
+        let started = std::time::Instant::now();
+        let released = wait_for_modifier_release(Duration::from_secs(5), || {
+            reads.set(reads.get() + 1);
+            if reads.get() < 3 {
+                NSEventModifierFlags::Option
+            } else {
+                NSEventModifierFlags::empty()
+            }
+        });
+        assert!(released);
+        assert_eq!(reads.get(), 3);
+        assert!(started.elapsed() < Duration::from_secs(5));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn modifier_wait_gives_up_after_the_timeout() {
+        let reads = Cell::new(0);
+        let started = std::time::Instant::now();
+        let released = wait_for_modifier_release(Duration::from_millis(50), || {
+            reads.set(reads.get() + 1);
+            NSEventModifierFlags::Option
+        });
+        assert!(!released);
+        assert!(started.elapsed() >= Duration::from_millis(50));
+        assert!((2..=7).contains(&reads.get()), "{} reads", reads.get());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn snapshot_size_is_capped_at_16_mb() {
+        let cap = 16 * 1024 * 1024;
+        assert_eq!(pasteboard::add_within_cap(0, cap), Some(cap));
+        assert_eq!(pasteboard::add_within_cap(cap - 10, 10), Some(cap));
+        assert_eq!(pasteboard::add_within_cap(cap, 1), None);
+        assert_eq!(pasteboard::add_within_cap(1, usize::MAX), None);
     }
 }

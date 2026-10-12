@@ -133,7 +133,7 @@ fn stop_speaking_on_main(app: &AppHandle) {
 }
 
 /// Ends the session that owns `stop`, unless it already ended.
-fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, error: Option<String>) {
+fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
@@ -147,9 +147,13 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, error: Option<St
         }
         *current = None;
     }
-    match error {
-        Some(message) => overlay::show_overlay(app, OverlayView::Error { message }),
-        None => overlay::hide_overlay(app),
+    match end {
+        PlaybackEnd::Done => overlay::hide_overlay(app),
+        PlaybackEnd::NothingSpoken => {
+            info!("No sentence had speakable text");
+            overlay::show_overlay(app, OverlayView::NothingSelected);
+        }
+        PlaybackEnd::Failed(message) => overlay::show_overlay(app, OverlayView::Error { message }),
     }
     tray::set_tray_state(app, TrayIconState::Idle);
 }
@@ -226,12 +230,24 @@ impl Drop for ReportPanic<'_> {
     }
 }
 
+/// How playback ended, which decides what the overlay shows next.
+#[derive(Debug, PartialEq, Eq)]
+enum PlaybackEnd {
+    /// The audio ran out or speech was stopped.
+    Done,
+    /// Synthesis finished without sending any audio: every sentence was
+    /// skipped as unspeakable.
+    NothingSpoken,
+    /// Synthesis failed; the audio queued before the failure has played.
+    Failed(String),
+}
+
 /// Ends the session when the playback thread exits for any reason, including
 /// a panic or a missing output device.
 struct SessionGuard {
     app: AppHandle,
     stop: Arc<AtomicBool>,
-    error: Option<String>,
+    end: PlaybackEnd,
 }
 
 impl Drop for SessionGuard {
@@ -243,10 +259,10 @@ impl Drop for SessionGuard {
         }
         let app = self.app.clone();
         let stop = self.stop.clone();
-        let error = self.error.take();
+        let end = std::mem::replace(&mut self.end, PlaybackEnd::Done);
         if let Err(e) = self
             .app
-            .run_on_main_thread(move || end_session_on_main(&app, &stop, error))
+            .run_on_main_thread(move || end_session_on_main(&app, &stop, end))
         {
             warn!("Failed to end the speech session: {e}");
         }
@@ -264,29 +280,30 @@ fn play(
     let mut guard = SessionGuard {
         app,
         stop: stop.clone(),
-        error: None,
+        end: PlaybackEnd::Done,
     };
     let mut sink = match audio_out::open_output(device.as_deref()) {
         Ok(sink) => sink,
         Err(e) => {
             error!("Cannot play speech: {e}");
-            guard.error = Some(e);
+            guard.end = PlaybackEnd::Failed(e);
             return;
         }
     };
     sink.log_on_drop(false);
     let player = Player::connect_new(sink.mixer());
     player.set_volume(volume);
-    guard.error = play_chunks(&player, &rx, &stop);
+    guard.end = play_chunks(&player, &rx, &stop);
 }
 
 /// Plays chunks from `rx` until they run out, synthesis fails or `stop` is
-/// set. Returns the synthesis error once the audio queued before it has played.
-fn play_chunks(player: &Player, rx: &Receiver<Chunk>, stop: &AtomicBool) -> Option<String> {
+/// set. Returns a synthesis failure once the audio queued before it has played.
+fn play_chunks(player: &Player, rx: &Receiver<Chunk>, stop: &AtomicBool) -> PlaybackEnd {
+    let mut queued_any = false;
     loop {
         if stop.load(Ordering::SeqCst) {
             player.stop();
-            return None;
+            return PlaybackEnd::Done;
         }
         // `append` never blocks, so this is what bounds the read-ahead.
         if player.len() >= READ_AHEAD {
@@ -298,19 +315,24 @@ fn play_chunks(player: &Player, rx: &Receiver<Chunk>, stop: &AtomicBool) -> Opti
                 // Appending after `stop` restarts a stopped player.
                 if stop.load(Ordering::SeqCst) {
                     player.stop();
-                    return None;
+                    return PlaybackEnd::Done;
                 }
                 player.append(SamplesBuffer::new(MONO, SAMPLE_RATE, pcm_to_f32(&samples)));
+                queued_any = true;
             }
             Ok(Err(message)) => {
                 error!("Speech synthesis failed: {message}");
                 play_out(player, stop);
-                return Some(message);
+                return PlaybackEnd::Failed(message);
             }
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
                 play_out(player, stop);
-                return None;
+                return if queued_any {
+                    PlaybackEnd::Done
+                } else {
+                    PlaybackEnd::NothingSpoken
+                };
             }
         }
     }
@@ -409,7 +431,10 @@ mod tests {
 
             // Stand in for the device and play it out.
             output.by_ref().take(48_000).for_each(drop);
-            assert_eq!(playback.join().unwrap(), Some("server error".into()));
+            assert_eq!(
+                playback.join().unwrap(),
+                PlaybackEnd::Failed("server error".into())
+            );
             assert!(player.empty());
         });
     }
@@ -429,7 +454,10 @@ mod tests {
             assert!(!playback.is_finished());
 
             stop.store(true, Ordering::SeqCst);
-            assert_eq!(playback.join().unwrap(), Some("server error".into()));
+            assert_eq!(
+                playback.join().unwrap(),
+                PlaybackEnd::Failed("server error".into())
+            );
         });
     }
 
@@ -485,7 +513,7 @@ mod tests {
             );
 
             output.by_ref().take(48_000).for_each(drop);
-            assert_eq!(playback.join().unwrap(), None);
+            assert_eq!(playback.join().unwrap(), PlaybackEnd::Done);
         });
     }
 
@@ -525,7 +553,7 @@ mod tests {
         tx.send(Ok(vec![0; 480])).unwrap();
         let stop = AtomicBool::new(true);
 
-        assert_eq!(play_chunks(&player, &rx, &stop), None);
+        assert_eq!(play_chunks(&player, &rx, &stop), PlaybackEnd::Done);
         assert!(
             player.empty(),
             "appending after stop would restart a stopped player"
@@ -561,7 +589,20 @@ mod tests {
             );
 
             stop.store(true, Ordering::SeqCst);
-            assert_eq!(playback.join().unwrap(), None);
+            assert_eq!(playback.join().unwrap(), PlaybackEnd::Done);
         });
+    }
+
+    #[test]
+    fn synthesis_that_sent_no_audio_ends_as_nothing_spoken() {
+        let (player, _output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        drop(tx);
+
+        let stop = AtomicBool::new(false);
+        assert_eq!(play_chunks(&player, &rx, &stop), PlaybackEnd::NothingSpoken);
+        // A stopped session ends quietly even when nothing played.
+        stop.store(true, Ordering::SeqCst);
+        assert_eq!(play_chunks(&player, &rx, &stop), PlaybackEnd::Done);
     }
 }
