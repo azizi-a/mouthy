@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "הגדרות...",
-    "checkUpdates": "בדוק עדכונים...",
     "copyLastTranscript": "העתק את התמלול האחרון",
     "unloadModel": "פרוק מודל",
     "model": "מודל",
@@ -500,11 +499,6 @@
         "lineCount": "{{count}} שורות",
         "empty": "ממתין ללוגים… רשומות יופיעו כאן כשהאפליקציה תפיק אותן."
       },
-      "updateChecks": {
-        "label": "בדוק עדכונים",
-        "description": "בדוק אוטומטית אם קיימות גרסאות חדשות של Mouthy",
-        "lockedDescription": "מושבת על ידי תצורת המערכת (HANDY_DISABLE_UPDATER)"
-      },
       "soundTheme": {
         "label": "ערכת צלילים",
         "description": "בחר ערכת צלילים להתחלה ולסיום ההקלטה"
@@ -598,13 +592,6 @@
         "verdictNoEvents": "לא נקלטו אירועים — האם הקשת על מקשים במהלך הבדיקה?",
         "failed": "האבחון נכשל: {{error}}"
       },
-      "whatsNewPreview": {
-        "title": "תצוגה מקדימה של מה חדש",
-        "description": "פתח את הערת הגרסה המצורפת האחרונה בלי לסמן אותה כנצפתה",
-        "button": "תצוגה מקדימה",
-        "noNotes": "לא נמצאו הערות גרסה מצורפות",
-        "error": "הצגת התצוגה המקדימה של הערות הגרסה נכשלה"
-      },
       "onboardingPreview": {
         "title": "תצוגה מקדימה של ההגדרה הראשונית",
         "description": "הצג את מסכי ההגדרה הראשונית בלי לשנות הרשאות, מודלים או את מצב ההשלמה",
@@ -635,27 +622,8 @@
           "description": "הסקה מהירה לביצועים גבוהים עבור מודל זיהוי הדיבור Whisper של OpenAI",
           "details": "Mouthy משתמש ב-ggml לתמלול מהיר ומקומי. תודה לעבודה המדהימה של Georgi Gerganov וכל התורמים."
         }
-      },
-      "whatsNewUpdates": {
-        "label": "הצג מה חדש",
-        "description": "הצג הערות גרסה לאחר עדכוני Mouthy"
       }
     }
-  },
-  "footer": {
-    "checkingUpdates": "בודק עדכונים...",
-    "updateAvailableShort": "יש עדכון זמין",
-    "upToDate": "מעודכן",
-    "updateCheckingDisabled": "בדיקת העדכונים כבויה",
-    "downloading": "מוריד... {{progress}}%",
-    "installing": "מתקין...",
-    "preparing": "מכין...",
-    "checkForUpdates": "בדוק עדכונים",
-    "portableUpdateTitle": "נדרש עדכון ידני",
-    "portableUpdateMessage": "התקנות ניידות אינן מתעדכנות אוטומטית. הורד למטה את המתקין המתאים למערכת שלך, הפעל אותו והתקן לאותה תיקייה — תיקיית Data/ (הגדרות, מודלים, הקלטות) נשמרת במקומה.",
-    "portableUpdateButton": "הורדת המתקין",
-    "portableUpdateBrowseMessage": "התקנות ניידות אינן מתעדכנות אוטומטית. הורד את הגרסה האחרונה המתאימה למערכת שלך מ-GitHub Releases והתקן אותה לאותה תיקייה — תיקיית Data/ (הגדרות, מודלים, הקלטות) נשמרת במקומה.",
-    "portableUpdateBrowseButton": "פתח את GitHub Releases"
   },
   "common": {
     "loading": "טוען...",
@@ -705,9 +673,6 @@
     "transcribing": "מתמלל...",
     "processing": "מעבד...",
     "loadingModel": "טוען מודל..."
-  },
-  "whatsNew": {
-    "title": "חדש ב-Mouthy v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "ייתכן ש-{{name}} חוסם קיצור דרך אחד",

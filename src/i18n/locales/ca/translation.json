@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Configuració...",
-    "checkUpdates": "Comprova si hi ha actualitzacions...",
     "copyLastTranscript": "Copia l'última transcripció",
     "unloadModel": "Allibera el model de la memòria",
     "model": "Model",
@@ -500,18 +499,6 @@
         "lineCount": "{{count}} línies",
         "empty": "S'estan esperant registres… Les entrades apareixeran aquí a mesura que l'aplicació les emeti."
       },
-      "updateChecks": {
-        "label": "Comproveu si hi ha actualitzacions",
-        "description": "Comprova automàticament si hi ha versions noves del Mouthy",
-        "lockedDescription": "Desactivat per la configuració del sistema (HANDY_DISABLE_UPDATER)"
-      },
-      "whatsNewPreview": {
-        "title": "Previsualització de les novetats",
-        "description": "Obre les últimes notes de la versió incloses sense marcar-les com a llegides",
-        "button": "Previsualitzeu",
-        "noNotes": "No s'han trobat notes de la versió incloses",
-        "error": "No s'han pogut previsualitzar les notes de la versió"
-      },
       "onboardingPreview": {
         "title": "Previsualització de la configuració inicial",
         "description": "Previsualitza les pantalles de configuració inicial sense canviar els permisos, os models ni l'estat de compleció",
@@ -619,10 +606,6 @@
         "title": "Versió",
         "description": "Versió actual del Mouthy"
       },
-      "whatsNewUpdates": {
-        "label": "Mostra les novetats",
-        "description": "Mostra les notes de la versió després d'actualitzar el Mouthy"
-      },
       "appDataDirectory": {
         "title": "Directori de dades de l'aplicació",
         "description": "Ubicació on el Mouthy desa les dades"
@@ -641,24 +624,6 @@
         }
       }
     }
-  },
-  "footer": {
-    "checkingUpdates": "S'està comprovant si hi ha actualitzacions...",
-    "updateAvailableShort": "Hi ha una actualització disponible",
-    "upToDate": "Actualitzat",
-    "updateCheckingDisabled": "Comprovació d'actualitzacions desactivada",
-    "downloading": "S'està baixant... {{progress}}%",
-    "installing": "S'està instal·lant...",
-    "preparing": "S'està preparant...",
-    "checkForUpdates": "Comprova si hi ha actualitzacions",
-    "portableUpdateTitle": "Cal actualitzar manualment",
-    "portableUpdateMessage": "Les instal·lacions portables no es poden actualitzar automàticament. Baixa l'instal·lador per al vostre sistema a continuació, executeu-lo i instal·leu-lo a la mateixa carpeta. La carpeta Data/ (configuració, models i enregistraments) es conserva.",
-    "portableUpdateButton": "Baixa l'instal·lador",
-    "portableUpdateBrowseMessage": "Les instal·lacions portables no es poden actualitzar automàticament. Baixa l'última versió per al vostre sistema des de GitHub Releases i instal·leu-la a la mateixa carpeta. La carpeta Data/ (configuració, models i enregistraments) es conserva.",
-    "portableUpdateBrowseButton": "Obriu GitHub Releases"
-  },
-  "whatsNew": {
-    "title": "Novetats del Mouthy v{{version}}"
   },
   "common": {
     "loading": "S'està carregant...",

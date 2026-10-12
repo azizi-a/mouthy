@@ -11,8 +11,8 @@ Design lane: not applicable · Intent-critical: yes
 - **Environment traps:** a release Handy.app (`com.pais.handy`) is installed; since S1a it no longer collides with dev launches. After T4, quit any running release Mouthy.app before `tauri dev`. macOS Spoken Content hotkey is currently off on this machine.
 - **Kokoro-FastAPI verified live at 127.0.0.1:8880** (Research Notes).
 - **Active constraints:** no new dependencies (none needed); one commit per logical removal; every stage passes the per-stage check list; macOS first; delete, don't disable; `block_on` only on the dedicated synth thread.
-- **Completed stages:** Stage 0 (docs), S1a (rebrand: binary `mouthy`, lib `mouthy_app_lib`, identifier `com.azizi.mouthy`, placeholder icons, CI/Nix deleted).
-- **Next stage:** S1b (remove updater). Debug binary is now `src-tauri/target/debug/mouthy`; dev launches no longer share Handy.app's single-instance socket.
+- **Completed stages:** Stage 0 (docs), S1a (rebrand: binary `mouthy`, lib `mouthy_app_lib`, identifier `com.azizi.mouthy`, placeholder icons, CI/Nix deleted), S1b (updater, What's New, process plugin, `react-markdown`, `footer` locale subtree removed).
+- **Next stage:** R1 (remove transcription action path, coordinator, migrations). Debug binary is `src-tauri/target/debug/mouthy`; dev launches no longer share Handy.app's single-instance socket.
 - **Open questions:** H4 (default README note applies).
 
 ## Human Asks
@@ -167,6 +167,11 @@ Sequential — every stage touches `Cargo.toml`, `lib.rs`, `settings.rs`, `bindi
 
 - Blocked by: nothing. Files: Module Map row S1b; `capabilities/{default,desktop}.json`; `tauri.conf.json` (`plugins.updater`, `createUpdaterArtifacts: false`); `lib.rs` plugin + command registrations; `tray` locale key `checkUpdates` + `whatsNew*` keys pruned in all 26 locales; `App.tsx` `WhatsNewGate`.
 - Verify: per-stage list; `grep -rn "updater\|whats_new\|whatsNew\|plugin-process" src src-tauri/src src-tauri/capabilities` returns only `settingUpdaters` in `settingsStore.ts`.
+- Implementation Notes:
+  - **Decisions:** the whole `footer` locale subtree went (every key was UpdateChecker-only); the footer keeps only the version label. `tauri.conf.json` drops the `createUpdaterArtifacts` key and the now-empty `plugins` object (Tauri's default is `false`/`{}`). `ErrorBoundary.tsx` deleted — it existed only to wrap `WhatsNewGate` (cjpais/Handy#1822). `utils::env_flag_enabled` stays (overlay + Vulkan flags); `settings.rs` no longer imports `utils`, `lib.rs` no longer imports `Emitter`. Deduped `autostart:default` (listed 3×) in `capabilities/desktop.json`.
+  - **Deviations:** legacy-store test fixtures in `settings.rs` lost their `update_checks_enabled`/`show_whats_new_on_update`/`whats_new_last_seen_version` keys; `gpu_device_migration_keeps_current_stable_selection` still asserts "no migration" because the only migration that needed that key is gone. Test count unchanged (267 pass / 16 ignored).
+  - **Learnings:** tray strings are now 7 fields (build.rs log line). macOS has no `timeout(1)`; run the bindings export as `perl -e 'alarm 90; exec @ARGV' ./target/debug/mouthy --list-devices` from `src-tauri`. `public/` is now empty (untracked); Vite tolerates a missing `publicDir`.
+  - **Grep verification:** the DoD grep returns only `settingsStore.ts` `const updater = settingUpdaters[key]` (+ its two follow-on lines) and the unrelated "Generic updater for post-processing provider settings" comment (R4 removes it). Removed symbols — `UpdateCheck*`, `update_check*`, `check_updates`, `checkUpdates`, `HANDY_DISABLE_UPDATER`, `check-for-updates`, `isUpdateChecksLocked`, `triggerUpdateCheck`, `show_whats_new`, `ShowWhatsNew`, `installCompatShims`, `lib/compat`, `ErrorBoundary`, `portableInstaller`, `update-checker`, `whats-new`, `tauri_plugin_{process,updater}`, `createUpdaterArtifacts`, `updateChecksLocked`, `footer.` — zero hits across `src`, `src-tauri/{src,build.rs,Cargo.toml,tauri.conf.json,capabilities}`, `package.json`, `tests`, `scripts`, configs; only "relaunch" hits are the unrelated tray-recreate comments (`tray.rs`, `lib.rs`). `cargo tree -i tauri-plugin-{updater,process}` → no match; `bun pm ls` shows none of the three npm packages.
 
 ### Stage R1 — Remove transcription action path, coordinator, migrations `[refactor]`
 

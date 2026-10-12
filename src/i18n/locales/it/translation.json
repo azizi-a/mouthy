@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Impostazioni...",
-    "checkUpdates": "Verifica aggiornamenti...",
     "copyLastTranscript": "Copia l'ultima trascrizione",
     "unloadModel": "Rilascia modello",
     "model": "Modello",
@@ -500,11 +499,6 @@
         "lineCount": "{{count}} righe",
         "empty": "In attesa di log… Le voci appariranno qui man mano che l'app le emette."
       },
-      "updateChecks": {
-        "label": "Controlla aggiornamenti",
-        "description": "Controlla automaticamente la disponibilità di nuove versioni di Mouthy",
-        "lockedDescription": "Disabilitato dalla configurazione di sistema (HANDY_DISABLE_UPDATER)"
-      },
       "soundTheme": {
         "label": "Tema Sonoro",
         "description": "Scegli un tema sonoro per il feedback di inizio e fine registrazione"
@@ -598,13 +592,6 @@
         "verdictNoEvents": "Nessun evento rilevato: hai premuto qualche tasto durante il test?",
         "failed": "Diagnostica non riuscita: {{error}}"
       },
-      "whatsNewPreview": {
-        "title": "Anteprima delle novità",
-        "description": "Apri le note di rilascio incluse più recenti senza segnarle come viste",
-        "button": "Anteprima",
-        "noNotes": "Nessuna nota di rilascio inclusa trovata",
-        "error": "Impossibile mostrare l'anteprima delle note di rilascio"
-      },
       "onboardingPreview": {
         "title": "Anteprima della configurazione iniziale",
         "description": "Visualizza le schermate di configurazione senza modificare autorizzazioni, modelli o stato di completamento",
@@ -635,27 +622,8 @@
           "description": "Inferenza ad alte prestazioni del modello di riconoscimento vocale automatico Whisper di OpenAI",
           "details": "Mouthy usa ggml per il riconoscimento vocale veloce in locale. Grazie a Georgi Gerganov e collaboratori per il fantastico lavoro."
         }
-      },
-      "whatsNewUpdates": {
-        "label": "Mostra novità",
-        "description": "Mostra le note di rilascio dopo gli aggiornamenti di Mouthy"
       }
     }
-  },
-  "footer": {
-    "checkingUpdates": "Controllo aggiornamenti...",
-    "updateAvailableShort": "Aggiornamento disponibile",
-    "upToDate": "Aggiornato",
-    "updateCheckingDisabled": "Controllo Aggiornamenti Disabilitato",
-    "downloading": "Download... {{progress}}%",
-    "installing": "Installazione...",
-    "preparing": "Preparazione...",
-    "checkForUpdates": "Controlla aggiornamenti",
-    "portableUpdateTitle": "Aggiornamento manuale necessario",
-    "portableUpdateMessage": "Le installazioni portatili non possono essere aggiornate automaticamente. Scarica qui sotto il programma di installazione per il tuo sistema, eseguilo e installalo nella stessa cartella: la cartella Data/ (impostazioni, modelli, registrazioni) viene mantenuta.",
-    "portableUpdateButton": "Scarica il programma di installazione",
-    "portableUpdateBrowseMessage": "Le installazioni portatili non possono essere aggiornate automaticamente. Scarica da GitHub Releases la versione più recente per il tuo sistema e installala nella stessa cartella: la cartella Data/ (impostazioni, modelli, registrazioni) viene mantenuta.",
-    "portableUpdateBrowseButton": "Apri i rilasci su GitHub"
   },
   "common": {
     "loading": "Caricamento...",
@@ -705,9 +673,6 @@
     "transcribing": "Trascrizione...",
     "processing": "Elaborazione...",
     "loadingModel": "Caricamento del modello..."
-  },
-  "whatsNew": {
-    "title": "Novità in Mouthy v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} potrebbe bloccare 1 scorciatoia",

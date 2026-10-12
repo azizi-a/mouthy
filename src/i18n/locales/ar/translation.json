@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "الإعدادات...",
-    "checkUpdates": "التحقق من وجود تحديثات...",
     "copyLastTranscript": "نسخ آخر نص تم تفريغه",
     "unloadModel": "تفريغ النموذج",
     "model": "النموذج",
@@ -477,11 +476,6 @@
         "lineCount": "{{count}} سطر",
         "empty": "بانتظار السجلات… ستظهر الإدخالات هنا فور إصدار التطبيق لها."
       },
-      "updateChecks": {
-        "label": "التحقق من وجود تحديثات",
-        "description": "التحقق تلقائياً من وجود إصدارات جديدة من Mouthy",
-        "lockedDescription": "معطّل بواسطة إعدادات النظام (HANDY_DISABLE_UPDATER)"
-      },
       "soundTheme": {
         "label": "سمة الصوت",
         "description": "اختر سمة صوت لتنبيهات بدء وتوقف التسجيل"
@@ -575,13 +569,6 @@
         "verdictNoEvents": "لم يُسجَّل أي حدث — هل ضغطت أي مفاتيح أثناء الاختبار؟",
         "failed": "فشل التشخيص: {{error}}"
       },
-      "whatsNewPreview": {
-        "title": "معاينة الجديد",
-        "description": "افتح أحدث ملاحظات إصدار مضمنة دون وضع علامة عليها كمقروءة",
-        "button": "معاينة",
-        "noNotes": "لم يتم العثور على ملاحظات إصدار مضمنة",
-        "error": "تعذرت معاينة ملاحظات الإصدار"
-      },
       "onboardingPreview": {
         "title": "معاينة الإعداد الأولي",
         "description": "عاين شاشات الإعداد الأولي دون تغيير الأذونات أو النماذج أو حالة الإكمال",
@@ -612,10 +599,6 @@
           "description": "استنتاج عالي الأداء لنموذج التعرف التلقائي على الكلام Whisper من OpenAI",
           "details": ".يستخدم Mouthy برنامج ggml لمعالجة سريعة ومحلية لتحويل الكلام إلى نص. شكراً للعمل الرائع الذي قام به Georgi Gerganov والمساهمون"
         }
-      },
-      "whatsNewUpdates": {
-        "label": "إظهار الجديد",
-        "description": "إظهار ملاحظات الإصدار بعد تحديثات Mouthy"
       }
     },
     "modelSettings": {
@@ -641,21 +624,6 @@
         "tooltip": "إعادة الفحص بحثًا عن النماذج المضافة إلى مجلد النماذج أو ذاكرة Hugging Face التخزينية المؤقتة خارج Mouthy"
       }
     }
-  },
-  "footer": {
-    "checkingUpdates": "جاري التحقق من وجود تحديثات...",
-    "updateAvailableShort": "تحديث متاح",
-    "upToDate": "محدث",
-    "updateCheckingDisabled": "تم تعطيل التحقق من التحديث",
-    "downloading": "جاري التنزيل {{progress}}%...",
-    "installing": "جاري التثبيت...",
-    "preparing": "جاري التحضير...",
-    "checkForUpdates": "التحقق من وجود تحديثات",
-    "portableUpdateTitle": "التحديث اليدوي مطلوب",
-    "portableUpdateMessage": "لا يمكن تحديث التثبيتات المحمولة تلقائيًا. نزّل المثبّت المناسب لنظامك من الزر أدناه، شغّله، وثبّته في المجلد نفسه — يبقى مجلد Data/ (الإعدادات والنماذج والتسجيلات) في مكانه.",
-    "portableUpdateButton": "تنزيل المثبّت",
-    "portableUpdateBrowseMessage": "لا يمكن تحديث التثبيتات المحمولة تلقائيًا. نزّل أحدث إصدار مناسب لنظامك من GitHub Releases وثبّته في المجلد نفسه — يبقى مجلد Data/ (الإعدادات والنماذج والتسجيلات) في مكانه.",
-    "portableUpdateBrowseButton": "فتح GitHub Releases"
   },
   "common": {
     "loading": "جاري التحميل...",
@@ -705,9 +673,6 @@
     "transcribing": "جاري التفريغ...",
     "processing": "جاري المعالجة...",
     "loadingModel": "جارٍ تحميل النموذج..."
-  },
-  "whatsNew": {
-    "title": "الجديد في Mouthy v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "قد يحظر {{name}} اختصارًا واحدًا",
