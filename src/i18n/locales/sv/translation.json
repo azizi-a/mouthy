@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Inställningar...",
-    "copyLastTranscript": "Kopiera senaste transkriptionen",
     "quit": "Avsluta",
     "cancel": "Avbryt",
     "secureInputWarning": "⚠ Kortkommandon blockeras av Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "Allmänt",
     "advanced": "Avancerat",
-    "history": "Historik",
     "debug": "Felsökning",
     "about": "Om"
   },
@@ -67,7 +65,6 @@
         "app": "App",
         "output": "Utmatning",
         "transcription": "Transkription",
-        "history": "Historik",
         "experimental": "Experimentellt"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Historik",
-      "openFolder": "Öppna mapp för inspelningar",
-      "loading": "Laddar historik...",
-      "empty": "Inga transkriptioner ännu. Börja spela in för att bygga upp din historik!",
-      "copyToClipboard": "Kopiera transkription till urklipp",
-      "copyError": "Det gick inte att kopiera transkriptionen till urklipp.",
-      "save": "Spara transkription",
-      "unsave": "Ta bort från sparade",
-      "delete": "Ta bort post",
-      "deleteError": "Misslyckades med att ta bort post. Försök igen.",
-      "transcriptionFailed": "Transkribering misslyckades. Du kan transkribera igen med hjälp av ikonen för nytt försök."
-    },
     "debug": {
       "title": "Felsökning",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "Kopierad",
         "lineCount": "{{count}} rader",
         "empty": "Väntar på loggar… Poster visas här när appen skickar dem."
-      },
-      "historyLimit": {
-        "title": "Historikgräns",
-        "description": "Maximalt antal historikposter som ska sparas",
-        "entries": "poster"
-      },
-      "recordingRetention": {
-        "title": "Radera inspelningar automatiskt",
-        "description": "Radera gamla inspelningar automatiskt för att spara utrymme",
-        "never": "Aldrig",
-        "preserveLimit": "Behåll de senaste {{count}}",
-        "days3": "Efter 3 dagar",
-        "weeks2": "Efter 2 veckor",
-        "months3": "Efter 3 månader",
-        "placeholder": "Välj lagringsperiod..."
       },
       "appendTrailingSpace": {
         "label": "Lägg till avslutande mellanslag",

@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Indstillinger...",
-    "copyLastTranscript": "Kopiér seneste transskription",
     "quit": "Afslut",
     "cancel": "Annuller",
     "secureInputWarning": "⚠ Genveje blokeret af Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "Generelt",
     "advanced": "Avanceret",
-    "history": "Historik",
     "debug": "Fejlfinding",
     "about": "Om"
   },
@@ -67,7 +65,6 @@
         "app": "App",
         "output": "Output",
         "transcription": "Transskription",
-        "history": "Historik",
         "experimental": "Eksperimentel"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Historik",
-      "openFolder": "Åbn optagelsesmappe",
-      "loading": "Indlæser historik...",
-      "empty": "Ingen transskriptioner endnu. Start optagelse for at opbygge din historik!",
-      "copyToClipboard": "Kopiér transskription til udklipsholder",
-      "copyError": "Kunne ikke kopiere transskriptionen til udklipsholderen.",
-      "save": "Gem transskription",
-      "unsave": "Fjern fra gemte",
-      "delete": "Slet post",
-      "deleteError": "Kunne ikke slette posten. Prøv igen.",
-      "transcriptionFailed": "Transskription mislykkedes. Du kan transskribere igen ved hjælp af genforsøgsikonet."
-    },
     "debug": {
       "title": "Fejlfinding",
       "logDirectory": {
@@ -183,21 +167,6 @@
         "description": "Forhåndsvis introduktionsskærmene uden at ændre tilladelser, modeller eller fuldførelsesstatus",
         "permissionsButton": "Tilladelser",
         "exitButton": "Afslut forhåndsvisning"
-      },
-      "historyLimit": {
-        "title": "Historikgrænse",
-        "description": "Maksimalt antal historikposter, der skal beholdes",
-        "entries": "poster"
-      },
-      "recordingRetention": {
-        "title": "Automatisk sletning af optagelser",
-        "description": "Slet automatisk gamle optagelser for at spare plads",
-        "never": "Aldrig",
-        "preserveLimit": "Behold de seneste {{count}}",
-        "days3": "Efter 3 dage",
-        "weeks2": "Efter 2 uger",
-        "months3": "Efter 3 måneder",
-        "placeholder": "Vælg opbevaringsperiode..."
       },
       "appendTrailingSpace": {
         "label": "Tilføj efterfølgende mellemrum",

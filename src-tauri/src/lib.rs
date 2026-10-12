@@ -6,7 +6,6 @@ pub mod cli;
 mod clipboard;
 mod commands;
 mod input;
-mod managers;
 mod overlay;
 mod paste_tx;
 mod secure_input;
@@ -20,12 +19,10 @@ mod utils;
 pub use cli::CliArgs;
 #[cfg(debug_assertions)]
 use specta_typescript::{BigIntExportBehavior, Typescript};
-use tauri_specta::{collect_commands, collect_events, Builder};
+use tauri_specta::{collect_commands, Builder};
 
 use env_filter::Builder as EnvFilterBuilder;
-use managers::history::HistoryManager;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
-use std::sync::Arc;
 use tauri::image::Image;
 
 use tauri::tray::TrayIconBuilder;
@@ -145,12 +142,6 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // after onboarding completes. This avoids triggering permission dialogs
     // on macOS before the user is ready.
 
-    // Initialize the managers
-    let history_manager =
-        Arc::new(HistoryManager::new(app_handle).expect("Failed to initialize history manager"));
-
-    // Add managers to Tauri's managed state
-    app_handle.manage(history_manager.clone());
     app_handle.manage(tray::TrayState::new());
 
     // Note: Shortcuts are NOT initialized here.
@@ -226,9 +217,6 @@ fn initialize_core_logic(app_handle: &AppHandle) {
                 // Full explanation lives in the settings-window banner
                 show_main_window(app);
             }
-            "copy_last_transcript" => {
-                tray::copy_last_transcript(app);
-            }
             "cancel" => {
                 use crate::utils::cancel_current_operation;
 
@@ -274,62 +262,53 @@ pub fn run(cli_args: CliArgs) {
     // when the variable is unset
     let console_filter = build_console_filter();
 
-    let specta_builder = Builder::<tauri::Wry>::new()
-        .commands(collect_commands![
-            shortcut::change_binding,
-            shortcut::reset_binding,
-            shortcut::change_theme_setting,
-            shortcut::change_start_hidden_setting,
-            shortcut::change_autostart_setting,
-            shortcut::change_overlay_position_setting,
-            shortcut::change_overlay_style_setting,
-            shortcut::change_debug_mode_setting,
-            shortcut::change_paste_delay_ms_setting,
-            shortcut::change_paste_delay_after_ms_setting,
-            shortcut::change_reliable_paste_setting,
-            shortcut::change_paste_method_setting,
-            shortcut::get_available_typing_tools,
-            shortcut::change_typing_tool_setting,
-            shortcut::change_external_script_path_setting,
-            shortcut::change_clipboard_handling_setting,
-            shortcut::change_auto_submit_setting,
-            shortcut::change_auto_submit_key_setting,
-            shortcut::change_experimental_enabled_setting,
-            shortcut::suspend_all_bindings,
-            shortcut::resume_all_bindings,
-            shortcut::change_append_trailing_space_setting,
-            shortcut::change_app_language_setting,
-            shortcut::change_keyboard_implementation_setting,
-            shortcut::get_keyboard_implementation,
-            shortcut::change_show_tray_icon_setting,
-            shortcut::change_onboarding_completed_setting,
-            shortcut::handy_keys::start_handy_keys_recording,
-            shortcut::handy_keys::stop_handy_keys_recording,
-            secure_input::get_secure_input_status,
-            secure_input::run_keyboard_diagnostic,
-            show_main_window_command,
-            commands::cancel_operation,
-            commands::get_app_dir_path,
-            commands::get_app_settings,
-            commands::get_default_settings,
-            commands::get_log_dir_path,
-            commands::set_log_level,
-            commands::open_recordings_folder,
-            commands::open_log_dir,
-            commands::open_app_data_dir,
-            commands::initialize_enigo,
-            commands::initialize_shortcuts,
-            commands::audio::get_available_output_devices,
-            commands::audio::set_selected_output_device,
-            commands::audio::get_selected_output_device,
-            commands::history::get_history_entries,
-            commands::history::toggle_history_entry_saved,
-            commands::history::get_audio_file_path,
-            commands::history::delete_history_entry,
-            commands::history::update_history_limit,
-            commands::history::update_recording_retention_period,
-        ])
-        .events(collect_events![managers::history::HistoryUpdatePayload]);
+    let specta_builder = Builder::<tauri::Wry>::new().commands(collect_commands![
+        shortcut::change_binding,
+        shortcut::reset_binding,
+        shortcut::change_theme_setting,
+        shortcut::change_start_hidden_setting,
+        shortcut::change_autostart_setting,
+        shortcut::change_overlay_position_setting,
+        shortcut::change_overlay_style_setting,
+        shortcut::change_debug_mode_setting,
+        shortcut::change_paste_delay_ms_setting,
+        shortcut::change_paste_delay_after_ms_setting,
+        shortcut::change_reliable_paste_setting,
+        shortcut::change_paste_method_setting,
+        shortcut::get_available_typing_tools,
+        shortcut::change_typing_tool_setting,
+        shortcut::change_external_script_path_setting,
+        shortcut::change_clipboard_handling_setting,
+        shortcut::change_auto_submit_setting,
+        shortcut::change_auto_submit_key_setting,
+        shortcut::change_experimental_enabled_setting,
+        shortcut::suspend_all_bindings,
+        shortcut::resume_all_bindings,
+        shortcut::change_append_trailing_space_setting,
+        shortcut::change_app_language_setting,
+        shortcut::change_keyboard_implementation_setting,
+        shortcut::get_keyboard_implementation,
+        shortcut::change_show_tray_icon_setting,
+        shortcut::change_onboarding_completed_setting,
+        shortcut::handy_keys::start_handy_keys_recording,
+        shortcut::handy_keys::stop_handy_keys_recording,
+        secure_input::get_secure_input_status,
+        secure_input::run_keyboard_diagnostic,
+        show_main_window_command,
+        commands::cancel_operation,
+        commands::get_app_dir_path,
+        commands::get_app_settings,
+        commands::get_default_settings,
+        commands::get_log_dir_path,
+        commands::set_log_level,
+        commands::open_log_dir,
+        commands::open_app_data_dir,
+        commands::initialize_enigo,
+        commands::initialize_shortcuts,
+        commands::audio::get_available_output_devices,
+        commands::audio::set_selected_output_device,
+        commands::audio::get_selected_output_device,
+    ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
     specta_builder
@@ -402,7 +381,6 @@ pub fn run(cli_args: CliArgs) {
                 show_main_window(app);
             }
         }))
-        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_macos_permissions::init())
@@ -415,8 +393,6 @@ pub fn run(cli_args: CliArgs) {
         ))
         .manage(cli_args.clone())
         .setup(move |app| {
-            specta_builder.mount_events(app);
-
             // Only used on Windows, to disable WebView2 browser accelerators.
             #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
             let main_window =

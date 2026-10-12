@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "설정...",
-    "copyLastTranscript": "마지막 녹음 내용 복사",
     "quit": "종료",
     "cancel": "취소",
     "secureInputWarning": "⚠ Secure Input으로 단축키가 차단됨"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "일반",
     "advanced": "고급",
-    "history": "히스토리",
     "debug": "디버그",
     "about": "정보"
   },
@@ -67,7 +65,6 @@
         "app": "앱",
         "output": "출력",
         "transcription": "전사",
-        "history": "히스토리",
         "experimental": "실험적"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "히스토리",
-      "openFolder": "녹음 폴더 열기",
-      "loading": "히스토리 로딩 중...",
-      "empty": "아직 변환된 내용이 없습니다. 녹음을 시작하여 히스토리를 만드세요!",
-      "copyToClipboard": "녹음 내용을 클립보드에 복사",
-      "copyError": "전사 내용을 클립보드에 복사하지 못했습니다.",
-      "save": "변환된 텍스트 저장",
-      "unsave": "저장에서 제거",
-      "delete": "항목 삭제",
-      "deleteError": "항목 삭제에 실패했습니다. 다시 시도해주세요.",
-      "transcriptionFailed": "전사에 실패했습니다. 재시도 아이콘을 사용하여 다시 전사할 수 있습니다."
-    },
     "debug": {
       "title": "디버그",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "복사됨",
         "lineCount": "{{count}}줄",
         "empty": "로그 대기 중… 앱이 로그를 출력하면 여기에 표시됩니다."
-      },
-      "historyLimit": {
-        "title": "히스토리 제한",
-        "description": "보관할 최대 히스토리 항목 수",
-        "entries": "항목"
-      },
-      "recordingRetention": {
-        "title": "녹음 자동 삭제",
-        "description": "공간을 절약하기 위해 오래된 녹음을 자동으로 삭제합니다",
-        "never": "안 함",
-        "preserveLimit": "최근 {{count}}개 유지",
-        "days3": "3일 후",
-        "weeks2": "2주 후",
-        "months3": "3개월 후",
-        "placeholder": "보관 기간 선택..."
       },
       "appendTrailingSpace": {
         "label": "끝 공백 추가",

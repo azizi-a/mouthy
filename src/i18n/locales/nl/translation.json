@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Instellingen...",
-    "copyLastTranscript": "Laatste transcriptie kopiëren",
     "quit": "Afsluiten",
     "cancel": "Annuleren",
     "secureInputWarning": "⚠ Sneltoetsen geblokkeerd door Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "Algemeen",
     "advanced": "Geavanceerd",
-    "history": "Geschiedenis",
     "debug": "Probleemoplossing",
     "about": "Over Mouthy"
   },
@@ -67,7 +65,6 @@
         "app": "App",
         "output": "Uitvoer",
         "transcription": "Transcriptie",
-        "history": "Geschiedenis",
         "experimental": "Experimenteel"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Geschiedenis",
-      "openFolder": "Opnamemap openen",
-      "loading": "Geschiedenis laden...",
-      "empty": "Nog geen transcripties. Start met opnemen om je geschiedenis op te bouwen!",
-      "copyToClipboard": "Transcriptie naar klembord kopiëren",
-      "copyError": "Transcriptie naar het klembord kopiëren mislukt.",
-      "save": "Transcriptie opslaan",
-      "unsave": "Verwijderen uit opgeslagen",
-      "delete": "Item verwijderen",
-      "deleteError": "Item verwijderen mislukt. Probeer het opnieuw.",
-      "transcriptionFailed": "Transcriptie mislukt. Je kunt het opnieuw proberen via het herlaad-pictogram."
-    },
     "debug": {
       "title": "Probleemoplossing",
       "logDirectory": {
@@ -183,21 +167,6 @@
         "description": "Bekijk de onboardingschermen zonder machtigingen, modellen of de voltooiingsstatus te wijzigen",
         "permissionsButton": "Machtigingen",
         "exitButton": "Voorbeeld sluiten"
-      },
-      "historyLimit": {
-        "title": "Geschiedenislimiet",
-        "description": "Maximum aantal te bewaren geschiedenisitems",
-        "entries": "items"
-      },
-      "recordingRetention": {
-        "title": "Opnames automatisch verwijderen",
-        "description": "Oude opnames automatisch verwijderen om ruimte te besparen",
-        "never": "Nooit",
-        "preserveLimit": "Bewaar de nieuwste {{count}}",
-        "days3": "Na 3 dagen",
-        "weeks2": "Na 2 weken",
-        "months3": "Na 3 maanden",
-        "placeholder": "Selecteer bewaarperiode..."
       },
       "appendTrailingSpace": {
         "label": "Spatie achteraan toevoegen",

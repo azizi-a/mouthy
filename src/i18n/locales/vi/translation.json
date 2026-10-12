@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Cài đặt...",
-    "copyLastTranscript": "Sao chép bản chép lời mới nhất",
     "quit": "Thoát",
     "cancel": "Hủy",
     "secureInputWarning": "⚠ Phím tắt bị Secure Input chặn"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "Chung",
     "advanced": "Nâng cao",
-    "history": "Lịch sử",
     "debug": "Gỡ lỗi",
     "about": "Giới thiệu"
   },
@@ -67,7 +65,6 @@
         "app": "Ứng dụng",
         "output": "Đầu ra",
         "transcription": "Chuyển đổi",
-        "history": "Lịch sử",
         "experimental": "Thử nghiệm"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Lịch sử",
-      "openFolder": "Mở thư mục ghi âm",
-      "loading": "Đang tải lịch sử...",
-      "empty": "Chưa có bản ghi nào. Bắt đầu ghi âm để xây dựng lịch sử của bạn!",
-      "copyToClipboard": "Sao chép bản ghi vào clipboard",
-      "copyError": "Không thể sao chép bản ghi vào bộ nhớ tạm.",
-      "save": "Lưu bản ghi",
-      "unsave": "Xóa khỏi đã lưu",
-      "delete": "Xóa mục",
-      "deleteError": "Không thể xóa mục. Vui lòng thử lại.",
-      "transcriptionFailed": "Phiên âm thất bại. Bạn có thể phiên âm lại bằng biểu tượng thử lại."
-    },
     "debug": {
       "title": "Gỡ lỗi",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "Đã sao chép",
         "lineCount": "{{count}} dòng",
         "empty": "Đang chờ nhật ký… Các mục sẽ xuất hiện ở đây khi ứng dụng phát ra."
-      },
-      "historyLimit": {
-        "title": "Giới hạn lịch sử",
-        "description": "Số lượng mục lịch sử tối đa cần giữ",
-        "entries": "mục"
-      },
-      "recordingRetention": {
-        "title": "Tự động xóa ghi âm",
-        "description": "Tự động xóa các bản ghi âm cũ để tiết kiệm dung lượng",
-        "never": "Không bao giờ",
-        "preserveLimit": "Giữ {{count}} bản mới nhất",
-        "days3": "Sau 3 ngày",
-        "weeks2": "Sau 2 tuần",
-        "months3": "Sau 3 tháng",
-        "placeholder": "Chọn thời gian lưu giữ..."
       },
       "appendTrailingSpace": {
         "label": "Thêm dấu cách cuối",

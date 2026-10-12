@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "الإعدادات...",
-    "copyLastTranscript": "نسخ آخر نص تم تفريغه",
     "quit": "إنهاء",
     "cancel": "إلغاء",
     "secureInputWarning": "⚠ الاختصارات محجوبة بواسطة Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "عام",
     "advanced": "متقدم",
-    "history": "السجل",
     "debug": "تصحيح الأخطاء",
     "about": "حول"
   },
@@ -67,7 +65,6 @@
         "app": "التطبيق",
         "output": "الإخراج",
         "transcription": "التفريغ الصوتي",
-        "history": "السجل",
         "experimental": "تجريبي"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "السجل",
-      "openFolder": "فتح مجلد التسجيلات",
-      "loading": "جاري تحميل السجل...",
-      "empty": "!لا يوجد تفريغ صوتي بعد. ابدأ التسجيل لبناء سجلك",
-      "copyToClipboard": "نسخ التفريغ إلى الحافظة",
-      "copyError": "تعذر نسخ التفريغ إلى الحافظة.",
-      "save": "حفظ التفريغ",
-      "unsave": "إزالة من المحفوظات",
-      "delete": "حذف الإدخال",
-      "deleteError": ".فشل حذف الإدخال. يرجى المحاولة مرة أخرى",
-      "transcriptionFailed": "فشل النسخ. يمكنك إعادة النسخ باستخدام أيقونة إعادة المحاولة."
-    },
     "debug": {
       "title": "تصحيح الأخطاء",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "تم النسخ",
         "lineCount": "{{count}} سطر",
         "empty": "بانتظار السجلات… ستظهر الإدخالات هنا فور إصدار التطبيق لها."
-      },
-      "historyLimit": {
-        "title": "حد السجل",
-        "description": "الحد الأقصى لعدد إدخالات السجل المراد الاحتفاظ بها",
-        "entries": "إدخالات"
-      },
-      "recordingRetention": {
-        "title": "حذف التسجيلات تلقائياً",
-        "description": "حذف التسجيلات القديمة تلقائياً لتوفير المساحة",
-        "never": "أبداً",
-        "preserveLimit": "الاحتفاظ بآخر {{count}}",
-        "days3": "بعد 3 أيام",
-        "weeks2": "بعد أسبوعين",
-        "months3": "بعد 3 أشهر",
-        "placeholder": "اختر فترة الاحتفاظ..."
       },
       "appendTrailingSpace": {
         "label": "إضافة مسافة تابعة",

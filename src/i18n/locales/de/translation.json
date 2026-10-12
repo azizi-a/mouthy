@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Einstellungen...",
-    "copyLastTranscript": "Letzte Transkription kopieren",
     "quit": "Beenden",
     "cancel": "Abbrechen",
     "secureInputWarning": "⚠ Tastenkürzel durch Secure Input blockiert"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "Allgemein",
     "advanced": "Erweitert",
-    "history": "Verlauf",
     "debug": "Debug",
     "about": "Info"
   },
@@ -67,7 +65,6 @@
         "app": "App",
         "output": "Ausgabe",
         "transcription": "Transkription",
-        "history": "Verlauf",
         "experimental": "Experimentell"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Verlauf",
-      "openFolder": "Aufnahmeordner öffnen",
-      "loading": "Verlauf wird geladen...",
-      "empty": "Noch keine Transkriptionen. Starte eine Aufnahme, um deinen Verlauf aufzubauen!",
-      "copyToClipboard": "Transkription in Zwischenablage kopieren",
-      "copyError": "Transkription konnte nicht in die Zwischenablage kopiert werden.",
-      "save": "Transkription speichern",
-      "unsave": "Aus Gespeicherten entfernen",
-      "delete": "Eintrag löschen",
-      "deleteError": "Eintrag konnte nicht gelöscht werden. Bitte versuche es erneut.",
-      "transcriptionFailed": "Transkription fehlgeschlagen. Du kannst über das Wiederholen-Symbol erneut transkribieren."
-    },
     "debug": {
       "title": "Debug",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "Kopiert",
         "lineCount": "{{count}} Zeilen",
         "empty": "Warte auf Logs … Einträge erscheinen hier, sobald die App sie ausgibt."
-      },
-      "historyLimit": {
-        "title": "Verlaufslimit",
-        "description": "Maximale Anzahl der Verlaufseinträge",
-        "entries": "Einträge"
-      },
-      "recordingRetention": {
-        "title": "Aufnahmen automatisch löschen",
-        "description": "Alte Aufnahmen automatisch löschen, um Speicherplatz zu sparen",
-        "never": "Nie",
-        "preserveLimit": "Neueste {{count}} behalten",
-        "days3": "Nach 3 Tagen",
-        "weeks2": "Nach 2 Wochen",
-        "months3": "Nach 3 Monaten",
-        "placeholder": "Aufbewahrungszeitraum auswählen..."
       },
       "appendTrailingSpace": {
         "label": "Leerzeichen anhängen",

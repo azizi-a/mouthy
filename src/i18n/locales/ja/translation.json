@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "設定…",
-    "copyLastTranscript": "最新の文字起こしをコピー",
     "quit": "終了",
     "cancel": "キャンセル",
     "secureInputWarning": "⚠ Secure Input でショートカットがブロック中"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "一般",
     "advanced": "詳細設定",
-    "history": "履歴",
     "debug": "デバッグ",
     "about": "概要"
   },
@@ -67,7 +65,6 @@
         "app": "アプリ",
         "output": "出力",
         "transcription": "文字起こし",
-        "history": "履歴",
         "experimental": "実験的"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "履歴",
-      "openFolder": "録音フォルダを開く",
-      "loading": "履歴を読み込み中…",
-      "empty": "まだ文字起こしがありません。録音を開始して履歴を作成しましょう!",
-      "copyToClipboard": "文字起こしをクリップボードにコピー",
-      "copyError": "文字起こしをクリップボードにコピーできませんでした。",
-      "save": "文字起こしを保存",
-      "unsave": "保存から削除",
-      "delete": "エントリーを削除",
-      "deleteError": "エントリーの削除に失敗しました。もう一度お試しください。",
-      "transcriptionFailed": "文字起こしに失敗しました。リトライアイコンを使用して再文字起こしできます。"
-    },
     "debug": {
       "title": "デバッグ",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "コピーしました",
         "lineCount": "{{count}}行",
         "empty": "ログを待機中… アプリが出力すると、ここにエントリが表示されます。"
-      },
-      "historyLimit": {
-        "title": "履歴上限",
-        "description": "保持する履歴エントリーの最大数",
-        "entries": "件"
-      },
-      "recordingRetention": {
-        "title": "録音の自動削除",
-        "description": "古い録音を自動的に削除して容量を節約",
-        "never": "しない",
-        "preserveLimit": "最新{{count}}件を保持",
-        "days3": "3日後",
-        "weeks2": "2週間後",
-        "months3": "3ヶ月後",
-        "placeholder": "保持期間を選択…"
       },
       "appendTrailingSpace": {
         "label": "末尾にスペースを追加",

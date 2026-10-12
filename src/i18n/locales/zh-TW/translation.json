@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "設定...",
-    "copyLastTranscript": "複製最新轉錄",
     "quit": "結束",
     "cancel": "取消",
     "secureInputWarning": "⚠ 快捷鍵被 Secure Input 阻擋"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "一般",
     "advanced": "進階",
-    "history": "歷史紀錄",
     "debug": "偵錯",
     "about": "關於"
   },
@@ -67,7 +65,6 @@
         "app": "應用程式",
         "output": "輸出",
         "transcription": "轉錄",
-        "history": "歷史",
         "experimental": "實驗性"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "歷史紀錄",
-      "openFolder": "開啟錄音資料夾",
-      "loading": "載入歷史紀錄中...",
-      "empty": "還沒有轉錄紀錄。開始錄製以建立您的歷史紀錄！",
-      "copyToClipboard": "複製轉錄到剪貼簿",
-      "copyError": "無法將轉錄複製到剪貼簿。",
-      "save": "儲存轉錄",
-      "unsave": "從已儲存中移除",
-      "delete": "刪除條目",
-      "deleteError": "刪除條目失敗，請重試",
-      "transcriptionFailed": "轉錄失敗。您可以使用重試圖示重新轉錄。"
-    },
     "debug": {
       "title": "偵錯",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "已複製",
         "lineCount": "{{count}} 行",
         "empty": "正在等待日誌…… 應用程式產生日誌時會顯示於此。"
-      },
-      "historyLimit": {
-        "title": "歷史紀錄上限",
-        "description": "歷史紀錄的最大保留筆數",
-        "entries": "筆"
-      },
-      "recordingRetention": {
-        "title": "自動刪除錄音",
-        "description": "自動刪除舊錄音以節省空間",
-        "never": "從不",
-        "preserveLimit": "保留最新 {{count}} 筆",
-        "days3": "3 天後",
-        "weeks2": "2 週後",
-        "months3": "3 個月後",
-        "placeholder": "選擇保留期限..."
       },
       "appendTrailingSpace": {
         "label": "附加尾部空格",

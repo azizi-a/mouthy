@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Configuració...",
-    "copyLastTranscript": "Copia l'última transcripció",
     "quit": "Surt",
     "cancel": "Cancel·la",
     "secureInputWarning": "⚠ Dreceres blocades per l'entrada segura"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "General",
     "advanced": "Avançat",
-    "history": "Historial",
     "debug": "Depuració",
     "about": "Quant a"
   },
@@ -67,7 +65,6 @@
         "app": "Aplicació",
         "output": "Sortida",
         "transcription": "Transcripció",
-        "history": "Historial",
         "experimental": "Experimental"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Historial",
-      "openFolder": "Obriu la carpeta d'enregistraments",
-      "loading": "S'està carregant l'historial...",
-      "empty": "Encara no hi ha transcripcions. Comenceu a enregistrar per crear l'historial!",
-      "copyToClipboard": "Copia la transcripció al porta-retalls",
-      "copyError": "No s'ha pogut copiar la transcripció al porta-retalls.",
-      "save": "Desa la transcripció",
-      "unsave": "Treu de les desades",
-      "delete": "Suprimeix l'entrada",
-      "deleteError": "No s'ha pogut suprimir l'entrada. Torneu-ho a provar.",
-      "transcriptionFailed": "La transcripció ha fallat. Podeu tornar a transcriure amb la icona de reintent."
-    },
     "debug": {
       "title": "Depuració",
       "logDirectory": {
@@ -183,21 +167,6 @@
         "description": "Previsualitza les pantalles de configuració inicial sense canviar els permisos, os models ni l'estat de compleció",
         "permissionsButton": "Permisos",
         "exitButton": "Sortiu de la previsualització"
-      },
-      "historyLimit": {
-        "title": "Límit de l'historial",
-        "description": "Nombre màxim d'entrades de l'historial que es conservaran",
-        "entries": "entrades"
-      },
-      "recordingRetention": {
-        "title": "Supressió automàtica d'enregistraments",
-        "description": "Suprimeix automàticament els enregistraments antics per estalviar espai",
-        "never": "Mai",
-        "preserveLimit": "Conserva els últims {{count}}",
-        "days3": "Al cap de 3 dies",
-        "weeks2": "Al cap de 2 setmanes",
-        "months3": "Al cap de 3 mesos",
-        "placeholder": "Selecciona el període de conservació..."
       },
       "appendTrailingSpace": {
         "label": "Afegiu un espai al final",

@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Nastavení...",
-    "copyLastTranscript": "Zkopírovat poslední přepis",
     "quit": "Ukončit",
     "cancel": "Zrušit",
     "secureInputWarning": "⚠ Zkratky blokuje Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "Obecné",
     "advanced": "Pokročilé",
-    "history": "Historie",
     "debug": "Ladění",
     "about": "O aplikaci"
   },
@@ -67,7 +65,6 @@
         "app": "Aplikace",
         "output": "Výstup",
         "transcription": "Přepis",
-        "history": "Historie",
         "experimental": "Experimentální"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Historie",
-      "openFolder": "Otevřít složku nahrávek",
-      "loading": "Načítám historii...",
-      "empty": "Zatím žádné přepisy. Začněte nahrávat a vytvořte si historii!",
-      "copyToClipboard": "Kopírovat přepis do schránky",
-      "copyError": "Přepis se nepodařilo zkopírovat do schránky.",
-      "save": "Uložit přepis",
-      "unsave": "Odebrat z uložených",
-      "delete": "Smazat záznam",
-      "deleteError": "Nepodařilo se smazat záznam. Zkuste to prosím znovu.",
-      "transcriptionFailed": "Přepis selhal. Můžete zkusit přepis znovu pomocí ikony opakování."
-    },
     "debug": {
       "title": "Ladění",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "Zkopírováno",
         "lineCount": "Řádků: {{count}}",
         "empty": "Čekání na logy… Záznamy se zde zobrazí, jakmile je aplikace vygeneruje."
-      },
-      "historyLimit": {
-        "title": "Limit historie",
-        "description": "Maximální počet záznamů historie k uchování",
-        "entries": "záznamů"
-      },
-      "recordingRetention": {
-        "title": "Automatické mazání nahrávek",
-        "description": "Automaticky mazat staré nahrávky pro úsporu místa",
-        "never": "Nikdy",
-        "preserveLimit": "Ponechat posledních {{count}}",
-        "days3": "Po 3 dnech",
-        "weeks2": "Po 2 týdnech",
-        "months3": "Po 3 měsících",
-        "placeholder": "Vyberte dobu uchování..."
       },
       "appendTrailingSpace": {
         "label": "Přidat koncovou mezeru",

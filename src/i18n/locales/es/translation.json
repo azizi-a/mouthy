@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Configuración...",
-    "copyLastTranscript": "Copiar la última transcripción",
     "quit": "Salir",
     "cancel": "Cancelar",
     "secureInputWarning": "⚠ Atajos bloqueados por Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "General",
     "advanced": "Avanzado",
-    "history": "Historial",
     "debug": "Depuración",
     "about": "Acerca de"
   },
@@ -67,7 +65,6 @@
         "app": "Aplicación",
         "output": "Salida",
         "transcription": "Transcripción",
-        "history": "Historial",
         "experimental": "Experimental"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Historial",
-      "openFolder": "Abrir carpeta de grabaciones",
-      "loading": "Cargando historial...",
-      "empty": "Aún no hay transcripciones. ¡Comienza a grabar para crear tu historial!",
-      "copyToClipboard": "Copiar transcripción al portapapeles",
-      "copyError": "No se pudo copiar la transcripción al portapapeles.",
-      "save": "Guardar transcripción",
-      "unsave": "Eliminar de guardados",
-      "delete": "Eliminar entrada",
-      "deleteError": "Error al eliminar la entrada. Por favor, intenta de nuevo.",
-      "transcriptionFailed": "La transcripción falló. Puedes re-transcribir usando el icono de reintentar."
-    },
     "debug": {
       "title": "Depuración",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "Copiado",
         "lineCount": "{{count}} líneas",
         "empty": "Esperando registros… Las entradas aparecerán aquí a medida que la aplicación las emita."
-      },
-      "historyLimit": {
-        "title": "Límite de historial",
-        "description": "Número máximo de entradas de historial a conservar",
-        "entries": "entradas"
-      },
-      "recordingRetention": {
-        "title": "Eliminación automática de grabaciones",
-        "description": "Eliminar automáticamente grabaciones antiguas para ahorrar espacio",
-        "never": "Nunca",
-        "preserveLimit": "Mantener las últimas {{count}}",
-        "days3": "Después de 3 días",
-        "weeks2": "Después de 2 semanas",
-        "months3": "Después de 3 meses",
-        "placeholder": "Seleccionar período de retención..."
       },
       "appendTrailingSpace": {
         "label": "Agregar espacio final",

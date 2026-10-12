@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Settings...",
-    "copyLastTranscript": "Copy Last Transcript",
     "quit": "Quit",
     "cancel": "Cancel",
     "secureInputWarning": "⚠ Shortcuts blocked by Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "General",
     "advanced": "Advanced",
-    "history": "History",
     "debug": "Debug",
     "about": "About"
   },
@@ -67,7 +65,6 @@
         "app": "App",
         "output": "Output",
         "transcription": "Transcription",
-        "history": "History",
         "experimental": "Experimental"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "History",
-      "openFolder": "Open Recordings Folder",
-      "loading": "Loading history...",
-      "empty": "No transcriptions yet. Start recording to build your history!",
-      "copyToClipboard": "Copy transcription to clipboard",
-      "copyError": "Failed to copy transcription to clipboard.",
-      "save": "Save transcription",
-      "unsave": "Remove from saved",
-      "delete": "Delete entry",
-      "deleteError": "Failed to delete entry. Please try again.",
-      "transcriptionFailed": "Transcription failed. You can re-transcribe using the retry icon."
-    },
     "debug": {
       "title": "Debug",
       "logDirectory": {
@@ -183,21 +167,6 @@
         "description": "Preview onboarding screens without changing permissions, models, or completion state",
         "permissionsButton": "Permissions",
         "exitButton": "Exit Preview"
-      },
-      "historyLimit": {
-        "title": "History Limit",
-        "description": "Maximum number of history entries to keep",
-        "entries": "entries"
-      },
-      "recordingRetention": {
-        "title": "Auto-Delete Recordings",
-        "description": "Automatically delete old recordings to save space",
-        "never": "Never",
-        "preserveLimit": "Keep latest {{count}}",
-        "days3": "After 3 days",
-        "weeks2": "After 2 weeks",
-        "months3": "After 3 months",
-        "placeholder": "Select retention period..."
       },
       "appendTrailingSpace": {
         "label": "Append Trailing Space",

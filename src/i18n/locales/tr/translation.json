@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "Ayarlar...",
-    "copyLastTranscript": "Son Transkripti Kopyala",
     "quit": "Çıkış",
     "cancel": "İptal",
     "secureInputWarning": "⚠ Kısayollar Secure Input tarafından engelleniyor"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "Genel",
     "advanced": "Gelişmiş",
-    "history": "Geçmiş",
     "debug": "Hata Ayıklama",
     "about": "Hakkında"
   },
@@ -67,7 +65,6 @@
         "app": "Uygulama",
         "output": "Çıktı",
         "transcription": "Transkripsiyon",
-        "history": "Geçmiş",
         "experimental": "Deneysel"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "Geçmiş",
-      "openFolder": "Kayıtlar Klasörünü Aç",
-      "loading": "Geçmiş yükleniyor...",
-      "empty": "Henüz transkripsiyon yok. Geçmişinizi oluşturmak için kayda başlayın!",
-      "copyToClipboard": "Transkripsiyonu panoya kopyala",
-      "copyError": "Transkripsiyon panoya kopyalanamadı.",
-      "save": "Transkripsiyonu kaydet",
-      "unsave": "Kaydedilenlerden kaldır",
-      "delete": "Kaydı sil",
-      "deleteError": "Kayıt silinemedi. Lütfen tekrar deneyin.",
-      "transcriptionFailed": "Transkripsiyon başarısız oldu. Yeniden deneme simgesini kullanarak tekrar transkribe edebilirsiniz."
-    },
     "debug": {
       "title": "Hata Ayıklama",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "Kopyalandı",
         "lineCount": "{{count}} satır",
         "empty": "Loglar bekleniyor… Uygulama logları ürettikçe girişler burada görünür."
-      },
-      "historyLimit": {
-        "title": "Geçmiş Limiti",
-        "description": "Saklanacak maksimum geçmiş kaydı sayısı",
-        "entries": "kayıt"
-      },
-      "recordingRetention": {
-        "title": "Kayıtları Otomatik Sil",
-        "description": "Alan tasarrufu için eski kayıtları otomatik olarak siler",
-        "never": "Asla",
-        "preserveLimit": "Son {{count}} kaydı tut",
-        "days3": "3 gün sonra",
-        "weeks2": "2 hafta sonra",
-        "months3": "3 ay sonra",
-        "placeholder": "Saklama süresi seçin..."
       },
       "appendTrailingSpace": {
         "label": "Sonuna Boşluk Ekle",

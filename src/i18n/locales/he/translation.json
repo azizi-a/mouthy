@@ -1,7 +1,6 @@
 {
   "tray": {
     "settings": "הגדרות...",
-    "copyLastTranscript": "העתק את התמלול האחרון",
     "quit": "יציאה",
     "cancel": "ביטול",
     "secureInputWarning": "⚠ קיצורי המקשים חסומים על ידי Secure Input"
@@ -9,7 +8,6 @@
   "sidebar": {
     "general": "כללי",
     "advanced": "מתקדם",
-    "history": "היסטוריה",
     "debug": "ניפוי שגיאות",
     "about": "אודות"
   },
@@ -67,7 +65,6 @@
         "app": "אפליקציה",
         "output": "פלט",
         "transcription": "תמלול",
-        "history": "היסטוריה",
         "experimental": "ניסיוני"
       },
       "experimentalToggle": {
@@ -144,19 +141,6 @@
         }
       }
     },
-    "history": {
-      "title": "היסטוריה",
-      "openFolder": "פתח את תיקיית ההקלטות",
-      "loading": "טוען היסטוריה...",
-      "empty": "עדיין אין תמלולים. התחל להקליט כדי לבנות את ההיסטוריה שלך!",
-      "copyToClipboard": "העתק תמלול ללוח",
-      "copyError": "לא ניתן להעתיק את התמלול ללוח.",
-      "save": "שמור תמלול",
-      "unsave": "הסר משמורים",
-      "delete": "מחק רשומה",
-      "deleteError": "מחיקת הרשומה נכשלה. נסה שוב.",
-      "transcriptionFailed": "התמלול נכשל. אפשר לתמלל מחדש באמצעות אייקון הניסיון החוזר."
-    },
     "debug": {
       "title": "ניפוי שגיאות",
       "logDirectory": {
@@ -177,21 +161,6 @@
         "copied": "הועתק",
         "lineCount": "{{count}} שורות",
         "empty": "ממתין ללוגים… רשומות יופיעו כאן כשהאפליקציה תפיק אותן."
-      },
-      "historyLimit": {
-        "title": "מגבלת היסטוריה",
-        "description": "המספר המרבי של רשומות היסטוריה לשמירה",
-        "entries": "רשומות"
-      },
-      "recordingRetention": {
-        "title": "מחיקה אוטומטית של הקלטות",
-        "description": "מחק הקלטות ישנות אוטומטית כדי לחסוך מקום",
-        "never": "אף פעם",
-        "preserveLimit": "שמור את {{count}} האחרונות",
-        "days3": "אחרי 3 ימים",
-        "weeks2": "אחרי שבועיים",
-        "months3": "אחרי 3 חודשים",
-        "placeholder": "בחר משך שמירה..."
       },
       "appendTrailingSpace": {
         "label": "הוסף רווח בסוף",
