@@ -64,8 +64,6 @@
     "advanced": {
       "groups": {
         "app": "Aplikasi",
-        "output": "Keluaran",
-        "transcription": "Transkripsi",
         "experimental": "Eksperimental"
       },
       "experimentalToggle": {
@@ -101,45 +99,6 @@
             "top": "Atas"
           }
         }
-      },
-      "pasteMethod": {
-        "title": "Metode Tempel",
-        "description": "Pilih cara teks dimasukkan. Langsung: mensimulasikan pengetikan melalui masukan sistem. Tidak Ada: melewati proses tempel dan hanya memperbarui riwayat/papan klip.",
-        "options": {
-          "clipboard": "Papan klip ({{modifier}}+V)",
-          "clipboardCtrlShiftV": "Papan klip (Ctrl+Shift+V)",
-          "clipboardShiftInsert": "Papan klip (Shift+Insert)",
-          "direct": "Langsung",
-          "none": "Tidak Ada",
-          "externalScript": "Skrip Eksternal"
-        },
-        "externalScriptPlaceholder": "/path/to/your/script.sh"
-      },
-      "typingTool": {
-        "title": "Alat Pengetikan",
-        "description": "Pilih alat pengetikan Linux yang digunakan untuk metode tempel Langsung. Otomatis akan mendeteksi dan menggunakan alat terbaik yang tersedia untuk sistem Anda.",
-        "options": {
-          "auto": "Otomatis (Direkomendasikan)"
-        }
-      },
-      "clipboardHandling": {
-        "title": "Penanganan Papan Klip",
-        "description": "Jangan Ubah Papan Klip akan mempertahankan isi papan klip saat ini setelah transkripsi. Salin ke Papan Klip akan membiarkan hasil transkripsi tetap berada di papan klip setelah ditempel.",
-        "options": {
-          "dontModify": "Jangan Ubah Papan Klip",
-          "copyToClipboard": "Salin ke Papan Klip"
-        }
-      },
-      "autoSubmit": {
-        "title": "Kirim Otomatis",
-        "description": "Kirim kombinasi tombol yang dipilih secara otomatis setelah teks dimasukkan. Cmd+Enter berlaku di macOS, sedangkan Windows/Linux menggunakan Super+Enter.",
-        "options": {
-          "off": "Nonaktif",
-          "enter": "Enter",
-          "cmdEnter": "Cmd+Enter",
-          "superEnter": "Super+Enter",
-          "ctrlEnter": "Ctrl+Enter"
-        }
       }
     },
     "debug": {
@@ -169,10 +128,6 @@
         "permissionsButton": "Izin",
         "exitButton": "Keluar dari Pratinjau"
       },
-      "appendTrailingSpace": {
-        "label": "Tambahkan Spasi di Akhir",
-        "description": "Tambahkan spasi setelah transkripsi ditempel"
-      },
       "keyboardImplementation": {
         "title": "Implementasi Keyboard",
         "description": "Pilih backend pintasan keyboard.",
@@ -181,18 +136,6 @@
       "paths": {
         "appData": "Data Aplikasi:",
         "settings": "Pengaturan:"
-      },
-      "pasteDelay": {
-        "title": "Jeda Tempel (Sebelum)",
-        "description": "Jeda (dalam milidetik) setelah menyalin teks sebelum mengirim perintah tempel. Tingkatkan jika tidak ada yang ditempel."
-      },
-      "pasteDelayAfter": {
-        "title": "Jeda Tempel (Sesudah)",
-        "description": "Jeda (dalam milidetik) setelah perintah tempel dikirim sebelum mengembalikan isi papan klip sebelumnya. Tingkatkan jika isi papan klip lama yang ditempel alih-alih transkripsi."
-      },
-      "reliablePaste": {
-        "title": "Tempel Lebih Andal (Beta)",
-        "description": "Kembalikan papan klip hanya setelah aplikasi target benar-benar membaca transkripsi, bukan setelah jeda tetap. Ditujukan untuk memperbaiki kasus isi papan klip lama yang tertempel saat sistem sedang terbebani. Memerlukan metode tempel papan klip; hanya macOS dan Windows."
       },
       "keyboardDiagnostic": {
         "title": "Diagnostik Keyboard",

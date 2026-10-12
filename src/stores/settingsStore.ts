@@ -34,7 +34,7 @@ interface SettingsStore {
 }
 
 // Note: Default settings are now fetched from Rust via commands.getDefaultSettings()
-// This ensures platform-specific defaults (like overlay_position, shortcuts, paste_method) work correctly
+// This ensures platform-specific defaults (like overlay_style and shortcuts) work correctly
 
 const DEFAULT_AUDIO_DEVICE: AudioDevice = {
   index: "default",
@@ -57,23 +57,6 @@ const settingUpdaters: {
   overlay_position: (value) =>
     commands.changeOverlayPositionSetting(value as string),
   debug_mode: (value) => commands.changeDebugModeSetting(value as boolean),
-  paste_delay_ms: (value) =>
-    commands.changePasteDelayMsSetting(value as number),
-  paste_delay_after_ms: (value) =>
-    commands.changePasteDelayAfterMsSetting(value as number),
-  reliable_paste: (value) =>
-    commands.changeReliablePasteSetting(value as boolean),
-  paste_method: (value) => commands.changePasteMethodSetting(value as string),
-  typing_tool: (value) => commands.changeTypingToolSetting(value as string),
-  external_script_path: (value) =>
-    commands.changeExternalScriptPathSetting(value as string | null),
-  clipboard_handling: (value) =>
-    commands.changeClipboardHandlingSetting(value as string),
-  auto_submit: (value) => commands.changeAutoSubmitSetting(value as boolean),
-  auto_submit_key: (value) =>
-    commands.changeAutoSubmitKeySetting(value as string),
-  append_trailing_space: (value) =>
-    commands.changeAppendTrailingSpaceSetting(value as boolean),
   log_level: (value) => commands.setLogLevel(value as any),
   app_language: (value) => commands.changeAppLanguageSetting(value as string),
   theme: (value) => commands.changeThemeSetting(value as string),

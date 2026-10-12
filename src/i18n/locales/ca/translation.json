@@ -64,8 +64,6 @@
     "advanced": {
       "groups": {
         "app": "Aplicació",
-        "output": "Sortida",
-        "transcription": "Transcripció",
         "experimental": "Experimental"
       },
       "experimentalToggle": {
@@ -101,45 +99,6 @@
             "top": "A dalt"
           }
         }
-      },
-      "pasteMethod": {
-        "title": "Mètode d'enganxament",
-        "description": "Trieu com s'insereix el text. Directe: simula l'escriptura mitjançant l'entrada del sistema. Cap: no enganxa el text, només actualitza l'historial i el porta-retalls.",
-        "options": {
-          "clipboard": "Porta-retalls ({{modifier}}+V)",
-          "clipboardCtrlShiftV": "Porta-retalls (Ctrl+Maj+V)",
-          "clipboardShiftInsert": "Porta-retalls (Maj+Insert)",
-          "direct": "Directe",
-          "none": "Cap",
-          "externalScript": "Script extern"
-        },
-        "externalScriptPlaceholder": "/camí/al/vostre/script.sh"
-      },
-      "typingTool": {
-        "title": "Eina d'escriptura",
-        "description": "Trieu l'eina d'escriptura del Linux que s'utilitzarà amb el mètode d'enganxament directe. L'opció automàtica detecta i utilitza la millor eina disponible per al sistema.",
-        "options": {
-          "auto": "Automàtica (recomanada)"
-        }
-      },
-      "clipboardHandling": {
-        "title": "Gestió del porta-retalls",
-        "description": "«No modifiqueu el porta-retalls» conserva el contingut actual del porta-retalls després de la transcripció. «Copieu al porta-retalls» hi deixa el resultat de la transcripció després d'enganxar-lo.",
-        "options": {
-          "dontModify": "No modifiqueu el porta-retalls",
-          "copyToClipboard": "Copia al porta-retalls"
-        }
-      },
-      "autoSubmit": {
-        "title": "Enviament automàtic",
-        "description": "Envia automàticament la combinació de tecles seleccionada després d'inserir el text. S'utilitza Cmd+Enter al macOS i Super+Enter al Windows i al Linux.",
-        "options": {
-          "off": "Desactivat",
-          "enter": "Enter",
-          "cmdEnter": "Cmd+Enter",
-          "superEnter": "Super+Enter",
-          "ctrlEnter": "Ctrl+Enter"
-        }
       }
     },
     "debug": {
@@ -169,10 +128,6 @@
         "permissionsButton": "Permisos",
         "exitButton": "Sortiu de la previsualització"
       },
-      "appendTrailingSpace": {
-        "label": "Afegiu un espai al final",
-        "description": "Afegeix un espai après de la transcripció enganxada"
-      },
       "keyboardImplementation": {
         "title": "Implementació del teclat",
         "description": "Tria el motor de dreceres de teclat.",
@@ -181,18 +136,6 @@
       "paths": {
         "appData": "Dades de l'aplicació:",
         "settings": "Configuració:"
-      },
-      "pasteDelay": {
-        "title": "Retard abans d'enganxar",
-        "description": "Retard (en mil·lisegons) després de copiar el text i abans d'enviar la combinació de tecles per enganxar-lo. Augmenteu-lo si no s'enganxa res."
-      },
-      "pasteDelayAfter": {
-        "title": "Retard après d'enganxar",
-        "description": "Retard (en mil·lisegons) després d'enviar la combinació de tecles per enganxar i abans de restaurar el porta-retalls anterior. Augmenteu-lo si s'enganxa el contingut antic del porta-retalls en lloc de la transcripció."
-      },
-      "reliablePaste": {
-        "title": "Enganxament fiable (beta)",
-        "description": "Restaura el porta-retalls només quan l'aplicació de destinació ha llegit la transcripció, en lloc de fer-ho després d'un retard fix. Pensat per evitar que s'enganxi el contingut antic del porta-retalls quan el sistema està carregat. Requereix un mètode d'enganxament amb el porta-retalls; només al macOS i al Windows."
       },
       "keyboardDiagnostic": {
         "title": "Diagnòstic del teclat",

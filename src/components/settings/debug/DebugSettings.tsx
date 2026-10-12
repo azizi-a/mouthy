@@ -2,8 +2,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { LogLevelSelector } from "./LogLevelSelector";
 import { LiveLogViewer } from "./LiveLogViewer";
-import { PasteDelay } from "./PasteDelay";
-import { ReliablePasteToggle } from "./ReliablePaste";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { KeyboardDiagnostic } from "./KeyboardDiagnostic";
 import {
@@ -31,15 +29,6 @@ export const DebugSettings: React.FC<DebugSettingsProps> = ({
             grouped={true}
           />
         )}
-        <PasteDelay descriptionMode="tooltip" grouped={true} />
-        <PasteDelay
-          descriptionMode="tooltip"
-          grouped={true}
-          settingKey="paste_delay_after_ms"
-          labelKey="settings.debug.pasteDelayAfter.title"
-          descriptionKey="settings.debug.pasteDelayAfter.description"
-        />
-        <ReliablePasteToggle descriptionMode="tooltip" grouped={true} />
         <KeyboardDiagnostic />
         <LiveLogViewer descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>

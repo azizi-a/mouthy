@@ -106,34 +106,6 @@ pub enum OverlayStyle {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "snake_case")]
-pub enum PasteMethod {
-    CtrlV,
-    Direct,
-    None,
-    ShiftInsert,
-    CtrlShiftV,
-    ExternalScript,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum ClipboardHandling {
-    #[default]
-    DontModify,
-    CopyToClipboard,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum AutoSubmitKey {
-    #[default]
-    Enter,
-    CtrlEnter,
-    CmdEnter,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
-#[serde(rename_all = "snake_case")]
 pub enum KeyboardImplementation {
     Tauri,
     HandyKeys,
@@ -148,16 +120,6 @@ impl Default for KeyboardImplementation {
     }
 }
 
-impl Default for PasteMethod {
-    fn default() -> Self {
-        // Default to CtrlV for macOS and Windows, Direct for Linux
-        #[cfg(target_os = "linux")]
-        return PasteMethod::Direct;
-        #[cfg(not(target_os = "linux"))]
-        return PasteMethod::CtrlV;
-    }
-}
-
 /// UI appearance mode. `System` follows the OS `prefers-color-scheme`; `Light`
 /// and `Dark` force one of the two palettes Handy already ships.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
@@ -166,18 +128,6 @@ pub enum Theme {
     System,
     Light,
     Dark,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum TypingTool {
-    #[default]
-    Auto,
-    Wtype,
-    Kwtype,
-    Dotool,
-    Ydotool,
-    Xdotool,
 }
 
 /* still handy for composing the initial JSON in the store ------------- */
@@ -208,16 +158,6 @@ pub struct AppSettings {
     pub debug_mode: bool,
     #[serde(default = "default_log_level")]
     pub log_level: LogLevel,
-    #[serde(default)]
-    pub paste_method: PasteMethod,
-    #[serde(default)]
-    pub clipboard_handling: ClipboardHandling,
-    #[serde(default = "default_auto_submit")]
-    pub auto_submit: bool,
-    #[serde(default)]
-    pub auto_submit_key: AutoSubmitKey,
-    #[serde(default)]
-    pub append_trailing_space: bool,
     #[serde(default = "default_app_language")]
     pub app_language: String,
     #[serde(default = "default_theme")]
@@ -228,19 +168,6 @@ pub struct AppSettings {
     pub keyboard_implementation: KeyboardImplementation,
     #[serde(default = "default_show_tray_icon")]
     pub show_tray_icon: bool,
-    #[serde(default = "default_paste_delay_ms")]
-    pub paste_delay_ms: u64,
-    #[serde(default = "default_paste_delay_after_ms")]
-    pub paste_delay_after_ms: u64,
-    /// Debug-gated ("beta") receipt-sequenced paste: restore the clipboard only
-    /// after the target app actually reads the transcript, instead of after a
-    /// fixed delay. See `paste_tx`. macOS and Windows only.
-    #[serde(default)]
-    pub reliable_paste: bool,
-    #[serde(default = "default_typing_tool")]
-    pub typing_tool: TypingTool,
-    #[serde(default)]
-    pub external_script_path: Option<String>,
     #[serde(default = "default_overlay_style")]
     pub overlay_style: OverlayStyle,
     #[serde(default = "default_tts_base_url")]
@@ -285,18 +212,6 @@ fn default_log_level() -> LogLevel {
     LogLevel::Debug
 }
 
-fn default_paste_delay_ms() -> u64 {
-    60
-}
-
-fn default_paste_delay_after_ms() -> u64 {
-    60
-}
-
-fn default_auto_submit() -> bool {
-    false
-}
-
 fn default_theme() -> Theme {
     Theme::System
 }
@@ -309,10 +224,6 @@ fn default_app_language() -> String {
 
 fn default_show_tray_icon() -> bool {
     true
-}
-
-fn default_typing_tool() -> TypingTool {
-    TypingTool::Auto
 }
 
 fn default_tts_base_url() -> String {
@@ -361,21 +272,11 @@ pub fn get_default_settings() -> AppSettings {
         overlay_position: default_overlay_position(),
         debug_mode: false,
         log_level: default_log_level(),
-        paste_method: PasteMethod::default(),
-        clipboard_handling: ClipboardHandling::default(),
-        auto_submit: default_auto_submit(),
-        auto_submit_key: AutoSubmitKey::default(),
-        append_trailing_space: false,
         app_language: default_app_language(),
         theme: default_theme(),
         experimental_enabled: false,
         keyboard_implementation: KeyboardImplementation::default(),
         show_tray_icon: default_show_tray_icon(),
-        paste_delay_ms: default_paste_delay_ms(),
-        paste_delay_after_ms: default_paste_delay_after_ms(),
-        reliable_paste: false,
-        typing_tool: default_typing_tool(),
-        external_script_path: None,
         overlay_style: default_overlay_style(),
         tts_base_url: default_tts_base_url(),
         tts_voice: default_tts_voice(),
@@ -582,14 +483,14 @@ mod tests {
     fn salvage_drops_only_wrong_typed_fields() {
         let mut stored = default_settings_json();
         let map = stored.as_object_mut().unwrap();
-        map.insert("paste_delay_ms".into(), serde_json::json!("sixty"));
+        map.insert("tts_speed".into(), serde_json::json!("fast"));
         map.insert("theme".into(), serde_json::json!(42));
         map.insert("app_language".into(), serde_json::json!("de"));
 
         assert!(serde_json::from_value::<AppSettings>(stored.clone()).is_err());
 
         let salvaged = salvage_settings(&stored);
-        assert_eq!(salvaged.paste_delay_ms, default_paste_delay_ms());
+        assert_eq!(salvaged.tts_speed, default_tts_speed());
         assert_eq!(salvaged.theme, default_theme());
         assert_eq!(salvaged.app_language, "de");
     }
@@ -710,13 +611,6 @@ mod tests {
             current_bindings(&bindings),
             current_bindings(&get_default_settings().bindings)
         );
-    }
-
-    #[test]
-    fn default_settings_disable_auto_submit() {
-        let settings = get_default_settings();
-        assert!(!settings.auto_submit);
-        assert_eq!(settings.auto_submit_key, AutoSubmitKey::Enter);
     }
 
     #[cfg(not(target_os = "linux"))]

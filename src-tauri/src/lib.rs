@@ -7,7 +7,6 @@ mod clipboard;
 mod commands;
 mod input;
 mod overlay;
-mod paste_tx;
 mod secure_input;
 mod settings;
 mod shortcut;
@@ -273,20 +272,9 @@ pub fn run(cli_args: CliArgs) {
         shortcut::change_overlay_position_setting,
         shortcut::change_overlay_style_setting,
         shortcut::change_debug_mode_setting,
-        shortcut::change_paste_delay_ms_setting,
-        shortcut::change_paste_delay_after_ms_setting,
-        shortcut::change_reliable_paste_setting,
-        shortcut::change_paste_method_setting,
-        shortcut::get_available_typing_tools,
-        shortcut::change_typing_tool_setting,
-        shortcut::change_external_script_path_setting,
-        shortcut::change_clipboard_handling_setting,
-        shortcut::change_auto_submit_setting,
-        shortcut::change_auto_submit_key_setting,
         shortcut::change_experimental_enabled_setting,
         shortcut::suspend_all_bindings,
         shortcut::resume_all_bindings,
-        shortcut::change_append_trailing_space_setting,
         shortcut::change_app_language_setting,
         shortcut::change_keyboard_implementation_setting,
         shortcut::get_keyboard_implementation,
@@ -390,7 +378,6 @@ pub fn run(cli_args: CliArgs) {
             }
         }))
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_macos_permissions::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())

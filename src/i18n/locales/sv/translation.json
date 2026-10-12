@@ -64,8 +64,6 @@
     "advanced": {
       "groups": {
         "app": "App",
-        "output": "Utmatning",
-        "transcription": "Transkription",
         "experimental": "Experimentellt"
       },
       "experimentalToggle": {
@@ -101,45 +99,6 @@
             "top": "Överst"
           }
         }
-      },
-      "pasteMethod": {
-        "title": "Klistra-in-metod",
-        "description": "Välj hur text infogas. Direkt: simulerar skrivande via systeminmatning. Ingen: hoppar över klistra in, uppdaterar endast historik/urklipp.",
-        "options": {
-          "clipboard": "Urklipp ({{modifier}}+V)",
-          "clipboardCtrlShiftV": "Urklipp (Ctrl+Shift+V)",
-          "clipboardShiftInsert": "Urklipp (Shift+Insert)",
-          "direct": "Direkt",
-          "none": "Ingen",
-          "externalScript": "Externt skript"
-        },
-        "externalScriptPlaceholder": "/sökväg/till/ditt/skript.sh"
-      },
-      "typingTool": {
-        "title": "Skrivverktyg",
-        "description": "Välj vilket Linux-skrivverktyg som ska användas för metoden Direkt klistra in. Auto kommer automatiskt att upptäcka och använda det bästa tillgängliga verktyget för ditt system.",
-        "options": {
-          "auto": "Auto (Rekommenderas)"
-        }
-      },
-      "clipboardHandling": {
-        "title": "Hantering av urklipp",
-        "description": "Ändra inte urklipp bevarar ditt nuvarande urklippsinnehåll efter transkription. Kopiera till urklipp lämnar transkriptionsresultatet i ditt urklipp efter att ha klistrat in.",
-        "options": {
-          "dontModify": "Ändra inte urklipp",
-          "copyToClipboard": "Kopiera till urklipp"
-        }
-      },
-      "autoSubmit": {
-        "title": "Skicka automatiskt",
-        "description": "Skicka automatiskt den valda tangentkombinationen efter textinsättning. Cmd+Enter gäller på macOS, medan Windows/Linux använder Super+Enter.",
-        "options": {
-          "off": "Av",
-          "enter": "Enter",
-          "cmdEnter": "Cmd+Enter",
-          "superEnter": "Super+Enter",
-          "ctrlEnter": "Ctrl+Enter"
-        }
       }
     },
     "debug": {
@@ -163,10 +122,6 @@
         "lineCount": "{{count}} rader",
         "empty": "Väntar på loggar… Poster visas här när appen skickar dem."
       },
-      "appendTrailingSpace": {
-        "label": "Lägg till avslutande mellanslag",
-        "description": "Lägg till ett mellanslag efter klistrad transkription"
-      },
       "keyboardImplementation": {
         "title": "Tangentbordsimplementering",
         "description": "Välj tangentbordsgenvägens implementation.",
@@ -175,18 +130,6 @@
       "paths": {
         "appData": "Appdata:",
         "settings": "Inställningar:"
-      },
-      "pasteDelay": {
-        "title": "Fördröjning vid klistra in (före)",
-        "description": "Fördröjning (i millisekunder) efter att text kopierats, innan tangenttryckningen för att klistra in skickas. Öka om ingenting klistras in."
-      },
-      "pasteDelayAfter": {
-        "title": "Fördröjning vid klistra in (efter)",
-        "description": "Fördröjning (i millisekunder) efter tangenttryckningen för att klistra in, innan ditt tidigare urklipp återställs. Öka om det gamla urklippsinnehållet klistras in i stället för transkriptionen."
-      },
-      "reliablePaste": {
-        "title": "Tillförlitlig inklistring (Beta)",
-        "description": "Återställ urklipp först när målappen faktiskt har läst transkriptionen, i stället för efter en fast fördröjning. Avsett att åtgärda att det gamla urklippsinnehållet klistras in när systemet är belastat. Kräver en klistra-in-metod via urklipp; endast macOS och Windows."
       },
       "keyboardDiagnostic": {
         "title": "Tangentbordsdiagnostik",

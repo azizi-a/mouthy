@@ -64,8 +64,6 @@
     "advanced": {
       "groups": {
         "app": "التطبيق",
-        "output": "الإخراج",
-        "transcription": "التفريغ الصوتي",
         "experimental": "تجريبي"
       },
       "experimentalToggle": {
@@ -101,45 +99,6 @@
             "top": "أعلى"
           }
         }
-      },
-      "pasteMethod": {
-        "title": "طريقة اللصق",
-        "description": ".اختر كيفية إدراج النص. مباشر: يحاكي الكتابة عبر إدخال النظام. بلا: يتخطى اللصق، ويحدث السجل/الحافظة فقط",
-        "options": {
-          "clipboard": "الحافظة ({{modifier}}+V)",
-          "clipboardCtrlShiftV": "الحافظة (Ctrl+Shift+V)",
-          "clipboardShiftInsert": "الحافظة (Shift+Insert)",
-          "direct": "مباشر",
-          "none": "بلا",
-          "externalScript": "نص برمجي خارجي"
-        },
-        "externalScriptPlaceholder": "/path/to/your/script.sh"
-      },
-      "typingTool": {
-        "title": "أداة الكتابة",
-        "description": ".اختر أداة الكتابة في Linux لاستخدامها مع طريقة اللصق المباشر. سيكتشف \"تلقائي\" تلقائياً أفضل أداة متاحة لنظامك ويستخدمها",
-        "options": {
-          "auto": "تلقائي (موصى به)"
-        }
-      },
-      "clipboardHandling": {
-        "title": "التعامل مع الحافظة",
-        "description": ".'عدم تعديل الحافظة' يحافظ على محتويات حافظتك الحالية بعد التفريغ. 'نسخ إلى الحافظة' يترك نتيجة التفريغ في حافظتك بعد اللصق",
-        "options": {
-          "dontModify": "عدم تعديل الحافظة",
-          "copyToClipboard": "نسخ إلى الحافظة"
-        }
-      },
-      "autoSubmit": {
-        "title": "إرسال تلقائي",
-        "description": "إرسال مجموعة المفاتيح المحددة تلقائياً بعد إدراج النص. Cmd+Enter ينطبق على macOS، بينما يستخدم Windows/Linux مفتاح Super+Enter.",
-        "options": {
-          "off": "إيقاف",
-          "enter": "Enter",
-          "cmdEnter": "Cmd+Enter",
-          "superEnter": "Super+Enter",
-          "ctrlEnter": "Ctrl+Enter"
-        }
       }
     },
     "debug": {
@@ -163,10 +122,6 @@
         "lineCount": "{{count}} سطر",
         "empty": "بانتظار السجلات… ستظهر الإدخالات هنا فور إصدار التطبيق لها."
       },
-      "appendTrailingSpace": {
-        "label": "إضافة مسافة تابعة",
-        "description": "إضافة مسافة بعد التفريغ الملصق"
-      },
       "keyboardImplementation": {
         "title": "تنفيذ لوحة المفاتيح",
         "description": ".اختر الواجهة الخلفية لاختصارات لوحة المفاتيح",
@@ -175,18 +130,6 @@
       "paths": {
         "appData": "بيانات التطبيق:",
         "settings": "الإعدادات:"
-      },
-      "pasteDelay": {
-        "title": "تأخير اللصق (قبل)",
-        "description": "التأخير (بالمللي ثانية) بعد نسخ النص وقبل إرسال ضغطة مفتاح اللصق. قم بزيادته إذا لم يتم لصق أي شيء."
-      },
-      "pasteDelayAfter": {
-        "title": "تأخير اللصق (بعد)",
-        "description": "التأخير (بالمللي ثانية) بعد ضغطة مفتاح اللصق وقبل استعادة محتوى الحافظة السابق. قم بزيادته إذا تم لصق محتوى الحافظة القديم بدلاً من النص المُفرَّغ."
-      },
-      "reliablePaste": {
-        "title": "لصق موثوق (Beta)",
-        "description": "استعادة الحافظة فقط بعد أن يقرأ التطبيق المستهدف النص المُفرَّغ فعلياً، بدلاً من الاعتماد على تأخير ثابت. يهدف إلى إصلاح لصق محتوى الحافظة القديم عند وجود حمل على النظام. يتطلب طريقة لصق تعتمد على الحافظة؛ على macOS وWindows فقط."
       },
       "keyboardDiagnostic": {
         "title": "تشخيص لوحة المفاتيح",

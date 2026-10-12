@@ -64,8 +64,6 @@
     "advanced": {
       "groups": {
         "app": "App",
-        "output": "Output",
-        "transcription": "Trascrizione",
         "experimental": "Sperimentale"
       },
       "experimentalToggle": {
@@ -101,45 +99,6 @@
             "top": "In alto"
           }
         }
-      },
-      "pasteMethod": {
-        "title": "Metodo di Incollaggio",
-        "description": "Scegli come viene inserito il testo. Diretto: simula l'input da tastiera. Nessuno: non incolla, aggiorna solo la cronologia/appunti.",
-        "options": {
-          "clipboard": "Appunti ({{modifier}}+V)",
-          "clipboardCtrlShiftV": "Appunti (Ctrl+Shift+V)",
-          "clipboardShiftInsert": "Appunti (Shift+Insert)",
-          "direct": "Diretto",
-          "none": "Nessuno",
-          "externalScript": "Script esterno"
-        },
-        "externalScriptPlaceholder": "/percorso/del/tuo/script.sh"
-      },
-      "typingTool": {
-        "title": "Strumento di digitazione",
-        "description": "Scegli quale strumento di digitazione Linux usare per il metodo di incolla diretto. Auto rileverà e userà automaticamente lo strumento migliore disponibile per il tuo sistema.",
-        "options": {
-          "auto": "Auto (Consigliato)"
-        }
-      },
-      "clipboardHandling": {
-        "title": "Gestione Appunti",
-        "description": "Non Modificare gli Appunti mantiene il contenuto dei tuoi appunti dopo la trascrizione. Copia negli Appunti lascia il risultato della trascrizione negli appunti dopo aver incollato.",
-        "options": {
-          "dontModify": "Non Modificare gli Appunti",
-          "copyToClipboard": "Copia negli Appunti"
-        }
-      },
-      "autoSubmit": {
-        "title": "Invio automatico",
-        "description": "Invia automaticamente la combinazione di tasti selezionata dopo l'inserimento del testo. Cmd+Enter si applica su macOS, mentre Windows/Linux usano Super+Enter.",
-        "options": {
-          "off": "Disattivato",
-          "enter": "Invio",
-          "cmdEnter": "Cmd+Invio",
-          "superEnter": "Super+Invio",
-          "ctrlEnter": "Ctrl+Invio"
-        }
       }
     },
     "debug": {
@@ -163,10 +122,6 @@
         "lineCount": "{{count}} righe",
         "empty": "In attesa di log… Le voci appariranno qui man mano che l'app le emette."
       },
-      "appendTrailingSpace": {
-        "label": "Aggiungi Spazio Finale",
-        "description": "Aggiungi uno spazio dopo la trascrizione incollata"
-      },
       "keyboardImplementation": {
         "title": "Implementazione tastiera",
         "description": "Scegli il backend per le scorciatoie da tastiera.",
@@ -175,18 +130,6 @@
       "paths": {
         "appData": "Dati App:",
         "settings": "Impostazioni:"
-      },
-      "pasteDelay": {
-        "title": "Ritardo incolla (prima)",
-        "description": "Ritardo (in millisecondi) dopo aver copiato il testo, prima di inviare il tasto incolla. Aumentare se non viene incollato nulla."
-      },
-      "pasteDelayAfter": {
-        "title": "Ritardo incolla (dopo)",
-        "description": "Ritardo (in millisecondi) dopo il tasto incolla, prima di ripristinare gli appunti precedenti. Aumentare se viene incollato il vecchio contenuto degli appunti invece della trascrizione."
-      },
-      "reliablePaste": {
-        "title": "Incolla affidabile (Beta)",
-        "description": "Ripristina gli appunti solo dopo che l'app di destinazione ha effettivamente letto la trascrizione, anziché dopo un ritardo fisso. Serve a risolvere l'incollaggio del vecchio contenuto degli appunti quando il sistema è sotto carico. Richiede un metodo di incollaggio tramite appunti; solo macOS e Windows."
       },
       "keyboardDiagnostic": {
         "title": "Diagnostica tastiera",

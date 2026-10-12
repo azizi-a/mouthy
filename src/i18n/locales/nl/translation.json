@@ -64,8 +64,6 @@
     "advanced": {
       "groups": {
         "app": "App",
-        "output": "Uitvoer",
-        "transcription": "Transcriptie",
         "experimental": "Experimenteel"
       },
       "experimentalToggle": {
@@ -101,45 +99,6 @@
             "top": "Bovenkant"
           }
         }
-      },
-      "pasteMethod": {
-        "title": "Plakmethode",
-        "description": "Kies hoe tekst wordt ingevoegd. 'Direct' simuleert typen via het systeem. 'Geen' slaat het plakken over en werkt alleen de geschiedenis en het klembord bij.",
-        "options": {
-          "clipboard": "Klembord ({{modifier}}+V)",
-          "clipboardCtrlShiftV": "Klembord (Ctrl+Shift+V)",
-          "clipboardShiftInsert": "Klembord (Shift+Insert)",
-          "direct": "Direct",
-          "none": "Geen",
-          "externalScript": "Extern script"
-        },
-        "externalScriptPlaceholder": "/pad/naar/je/script.sh"
-      },
-      "typingTool": {
-        "title": "Typgereedschap",
-        "description": "Kies welke Linux-typtool gebruikt moet worden voor de 'Directe' plakmethode. 'Automatisch' detecteert zelf de beste optie voor jouw systeem.",
-        "options": {
-          "auto": "Automatisch (Aanbevolen)"
-        }
-      },
-      "clipboardHandling": {
-        "title": "Klembordbeheer",
-        "description": "'Klembord niet aanpassen' behoudt je huidige klembordinhoud na een transcriptie. 'Kopiëren naar klembord' laat de getranscribeerde tekst achter op je klembord.",
-        "options": {
-          "dontModify": "Klembord niet aanpassen",
-          "copyToClipboard": "Kopiëren naar klembord"
-        }
-      },
-      "autoSubmit": {
-        "title": "Automatisch verzenden",
-        "description": "Verzend automatisch de geselecteerde toetsencombinatie na het invoegen van de tekst. Cmd+Enter geldt voor macOS, Windows/Linux gebruiken Super+Enter.",
-        "options": {
-          "off": "Uit",
-          "enter": "Enter",
-          "cmdEnter": "Cmd+Enter",
-          "superEnter": "Super+Enter",
-          "ctrlEnter": "Ctrl+Enter"
-        }
       }
     },
     "debug": {
@@ -169,10 +128,6 @@
         "permissionsButton": "Machtigingen",
         "exitButton": "Voorbeeld sluiten"
       },
-      "appendTrailingSpace": {
-        "label": "Spatie achteraan toevoegen",
-        "description": "Voeg een spatie toe na de geplakte transcriptie"
-      },
       "keyboardImplementation": {
         "title": "Toetsenbord-implementatie",
         "description": "Kies de backend voor sneltoetsen.",
@@ -181,18 +136,6 @@
       "paths": {
         "appData": "App-data:",
         "settings": "Instellingen:"
-      },
-      "pasteDelay": {
-        "title": "Plakvertraging (voor)",
-        "description": "Vertraging (in milliseconden) na het kopiëren van de tekst, voordat de plak-toetsaanslag wordt verzonden. Verhoog dit als er niets wordt geplakt."
-      },
-      "pasteDelayAfter": {
-        "title": "Plakvertraging (na)",
-        "description": "Vertraging (in milliseconden) na de plak-toetsaanslag, voordat je vorige klembord wordt hersteld. Verhoog dit als de oude klembordinhoud wordt geplakt in plaats van de transcriptie."
-      },
-      "reliablePaste": {
-        "title": "Betrouwbaar plakken (Beta)",
-        "description": "Herstel het klembord pas nadat de doelapp de transcriptie daadwerkelijk heeft gelezen, in plaats van na een vaste vertraging. Bedoeld om te verhelpen dat bij systeembelasting de oude klembordinhoud wordt geplakt. Vereist een plakmethode via het klembord; alleen macOS en Windows."
       },
       "keyboardDiagnostic": {
         "title": "Toetsenborddiagnose",
