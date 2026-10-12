@@ -407,3 +407,12 @@ Arbiter rulings (adversary 70%; findings in its report):
 - DEFER: 60 s timeout edge at speed 0.5 on slow servers (Phase 2 makes it moot); `AXSelectedText` fast path (Phase 3). README (T4): `--speak-selection` with no running instance just launches the app.
 - Tests: `restore_decision` unchanged; add a unit test for the modifier-wait helper's timeout bound if factored purely; snapshot byte-cap decision as a pure fn + test.
 - Verification-matrix corrections recorded: A7 is code-read only; A3 proves registration not delivery; A11 bound excludes snapshot/hold/restore; overlay never rendered before T3.
+
+### Stage T3c — T3 panel fixes (after T3b) `[fix]`
+Arbiter rulings on the T3 simplicity seat (72%); integration seat pending — fold its must/should-fixes in here too:
+- ACCEPT: delete `backendNormalizedSettings` + the re-read in `updateSetting`; `BackendUrl`/`VoiceSelector` commit handlers `.trim()` before writing (backend trim/clamp stays as authority). Rationale: slider drag ticks each caused a write + full settings round-trip with a thumb-jump race.
+- ACCEPT: delete dead UI — `ui/Dialog.tsx`, `ui/TextDisplay.tsx`, `ui/Textarea.tsx`, `ui/index.ts`, `icons/CancelIcon.tsx`, `icons/TranscriptionIcon.tsx`, `icons/index.ts` (if nothing imports the barrels), `--color-logo-stroke` (3 declarations + `@theme` line), `--color-text-stroke` + `.text-stroke`; drop the four new no-importer exports from `settings/index.ts`.
+- ACCEPT: one overlay window size 360×60 for all views; delete `OverlayView::size`, the error consts, `OVERLAY_SIZE` static and its Mutex import; keep `update_overlay_position` reading the fixed size.
+- ACCEPT: overlay card vertically centred; delete the `top` state, the per-show `getAppSettings` read and the `.top` CSS; use lucide `X` instead of the inline SVG; drop `title={message}`; drop `React.memo` on `BackendUrl`/`VoiceSelector`.
+- REJECT: inlining the two sliders / merging the two text settings into one component (codebase convention: one component per setting); removing the `useCallback` (it is the chain-review fix, already recorded).
+- DEFER: `OverlayStyle {None, Minimal}` → `overlay_enabled` bool (settings-schema change; Phase 3); PLAN.md "Completed stages" line → T4 doc tidy (one-line pointers only).
