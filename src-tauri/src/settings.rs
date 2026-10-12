@@ -242,32 +242,6 @@ impl ModelUnloadTimeout {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
-#[serde(rename_all = "snake_case")]
-pub enum SoundTheme {
-    Marimba,
-    Pop,
-    Custom,
-}
-
-impl SoundTheme {
-    fn as_str(&self) -> &'static str {
-        match self {
-            SoundTheme::Marimba => "marimba",
-            SoundTheme::Pop => "pop",
-            SoundTheme::Custom => "custom",
-        }
-    }
-
-    pub fn to_start_path(self) -> String {
-        format!("resources/{}_start.wav", self.as_str())
-    }
-
-    pub fn to_stop_path(self) -> String {
-        format!("resources/{}_stop.wav", self.as_str())
-    }
-}
-
 /// UI appearance mode. `System` follows the OS `prefers-color-scheme`; `Light`
 /// and `Dark` force one of the two palettes Handy already ships.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
@@ -353,12 +327,6 @@ pub struct AppSettings {
     /// settings are used.
     #[serde(default)]
     pub bindings: HashMap<String, ShortcutBinding>,
-    #[serde(default)]
-    pub audio_feedback: bool,
-    #[serde(default = "default_audio_feedback_volume")]
-    pub audio_feedback_volume: f32,
-    #[serde(default = "default_sound_theme")]
-    pub sound_theme: SoundTheme,
     #[serde(default = "default_start_hidden")]
     pub start_hidden: bool,
     #[serde(default = "default_autostart_enabled")]
@@ -536,14 +504,6 @@ fn default_history_limit() -> usize {
 
 fn default_recording_retention_period() -> RecordingRetentionPeriod {
     RecordingRetentionPeriod::PreserveLimit
-}
-
-fn default_audio_feedback_volume() -> f32 {
-    1.0
-}
-
-fn default_sound_theme() -> SoundTheme {
-    SoundTheme::Marimba
 }
 
 fn default_theme() -> Theme {
@@ -791,9 +751,6 @@ pub fn get_default_settings() -> AppSettings {
 
     AppSettings {
         bindings,
-        audio_feedback: false,
-        audio_feedback_volume: default_audio_feedback_volume(),
-        sound_theme: default_sound_theme(),
         start_hidden: default_start_hidden(),
         autostart_enabled: default_autostart_enabled(),
         selected_model: "".to_string(),
@@ -1048,7 +1005,7 @@ mod tests {
     fn empty_store_parses_with_defaults() {
         let settings: AppSettings = serde_json::from_value(serde_json::json!({}))
             .expect("all AppSettings fields need serde defaults");
-        assert!(!settings.audio_feedback);
+        assert_eq!(settings.theme, default_theme());
         assert!(settings.filler_word_removal_enabled);
         // Bindings default to empty; the load path merges the real defaults in.
         assert!(settings.bindings.is_empty());
@@ -1065,7 +1022,7 @@ mod tests {
         map.insert("onboarding_completed".into(), serde_json::json!(true));
         // An enum variant this build doesn't know, e.g. written by a newer
         // version before a downgrade.
-        map.insert("sound_theme".into(), serde_json::json!("theremin"));
+        map.insert("theme".into(), serde_json::json!("sepia"));
         stored["bindings"]["cancel"]["current_binding"] = serde_json::json!("f13");
 
         // Precondition: this is exactly the whole-store parse failure from
@@ -1076,7 +1033,7 @@ mod tests {
         assert_eq!(salvaged.selected_model, "parakeet-tdt-0.6b-v3");
         assert!(salvaged.onboarding_completed);
         assert_eq!(salvaged.bindings["cancel"].current_binding, "f13");
-        assert_eq!(salvaged.sound_theme, default_sound_theme());
+        assert_eq!(salvaged.theme, default_theme());
     }
 
     #[test]
@@ -1084,14 +1041,14 @@ mod tests {
         let mut stored = default_settings_json();
         let map = stored.as_object_mut().unwrap();
         map.insert("paste_delay_ms".into(), serde_json::json!("sixty"));
-        map.insert("sound_theme".into(), serde_json::json!(42));
+        map.insert("theme".into(), serde_json::json!(42));
         map.insert("custom_words".into(), serde_json::json!(["handy"]));
 
         assert!(serde_json::from_value::<AppSettings>(stored.clone()).is_err());
 
         let salvaged = salvage_settings(&stored);
         assert_eq!(salvaged.paste_delay_ms, default_paste_delay_ms());
-        assert_eq!(salvaged.sound_theme, default_sound_theme());
+        assert_eq!(salvaged.theme, default_theme());
         assert_eq!(salvaged.custom_words, vec!["handy".to_string()]);
     }
 
@@ -1127,11 +1084,11 @@ mod tests {
             serde_json::json!({ "nested": true }),
         );
         map.insert("selected_model".into(), serde_json::json!("kept"));
-        map.insert("sound_theme".into(), serde_json::json!("theremin"));
+        map.insert("theme".into(), serde_json::json!("sepia"));
 
         let salvaged = salvage_settings(&stored);
         assert_eq!(salvaged.selected_model, "kept");
-        assert_eq!(salvaged.sound_theme, default_sound_theme());
+        assert_eq!(salvaged.theme, default_theme());
     }
 
     #[test]

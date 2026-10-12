@@ -3,14 +3,14 @@ use rodio::cpal::{
     traits::{DeviceTrait, HostTrait},
 };
 
-/// An output device for feedback sounds.
+/// An audio output device.
 pub struct OutputDeviceInfo {
     pub index: String,
     pub name: String,
     pub is_default: bool,
 }
 
-/// The name feedback sounds match `selected_output_device` against.
+/// The name `selected_output_device` is matched against.
 pub fn output_device_name(device: &cpal::Device) -> Option<String> {
     device.description().ok().map(|d| d.name().to_owned())
 }

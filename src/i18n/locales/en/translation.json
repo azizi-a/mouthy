@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Sound",
-      "audioFeedback": {
-        "label": "Audio Feedback",
-        "description": "Play sound when recording starts and stops"
-      },
       "outputDevice": {
         "title": "Output Device",
-        "description": "Select your preferred audio output device for feedback sounds",
+        "description": "Select your preferred audio output device",
         "placeholder": "Select output device...",
         "loading": "Loading..."
-      },
-      "volume": {
-        "title": "Volume",
-        "description": "Adjust the volume of audio feedback sounds"
       }
     },
     "advanced": {
@@ -447,10 +439,6 @@
         "permissionsButton": "Permissions",
         "modelsButton": "Model Selection",
         "exitButton": "Exit Preview"
-      },
-      "soundTheme": {
-        "label": "Sound Theme",
-        "description": "Choose a sound theme for recording start and stop feedback"
       },
       "wordCorrectionThreshold": {
         "title": "Word Correction Threshold",

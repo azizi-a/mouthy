@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Dźwięk",
-      "audioFeedback": {
-        "label": "Informacja dźwiękowa",
-        "description": "Odtwarzaj dźwięk przy rozpoczęciu i zakończeniu nagrywania"
-      },
       "outputDevice": {
         "title": "Urządzenie wyjściowe",
         "description": "Wybierz preferowane urządzenie audio do odtwarzania dźwięków",
         "placeholder": "Wybierz urządzenie wyjściowe...",
         "loading": "Wczytywanie..."
-      },
-      "volume": {
-        "title": "Głośność",
-        "description": "Dostosuj głośność dźwięków informacyjnych"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Skopiowano",
         "lineCount": "Wierszy: {{count}}",
         "empty": "Oczekiwanie na logi… Wpisy pojawią się tutaj, gdy aplikacja je wygeneruje."
-      },
-      "soundTheme": {
-        "label": "Motyw dźwiękowy",
-        "description": "Wybierz motyw dźwiękowy dla informacji o rozpoczęciu i zakończeniu nagrywania"
       },
       "wordCorrectionThreshold": {
         "title": "Próg korekty słów",

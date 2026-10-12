@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "आवाज़",
-      "audioFeedback": {
-        "label": "ऑडियो फ़ीडबैक",
-        "description": "रिकॉर्डिंग शुरू और बंद होने पर साउंड चलाएं"
-      },
       "outputDevice": {
         "title": "आउटपुट डिवाइस",
         "description": "फ़ीडबैक साउंड के लिए अपना पसंदीदा ऑडियो आउटपुट डिवाइस चुनें",
         "placeholder": "आउटपुट डिवाइस चुनें...",
         "loading": "लोड हो रहा है..."
-      },
-      "volume": {
-        "title": "वॉल्यूम",
-        "description": "ऑडियो फ़ीडबैक साउंड का वॉल्यूम सेट करें"
       }
     },
     "advanced": {
@@ -447,10 +439,6 @@
         "permissionsButton": "अनुमतियाँ",
         "modelsButton": "मॉडल चयन",
         "exitButton": "झलक से बाहर निकलें"
-      },
-      "soundTheme": {
-        "label": "साउंड थीम",
-        "description": "रिकॉर्डिंग शुरू और बंद होने के फ़ीडबैक के लिए कोई साउंड थीम चुनें"
       },
       "wordCorrectionThreshold": {
         "title": "शब्द सुधार की सीमा",

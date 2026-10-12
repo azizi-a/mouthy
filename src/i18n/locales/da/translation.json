@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Lyd",
-      "audioFeedback": {
-        "label": "Lydfeedback",
-        "description": "Afspil lyd, når optagelse starter og stopper"
-      },
       "outputDevice": {
         "title": "Outputenhed",
         "description": "Vælg din foretrukne lydoutputenhed til feedbacklyde",
         "placeholder": "Vælg outputenhed...",
         "loading": "Indlæser..."
-      },
-      "volume": {
-        "title": "Lydstyrke",
-        "description": "Juster lydstyrken for lydfeedback"
       }
     },
     "advanced": {
@@ -447,10 +439,6 @@
         "permissionsButton": "Tilladelser",
         "modelsButton": "Modelvalg",
         "exitButton": "Afslut forhåndsvisning"
-      },
-      "soundTheme": {
-        "label": "Lydtema",
-        "description": "Vælg et lydtema til feedback ved start og stop af optagelse"
       },
       "wordCorrectionThreshold": {
         "title": "Tærskel for ordkorrektion",

@@ -2,7 +2,6 @@ use log::info;
 use tauri::AppHandle;
 
 // Re-export all utility modules for easy access
-// pub use crate::audio_feedback::*;
 pub use crate::overlay::*;
 pub use crate::tray::*;
 

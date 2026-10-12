@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Ljud",
-      "audioFeedback": {
-        "label": "Ljudåterkoppling",
-        "description": "Spela upp ljud när inspelningen startar och stoppar"
-      },
       "outputDevice": {
         "title": "Utmatningsenhet",
         "description": "Välj din föredragna ljudutmatningsenhet för återkopplingsljud",
         "placeholder": "Välj utmatningsenhet...",
         "loading": "Laddar..."
-      },
-      "volume": {
-        "title": "Volym",
-        "description": "Justera volymen för ljudåterkopplingsljud"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Kopierad",
         "lineCount": "{{count}} rader",
         "empty": "Väntar på loggar… Poster visas här när appen skickar dem."
-      },
-      "soundTheme": {
-        "label": "Ljudtema",
-        "description": "Välj ett ljudtema för återkoppling vid start och stopp av inspelning"
       },
       "wordCorrectionThreshold": {
         "title": "Tröskelvärde för ordkorrigering",

@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "聲音",
-      "audioFeedback": {
-        "label": "聲音回饋",
-        "description": "錄製開始和停止時播放聲音"
-      },
       "outputDevice": {
         "title": "輸出裝置",
         "description": "選擇用於聲音回饋的音訊輸出裝置",
         "placeholder": "選擇輸出裝置...",
         "loading": "載入中..."
-      },
-      "volume": {
-        "title": "音量",
-        "description": "調整聲音回饋的音量"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "已複製",
         "lineCount": "{{count}} 行",
         "empty": "正在等待日誌…… 應用程式產生日誌時會顯示於此。"
-      },
-      "soundTheme": {
-        "label": "聲音主題",
-        "description": "選擇錄製開始和停止回饋的聲音主題"
       },
       "wordCorrectionThreshold": {
         "title": "詞彙修正閾值",

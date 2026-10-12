@@ -6,7 +6,6 @@ import { LiveLogViewer } from "./LiveLogViewer";
 import { PasteDelay } from "./PasteDelay";
 import { ReliablePasteToggle } from "./ReliablePaste";
 import { SettingsGroup } from "../../ui/SettingsGroup";
-import { SoundPicker } from "../SoundPicker";
 import { KeyboardDiagnostic } from "./KeyboardDiagnostic";
 import {
   OnboardingPreview,
@@ -33,10 +32,6 @@ export const DebugSettings: React.FC<DebugSettingsProps> = ({
             grouped={true}
           />
         )}
-        <SoundPicker
-          label={t("settings.debug.soundTheme.label")}
-          description={t("settings.debug.soundTheme.description")}
-        />
         <WordCorrectionThreshold descriptionMode="tooltip" grouped={true} />
         <PasteDelay descriptionMode="tooltip" grouped={true} />
         <PasteDelay

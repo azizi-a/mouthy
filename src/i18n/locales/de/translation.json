@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Ton",
-      "audioFeedback": {
-        "label": "Audio-Feedback",
-        "description": "Ton bei Start und Ende der Aufnahme abspielen"
-      },
       "outputDevice": {
         "title": "Ausgabegerät",
         "description": "Bevorzugtes Audioausgabegerät für Feedback-Töne auswählen",
         "placeholder": "Ausgabegerät auswählen...",
         "loading": "Wird geladen..."
-      },
-      "volume": {
-        "title": "Lautstärke",
-        "description": "Lautstärke der Audio-Feedback-Töne anpassen"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Kopiert",
         "lineCount": "{{count}} Zeilen",
         "empty": "Warte auf Logs … Einträge erscheinen hier, sobald die App sie ausgibt."
-      },
-      "soundTheme": {
-        "label": "Sound-Thema",
-        "description": "Sound-Thema für Aufnahme-Start und -Stop-Feedback auswählen"
       },
       "wordCorrectionThreshold": {
         "title": "Wortkorrektur-Schwelle",

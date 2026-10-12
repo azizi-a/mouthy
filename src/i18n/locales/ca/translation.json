@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "So",
-      "audioFeedback": {
-        "label": "Avisos sonors",
-        "description": "Reprodueix un so quan s'inicia i s'atura l'enregistrament"
-      },
       "outputDevice": {
         "title": "Dispositiu de sortida",
         "description": "Selecciona el dispositiu de sortida d'àudio preferit per als avisos sonors",
         "placeholder": "Selecciona un dispositiu de sortida...",
         "loading": "S'està carregant..."
-      },
-      "volume": {
-        "title": "Volum",
-        "description": "Ajusta el volum dels avisos sonors"
       }
     },
     "advanced": {
@@ -447,10 +439,6 @@
         "permissionsButton": "Permisos",
         "modelsButton": "Selecció del model",
         "exitButton": "Sortiu de la previsualització"
-      },
-      "soundTheme": {
-        "label": "Tema de so",
-        "description": "Trieu un tema de so per als avisos d'inici i d'aturada de l'enregistrament"
       },
       "wordCorrectionThreshold": {
         "title": "Llindar de correcció de paraules",

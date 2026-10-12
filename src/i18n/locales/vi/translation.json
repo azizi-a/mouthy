@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Âm thanh",
-      "audioFeedback": {
-        "label": "Phản hồi âm thanh",
-        "description": "Phát âm thanh khi bắt đầu và kết thúc ghi âm"
-      },
       "outputDevice": {
         "title": "Thiết bị đầu ra",
         "description": "Chọn thiết bị đầu ra âm thanh ưa thích của bạn cho âm thanh phản hồi",
         "placeholder": "Chọn thiết bị đầu ra...",
         "loading": "Đang tải..."
-      },
-      "volume": {
-        "title": "Âm lượng",
-        "description": "Điều chỉnh âm lượng của âm thanh phản hồi"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Đã sao chép",
         "lineCount": "{{count}} dòng",
         "empty": "Đang chờ nhật ký… Các mục sẽ xuất hiện ở đây khi ứng dụng phát ra."
-      },
-      "soundTheme": {
-        "label": "Chủ đề âm thanh",
-        "description": "Chọn chủ đề âm thanh cho phản hồi bắt đầu và kết thúc ghi âm"
       },
       "wordCorrectionThreshold": {
         "title": "Ngưỡng sửa từ",

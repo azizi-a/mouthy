@@ -1,30 +1,8 @@
-use crate::audio_feedback;
 use crate::audio_toolkit::audio::list_output_devices;
 use crate::settings::{get_settings, write_settings};
-use log::warn;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::AppHandle;
-
-#[derive(Serialize, Type)]
-pub struct CustomSounds {
-    start: bool,
-    stop: bool,
-}
-
-fn custom_sound_exists(app: &AppHandle, sound_type: &str) -> bool {
-    crate::portable::resolve_app_data(app, &format!("custom_{}.wav", sound_type))
-        .is_ok_and(|path| path.exists())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn check_custom_sounds(app: AppHandle) -> CustomSounds {
-    CustomSounds {
-        start: custom_sound_exists(&app, "start"),
-        stop: custom_sound_exists(&app, "stop"),
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct AudioDevice {
@@ -79,18 +57,4 @@ pub fn get_selected_output_device(app: AppHandle) -> Result<String, String> {
     Ok(settings
         .selected_output_device
         .unwrap_or_else(|| "default".to_string()))
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn play_test_sound(app: AppHandle, sound_type: String) {
-    let sound = match sound_type.as_str() {
-        "start" => audio_feedback::SoundType::Start,
-        "stop" => audio_feedback::SoundType::Stop,
-        _ => {
-            warn!("Unknown sound type: {}", sound_type);
-            return;
-        }
-    };
-    audio_feedback::play_test_sound(&app, sound);
 }

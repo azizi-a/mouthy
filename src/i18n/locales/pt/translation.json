@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Som",
-      "audioFeedback": {
-        "label": "Feedback de Áudio",
-        "description": "Reproduzir som quando a gravação iniciar e parar"
-      },
       "outputDevice": {
         "title": "Dispositivo de Saída",
         "description": "Selecione seu dispositivo de saída de áudio preferido para sons de feedback",
         "placeholder": "Selecionar dispositivo de saída...",
         "loading": "Carregando..."
-      },
-      "volume": {
-        "title": "Volume",
-        "description": "Ajustar o volume dos sons de feedback de áudio"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Copiado",
         "lineCount": "{{count}} linhas",
         "empty": "Aguardando logs… As entradas aparecem aqui à medida que o app as emite."
-      },
-      "soundTheme": {
-        "label": "Tema de Som",
-        "description": "Escolha um tema de som para feedback de início e parada de gravação"
       },
       "wordCorrectionThreshold": {
         "title": "Limite de Correção de Palavras",

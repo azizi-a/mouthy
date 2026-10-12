@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Geluid",
-      "audioFeedback": {
-        "label": "Geluidsfeedback",
-        "description": "Geluid afspelen wanneer de opname start en stopt"
-      },
       "outputDevice": {
         "title": "Afspeelapparaat",
         "description": "Selecteer het gewenste audioapparaat voor feedbackgeluiden",
         "placeholder": "Afspeelapparaat selecteren...",
         "loading": "Laden..."
-      },
-      "volume": {
-        "title": "Volume",
-        "description": "Pas het volume van de geluidsfeedback aan"
       }
     },
     "advanced": {
@@ -447,10 +439,6 @@
         "permissionsButton": "Machtigingen",
         "modelsButton": "Modelselectie",
         "exitButton": "Voorbeeld sluiten"
-      },
-      "soundTheme": {
-        "label": "Geluidsthema",
-        "description": "Kies een geluidsthema voor feedback bij het starten en stoppen van opnames"
       },
       "wordCorrectionThreshold": {
         "title": "Drempelwaarde woordcorrectie",

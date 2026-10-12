@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Son",
-      "audioFeedback": {
-        "label": "Signal sonore",
-        "description": "Jouer un son au début et à la fin de l'enregistrement"
-      },
       "outputDevice": {
         "title": "Périphérique de sortie",
         "description": "Sélectionnez votre périphérique de sortie audio pour le signal sonore",
         "placeholder": "Sélectionner un périphérique de sortie...",
         "loading": "Chargement..."
-      },
-      "volume": {
-        "title": "Volume",
-        "description": "Ajuster le volume du signal sonore"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Copié",
         "lineCount": "{{count}} lignes",
         "empty": "En attente de journaux… Les entrées apparaîtront ici au fur et à mesure que l'application les émet."
-      },
-      "soundTheme": {
-        "label": "Thème sonore",
-        "description": "Choisir un thème sonore pour les retours de début et de fin d'enregistrement"
       },
       "wordCorrectionThreshold": {
         "title": "Seuil de correction des mots",

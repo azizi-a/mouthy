@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Sonido",
-      "audioFeedback": {
-        "label": "Retroalimentación de audio",
-        "description": "Reproducir sonido cuando la grabación inicia y se detiene"
-      },
       "outputDevice": {
         "title": "Dispositivo de salida",
         "description": "Selecciona tu dispositivo de salida de audio preferido para los sonidos de retroalimentación",
         "placeholder": "Seleccionar dispositivo de salida...",
         "loading": "Cargando..."
-      },
-      "volume": {
-        "title": "Volumen",
-        "description": "Ajusta el volumen de los sonidos de retroalimentación de audio"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Copiado",
         "lineCount": "{{count}} líneas",
         "empty": "Esperando registros… Las entradas aparecerán aquí a medida que la aplicación las emita."
-      },
-      "soundTheme": {
-        "label": "Tema de sonido",
-        "description": "Elige un tema de sonido para la retroalimentación de inicio y parada de grabación"
       },
       "wordCorrectionThreshold": {
         "title": "Umbral de corrección de palabras",

@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Suara",
-      "audioFeedback": {
-        "label": "Umpan Balik Audio",
-        "description": "Putar suara saat perekaman dimulai dan dihentikan"
-      },
       "outputDevice": {
         "title": "Perangkat Keluaran",
         "description": "Pilih perangkat keluaran audio yang Anda inginkan untuk suara umpan balik",
         "placeholder": "Pilih perangkat keluaran...",
         "loading": "Memuat..."
-      },
-      "volume": {
-        "title": "Volume",
-        "description": "Sesuaikan volume suara umpan balik audio"
       }
     },
     "advanced": {
@@ -447,10 +439,6 @@
         "permissionsButton": "Izin",
         "modelsButton": "Pemilihan Model",
         "exitButton": "Keluar dari Pratinjau"
-      },
-      "soundTheme": {
-        "label": "Tema Suara",
-        "description": "Pilih tema suara untuk umpan balik saat perekaman dimulai dan dihentikan"
       },
       "wordCorrectionThreshold": {
         "title": "Ambang Koreksi Kata",

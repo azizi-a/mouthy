@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "サウンド",
-      "audioFeedback": {
-        "label": "オーディオフィードバック",
-        "description": "録音の開始と停止時にサウンドを再生"
-      },
       "outputDevice": {
         "title": "出力デバイス",
         "description": "フィードバック用の音声出力デバイスを選択",
         "placeholder": "出力デバイスを選択…",
         "loading": "読み込み中…"
-      },
-      "volume": {
-        "title": "音量",
-        "description": "オーディオフィードバックの音量を調整"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "コピーしました",
         "lineCount": "{{count}}行",
         "empty": "ログを待機中… アプリが出力すると、ここにエントリが表示されます。"
-      },
-      "soundTheme": {
-        "label": "サウンドテーマ",
-        "description": "録音開始・停止フィードバックのサウンドテーマを選択"
       },
       "wordCorrectionThreshold": {
         "title": "単語修正しきい値",

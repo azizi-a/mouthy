@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Suono",
-      "audioFeedback": {
-        "label": "Feedback Audio",
-        "description": "Riproduci un suono quando la registrazione inizia e finisce"
-      },
       "outputDevice": {
         "title": "Dispositivo di Output",
         "description": "Scegli il dispositivo di output per il feedback audio",
         "placeholder": "Scegli dispositivo di output...",
         "loading": "Caricamento..."
-      },
-      "volume": {
-        "title": "Volume",
-        "description": "Regola il volume del feedback audio"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Copiato",
         "lineCount": "{{count}} righe",
         "empty": "In attesa di log… Le voci appariranno qui man mano che l'app le emette."
-      },
-      "soundTheme": {
-        "label": "Tema Sonoro",
-        "description": "Scegli un tema sonoro per il feedback di inizio e fine registrazione"
       },
       "wordCorrectionThreshold": {
         "title": "Soglia di Correzione Parole",

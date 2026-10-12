@@ -1,6 +1,6 @@
 use rodio::cpal;
 
-/// The CPAL host feedback sounds play through. On Linux, uses ALSA host. On
+/// The CPAL host audio output plays through. On Linux, uses ALSA host. On
 /// other platforms, uses the default host.
 pub fn get_cpal_host() -> cpal::Host {
     #[cfg(target_os = "linux")]

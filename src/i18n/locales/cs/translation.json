@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "Zvuk",
-      "audioFeedback": {
-        "label": "Zvuková odezva",
-        "description": "Přehrát zvuk při zahájení a ukončení nahrávání"
-      },
       "outputDevice": {
         "title": "Výstupní zařízení",
         "description": "Vyberte preferované výstupní zařízení pro zvuky odezvy",
         "placeholder": "Vyberte výstupní zařízení...",
         "loading": "Načítání..."
-      },
-      "volume": {
-        "title": "Hlasitost",
-        "description": "Upravte hlasitost zvukové odezvy"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "Zkopírováno",
         "lineCount": "Řádků: {{count}}",
         "empty": "Čekání na logy… Záznamy se zde zobrazí, jakmile je aplikace vygeneruje."
-      },
-      "soundTheme": {
-        "label": "Zvukový motiv",
-        "description": "Vyberte zvukový motiv pro odezvu při startu a ukončení nahrávání"
       },
       "wordCorrectionThreshold": {
         "title": "Práh korekce slov",

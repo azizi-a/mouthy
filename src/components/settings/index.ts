@@ -10,7 +10,6 @@ export { ModelsSettings } from "./models/ModelsSettings";
 
 // Individual setting components
 export { OutputDeviceSelector } from "./OutputDeviceSelector";
-export { AudioFeedback } from "./AudioFeedback";
 export { ShowOverlay } from "./ShowOverlay";
 export { GlobalShortcutInput } from "./GlobalShortcutInput";
 export { HandyKeysShortcutInput } from "./HandyKeysShortcutInput";

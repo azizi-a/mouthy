@@ -16,7 +16,6 @@ interface SettingsStore {
   isLoading: boolean;
   isUpdating: Record<string, boolean>;
   outputDevices: AudioDevice[];
-  customSounds: { start: boolean; stop: boolean };
   postProcessModelOptions: Record<string, string[]>;
 
   // Actions
@@ -33,8 +32,6 @@ interface SettingsStore {
   resetBinding: (id: string) => Promise<void>;
   getSetting: <K extends keyof Settings>(key: K) => Settings[K] | undefined;
   isUpdatingKey: (key: string) => boolean;
-  playTestSound: (soundType: "start" | "stop") => Promise<void>;
-  checkCustomSounds: () => Promise<void>;
   setPostProcessProvider: (providerId: string) => Promise<void>;
   updatePostProcessSetting: (
     settingType: "base_url" | "api_key" | "model",
@@ -59,7 +56,6 @@ interface SettingsStore {
   setLoading: (loading: boolean) => void;
   setUpdating: (key: string, updating: boolean) => void;
   setOutputDevices: (devices: AudioDevice[]) => void;
-  setCustomSounds: (sounds: { start: boolean; stop: boolean }) => void;
 }
 
 // Note: Default settings are now fetched from Rust via commands.getDefaultSettings()
@@ -74,11 +70,6 @@ const DEFAULT_AUDIO_DEVICE: AudioDevice = {
 const settingUpdaters: {
   [K in keyof Settings]?: (value: Settings[K]) => Promise<unknown>;
 } = {
-  audio_feedback: (value) =>
-    commands.changeAudioFeedbackSetting(value as boolean),
-  audio_feedback_volume: (value) =>
-    commands.changeAudioFeedbackVolumeSetting(value as number),
-  sound_theme: (value) => commands.changeSoundThemeSetting(value as string),
   start_hidden: (value) => commands.changeStartHiddenSetting(value as boolean),
   autostart_enabled: (value) =>
     commands.changeAutostartSetting(value as boolean),
@@ -153,7 +144,6 @@ export const useSettingsStore = create<SettingsStore>()(
     isLoading: true,
     isUpdating: {},
     outputDevices: [],
-    customSounds: { start: false, stop: false },
     postProcessModelOptions: {},
 
     // Internal setters
@@ -165,7 +155,6 @@ export const useSettingsStore = create<SettingsStore>()(
         isUpdating: { ...state.isUpdating, [key]: updating },
       })),
     setOutputDevices: (outputDevices) => set({ outputDevices }),
-    setCustomSounds: (customSounds) => set({ customSounds }),
 
     // Getters
     getSetting: (key) => get().settings?.[key],
@@ -211,24 +200,6 @@ export const useSettingsStore = create<SettingsStore>()(
       } catch (error) {
         console.error("Failed to load output devices:", error);
         set({ outputDevices: [DEFAULT_AUDIO_DEVICE] });
-      }
-    },
-
-    // Play a test sound
-    playTestSound: async (soundType: "start" | "stop") => {
-      try {
-        await commands.playTestSound(soundType);
-      } catch (error) {
-        console.error(`Failed to play test sound (${soundType}):`, error);
-      }
-    },
-
-    checkCustomSounds: async () => {
-      try {
-        const sounds = await commands.checkCustomSounds();
-        get().setCustomSounds(sounds);
-      } catch (error) {
-        console.error("Failed to check custom sounds:", error);
       }
     },
 
@@ -537,15 +508,11 @@ export const useSettingsStore = create<SettingsStore>()(
 
     // Initialize everything
     initialize: async () => {
-      const { refreshSettings, checkCustomSounds, loadDefaultSettings } = get();
+      const { refreshSettings, loadDefaultSettings } = get();
 
       // Note: Output devices are NOT refreshed here. The frontend (App.tsx)
       // calls refreshOutputDevices after onboarding completes.
-      await Promise.all([
-        loadDefaultSettings(),
-        refreshSettings(),
-        checkCustomSounds(),
-      ]);
+      await Promise.all([loadDefaultSettings(), refreshSettings()]);
 
       // Re-fetch settings when the backend changes them (e.g. language
       // reset during model switch). The backend is the source of truth.

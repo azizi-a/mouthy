@@ -203,19 +203,11 @@
     },
     "sound": {
       "title": "שמע",
-      "audioFeedback": {
-        "label": "משוב קולי",
-        "description": "נגן צליל כשההקלטה מתחילה ומסתיימת"
-      },
       "outputDevice": {
         "title": "התקן פלט",
         "description": "בחר את התקן השמע המועדף עליך עבור צלילי המשוב",
         "placeholder": "בחר התקן פלט...",
         "loading": "טוען..."
-      },
-      "volume": {
-        "title": "עוצמת קול",
-        "description": "כוונן את עוצמת צלילי המשוב"
       }
     },
     "advanced": {
@@ -440,10 +432,6 @@
         "copied": "הועתק",
         "lineCount": "{{count}} שורות",
         "empty": "ממתין ללוגים… רשומות יופיעו כאן כשהאפליקציה תפיק אותן."
-      },
-      "soundTheme": {
-        "label": "ערכת צלילים",
-        "description": "בחר ערכת צלילים להתחלה ולסיום ההקלטה"
       },
       "wordCorrectionThreshold": {
         "title": "סף תיקון מילים",
