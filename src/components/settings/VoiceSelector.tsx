@@ -12,73 +12,75 @@ interface VoiceSelectorProps {
   grouped?: boolean;
 }
 
-export const VoiceSelector: React.FC<VoiceSelectorProps> = React.memo(
-  ({ descriptionMode = "tooltip", grouped = false }) => {
-    const { t } = useTranslation();
-    const { getSetting, updateSetting, resetSetting, isUpdating } =
-      useSettings();
-    const voice = getSetting("tts_voice") ?? "";
-    const baseUrl = getSetting("tts_base_url");
-    const [draft, setDraft] = useState(voice);
-    const [voices, setVoices] = useState<string[]>([]);
+export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
+  descriptionMode = "tooltip",
+  grouped = false,
+}) => {
+  const { t } = useTranslation();
+  const { getSetting, updateSetting, resetSetting, isUpdating } = useSettings();
+  const voice = getSetting("tts_voice") ?? "";
+  const baseUrl = getSetting("tts_base_url");
+  const [draft, setDraft] = useState(voice);
+  const [voices, setVoices] = useState<string[]>([]);
 
-    useEffect(() => setDraft(voice), [voice]);
+  useEffect(() => setDraft(voice), [voice]);
 
-    // Servers without a voice list keep the free-text field only.
-    useEffect(() => {
-      let current = true;
-      setVoices([]);
-      commands
-        .fetchTtsVoices()
-        .then((result) => {
-          if (current && result.status === "ok") setVoices(result.data);
-        })
-        .catch(() => {});
-      return () => {
-        current = false;
-      };
-    }, [baseUrl]);
-
-    const commit = (value: string) => {
-      if (value !== voice) updateSetting("tts_voice", value);
+  // Servers without a voice list keep the free-text field only.
+  useEffect(() => {
+    let current = true;
+    setVoices([]);
+    commands
+      .fetchTtsVoices()
+      .then((result) => {
+        if (current && result.status === "ok") setVoices(result.data);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
     };
+  }, [baseUrl]);
 
-    return (
-      <SettingContainer
-        title={t("settings.speech.voice.title")}
-        description={t("settings.speech.voice.description")}
-        descriptionMode={descriptionMode}
-        grouped={grouped}
-      >
-        <div className="flex items-center space-x-1">
-          <Input
-            type="text"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={() => commit(draft)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") event.currentTarget.blur();
-            }}
-            spellCheck={false}
-            variant="compact"
-            className="w-36"
+  const commit = (value: string) => {
+    const next = value.trim();
+    setDraft(next);
+    if (next !== voice) updateSetting("tts_voice", next);
+  };
+
+  return (
+    <SettingContainer
+      title={t("settings.speech.voice.title")}
+      description={t("settings.speech.voice.description")}
+      descriptionMode={descriptionMode}
+      grouped={grouped}
+    >
+      <div className="flex items-center space-x-1">
+        <Input
+          type="text"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => commit(draft)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+          spellCheck={false}
+          variant="compact"
+          className="w-36"
+          disabled={isUpdating("tts_voice")}
+        />
+        {voices.length > 0 && (
+          <Dropdown
+            options={voices.map((id) => ({ value: id, label: id }))}
+            selectedValue={voice}
+            onSelect={commit}
+            placeholder={t("settings.speech.voice.choose")}
             disabled={isUpdating("tts_voice")}
           />
-          {voices.length > 0 && (
-            <Dropdown
-              options={voices.map((id) => ({ value: id, label: id }))}
-              selectedValue={voice}
-              onSelect={commit}
-              placeholder={t("settings.speech.voice.choose")}
-              disabled={isUpdating("tts_voice")}
-            />
-          )}
-          <ResetButton
-            onClick={() => resetSetting("tts_voice")}
-            disabled={isUpdating("tts_voice")}
-          />
-        </div>
-      </SettingContainer>
-    );
-  },
-);
+        )}
+        <ResetButton
+          onClick={() => resetSetting("tts_voice")}
+          disabled={isUpdating("tts_voice")}
+        />
+      </div>
+    </SettingContainer>
+  );
+};

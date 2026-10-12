@@ -7,12 +7,10 @@
   --light-color-text: #0f0f0f;
   --light-color-background: #fbfbfb;
   --light-color-logo-primary: #4f46e5;
-  --light-color-logo-stroke: #312e81;
 
   --dark-color-text: #fbfbfb;
   --dark-color-background: #2c2b29;
   --dark-color-logo-primary: #818cf8;
-  --dark-color-logo-stroke: #e0e7ff;
 
   /* Semantic status colors. First used by SecureInputWarning; intended to
      replace the ad-hoc yellow-500/red-500 usages over time so status styling
@@ -24,7 +22,6 @@
 
   /* Tokens that do not change between light and dark */
   --color-background-ui: #4f46e5;
-  --color-text-stroke: #f6f6f6;
   --color-mid-gray: #808080;
 
   /* Active palette — defaults to light, follows the OS via the media query
@@ -32,7 +29,6 @@
   --color-text: var(--light-color-text);
   --color-background: var(--light-color-background);
   --color-logo-primary: var(--light-color-logo-primary);
-  --color-logo-stroke: var(--light-color-logo-stroke);
   --color-warning: var(--light-color-warning);
   --color-error: var(--light-color-error);
 }
@@ -42,7 +38,6 @@
     --color-text: var(--dark-color-text);
     --color-background: var(--dark-color-background);
     --color-logo-primary: var(--dark-color-logo-primary);
-    --color-logo-stroke: var(--dark-color-logo-stroke);
     --color-warning: var(--dark-color-warning);
     --color-error: var(--dark-color-error);
   }
@@ -62,7 +57,6 @@
   --color-text: var(--light-color-text);
   --color-background: var(--light-color-background);
   --color-logo-primary: var(--light-color-logo-primary);
-  --color-logo-stroke: var(--light-color-logo-stroke);
   --color-warning: var(--light-color-warning);
   --color-error: var(--light-color-error);
 }
@@ -71,7 +65,6 @@
   --color-text: var(--dark-color-text);
   --color-background: var(--dark-color-background);
   --color-logo-primary: var(--dark-color-logo-primary);
-  --color-logo-stroke: var(--dark-color-logo-stroke);
   --color-warning: var(--dark-color-warning);
   --color-error: var(--dark-color-error);
 }

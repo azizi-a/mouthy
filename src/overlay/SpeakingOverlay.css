@@ -1,13 +1,13 @@
 @import "../styles/theme.css";
 
-/* The card sits flush against the window's screen-edge side, so overlay.rs
-   alone decides where it lands. Card sizes must fit the window sizes there. */
+/* The card is centred in the window, which overlay.rs places and sizes.
+   Every card must fit that window size. */
 .ov-stage {
   position: fixed;
   inset: 0;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: center;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 12px;
@@ -15,9 +15,6 @@
   color: var(--color-text);
   opacity: 0;
   transition: opacity 200ms ease-out;
-}
-.ov-stage.top {
-  align-items: flex-start;
 }
 .ov-stage.visible {
   opacity: 1;
@@ -118,8 +115,4 @@
 .ov-close:hover {
   color: var(--color-text);
   background: color-mix(in srgb, var(--color-mid-gray) 30%, transparent);
-}
-.ov-close svg {
-  width: 9px;
-  height: 9px;
 }

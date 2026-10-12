@@ -3,7 +3,6 @@ use crate::settings;
 use crate::settings::{OverlayPosition, OverlayStyle};
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 
@@ -41,20 +40,14 @@ tauri_panel! {
 const OVERLAY_LABEL: &str = "overlay";
 const OVERLAY_TITLE: &str = "Mouthy Overlay";
 
-// Native overlay window sizes (logical points). Each need only be at least as
-// large as the card it hosts (SpeakingOverlay.css). The card is CSS-anchored
-// flush to the screen edge, so window height doesn't move where the card sits —
-// only OVERLAY_TOP_OFFSET / OVERLAY_BOTTOM_OFFSET do. The window is sized per
-// view rather than to the largest card, because its transparent area still
-// swallows clicks.
+// Native overlay window size (logical points), shared by every view. It must
+// fit the largest card in SpeakingOverlay.css: the error card's two-line
+// message, Open Settings button and close button.
 //
 // On Windows the size is additionally multiplied by the accessibility text
 // scale (see windows_text_scale_factor), which WebView2 applies as a zoom.
-const OVERLAY_WIDTH: f64 = 256.0;
-const OVERLAY_HEIGHT: f64 = 50.0;
-// Room for a two-line message, the Open Settings button and the close button.
-const OVERLAY_ERROR_WIDTH: f64 = 360.0;
-const OVERLAY_ERROR_HEIGHT: f64 = 60.0;
+const OVERLAY_WIDTH: f64 = 360.0;
+const OVERLAY_HEIGHT: f64 = 60.0;
 
 #[cfg(target_os = "macos")]
 const OVERLAY_TOP_OFFSET: f64 = 46.0;
@@ -470,14 +463,6 @@ pub enum OverlayView {
 }
 
 impl OverlayView {
-    /// Logical window size for this view.
-    fn size(&self) -> (f64, f64) {
-        match self {
-            OverlayView::Error { .. } => (OVERLAY_ERROR_WIDTH, OVERLAY_ERROR_HEIGHT),
-            _ => (OVERLAY_WIDTH, OVERLAY_HEIGHT),
-        }
-    }
-
     /// Notices hide themselves; the speaking overlay stays until hidden.
     fn auto_hide(&self) -> Option<Duration> {
         match self {
@@ -512,9 +497,8 @@ pub fn show_overlay(app_handle: &AppHandle, view: OverlayView) {
 }
 
 fn show_overlay_state_on_main(app_handle: &AppHandle, view: OverlayView) {
-    let (width, height) = view.size();
+    let (width, height) = (OVERLAY_WIDTH, OVERLAY_HEIGHT);
     if let Some(overlay_window) = app_handle.get_webview_window(OVERLAY_LABEL) {
-        *OVERLAY_SIZE.lock().unwrap_or_else(|e| e.into_inner()) = (width, height);
         // Invalidate any delayed hide still in flight from a previous session
         // (see `hide_overlay`).
         let shown_at = OVERLAY_SHOW_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
@@ -609,7 +593,6 @@ pub fn update_overlay_position(app_handle: &AppHandle) {
 
 fn update_overlay_position_on_main(app_handle: &AppHandle) {
     if let Some(overlay_window) = app_handle.get_webview_window(OVERLAY_LABEL) {
-        let (width, height) = *OVERLAY_SIZE.lock().unwrap_or_else(|e| e.into_inner());
         #[cfg(target_os = "linux")]
         if LAYER_SHELL_ACTIVE.load(Ordering::SeqCst) {
             let position = settings::get_settings(app_handle).overlay_position;
@@ -621,13 +604,17 @@ fn update_overlay_position_on_main(app_handle: &AppHandle) {
         }
 
         #[cfg(target_os = "windows")]
-        if let Err(error) = place_windows_overlay(app_handle, &overlay_window, width, height) {
+        if let Err(error) =
+            place_windows_overlay(app_handle, &overlay_window, OVERLAY_WIDTH, OVERLAY_HEIGHT)
+        {
             log::error!("Failed to update overlay position: {error}");
         }
 
         #[cfg(not(target_os = "windows"))]
         {
-            if let Some((x, y)) = calculate_overlay_position(app_handle, width, height) {
+            if let Some((x, y)) =
+                calculate_overlay_position(app_handle, OVERLAY_WIDTH, OVERLAY_HEIGHT)
+            {
                 let _ = overlay_window
                     .set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }));
             }
@@ -640,9 +627,6 @@ fn update_overlay_position_on_main(app_handle: &AppHandle) {
 /// since, so a hide left over from a finished session or notice can never take
 /// down the overlay of one that started in the meantime.
 static OVERLAY_SHOW_GENERATION: AtomicU64 = AtomicU64::new(0);
-
-/// Window size of the view last shown, so a position change keeps it centred.
-static OVERLAY_SIZE: Mutex<(f64, f64)> = Mutex::new((OVERLAY_WIDTH, OVERLAY_HEIGHT));
 
 /// Hides the overlay window with fade-out animation. Call on the main thread,
 /// where shows run, so none can land between the snapshot and the fade.
@@ -775,7 +759,7 @@ mod tests {
                 OVERLAY_HEIGHT,
                 OverlayPosition::Bottom,
             ),
-            (3648, 2025, 384, 75)
+            (3570, 2010, 540, 90)
         );
         assert_eq!(
             windows_overlay_bounds(
@@ -787,7 +771,7 @@ mod tests {
                 OVERLAY_HEIGHT,
                 OverlayPosition::Top,
             ),
-            (3648, 6, 384, 75)
+            (3570, 6, 540, 90)
         );
     }
 
@@ -804,7 +788,7 @@ mod tests {
                 OVERLAY_HEIGHT,
                 OverlayPosition::Bottom,
             ),
-            (-1440, 1127, 320, 63)
+            (-1505, 1115, 450, 75)
         );
     }
 
@@ -823,9 +807,9 @@ mod tests {
             OVERLAY_HEIGHT,
             OverlayPosition::Bottom,
         );
-        // 256x50 logical at 1.25 DPI x 1.1 text, still centered horizontally.
-        assert_eq!((x, y, width, height), (-1456, 1121, 352, 69));
-        // Bottom edge unchanged from the 1.0 case above (1127 + 63).
+        // 360x60 logical at 1.25 DPI x 1.1 text, still centered horizontally.
+        assert_eq!((x, y, width, height), (-1528, 1107, 495, 83));
+        // Bottom edge unchanged from the 1.0 case above (1115 + 75).
         assert_eq!(y + height, 1190);
 
         let (_, top_y, _, _) = windows_overlay_bounds(

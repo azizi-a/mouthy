@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import { X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./SpeakingOverlay.css";
@@ -15,7 +16,6 @@ const SpeakingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [view, setView] = useState<OverlayView | null>(null);
   const [visible, setVisible] = useState(false);
-  const [top, setTop] = useState(false);
 
   useEffect(() => {
     // A show resolves asynchronously; drop it if a later show or hide overtook it.
@@ -23,11 +23,7 @@ const SpeakingOverlay: React.FC = () => {
     const show = listen<OverlayView>("show-overlay", async ({ payload }) => {
       const seq = ++latest;
       await syncLanguageFromSettings();
-      const settings = await commands.getAppSettings().catch(() => null);
       if (seq !== latest) return;
-      if (settings?.status === "ok") {
-        setTop(settings.data.overlay_position === "top");
-      }
       setView(payload);
       setVisible(true);
     });
@@ -49,7 +45,7 @@ const SpeakingOverlay: React.FC = () => {
       : t("overlay.nothingSelected");
 
   return (
-    <div className={`ov-stage${top ? " top" : ""}${visible ? " visible" : ""}`}>
+    <div className={`ov-stage${visible ? " visible" : ""}`}>
       <div className={`ov-card ${view.kind}`} role="status">
         {view.kind === "speaking" ? (
           <>
@@ -62,9 +58,7 @@ const SpeakingOverlay: React.FC = () => {
             <span className="ov-text">{t("overlay.speaking")}</span>
           </>
         ) : (
-          <span className="ov-text" title={message}>
-            {message}
-          </span>
+          <span className="ov-text">{message}</span>
         )}
         {view.kind === "error" && (
           <button
@@ -81,14 +75,7 @@ const SpeakingOverlay: React.FC = () => {
           )}
           onClick={() => commands.stopSpeaking()}
         >
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path
-              d="M4 4 L12 12 M12 4 L4 12"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
+          <X size={12} strokeWidth={2.5} />
         </button>
       </div>
     </div>

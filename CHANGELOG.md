@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Rebranded to Mouthy: new name, bundle identifier `com.azizi.mouthy`, placeholder icons, and attribution to Handy in README and LICENSE. Removed Handy's sponsor images, donate link, CI workflows and Nix packaging.
 - New compact speaking overlay, and an indigo placeholder accent instead of Handy's pink.
 - Wording no longer mentions transcription, recording or feedback sounds; text whose meaning changed shows in English in other languages until translated. About credits Handy, Kokoro and rodio instead of ggml.
+- The overlay keeps one size for every state with its card centred, and dragging the speed or volume slider no longer reloads all settings on each step. The server URL and voice fields save without surrounding spaces.
 
 ### Removed
 
@@ -30,7 +31,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Transcript history: the History page, saved recordings and their SQLite database, history limit and auto-delete settings, and the tray "Copy Last Transcript" item. Mouthy no longer creates `history.db` or `recordings/` in its data folder.
 - The Cancel shortcut, the `--toggle-transcription` and `--cancel` flags, and the tray Cancel item; Speak Selection and Stop replace them.
 - Text output: pasting or typing into the focused app, the paste method, typing tool, clipboard handling, auto-submit, trailing-space, paste delay and Reliable Paste settings, the Linux typing/clipboard tool integrations, and the clipboard plugin.
-- Unused dependencies and code left over from Handy: `rdev` (and the 28 crates it pulled in, which removes a future-Rust incompatibility warning), `react-select`, two unused UI components and an unused translation string. CMake is no longer a build requirement.
+- Unused dependencies and code left over from Handy: `rdev` (and the 28 crates it pulled in, which removes a future-Rust incompatibility warning), `react-select`, unused UI components, icons and theme colours, and an unused translation string. CMake is no longer a build requirement.
 
 ### Fixed
 

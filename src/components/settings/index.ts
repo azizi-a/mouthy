@@ -14,7 +14,3 @@ export { ShortcutInput } from "./ShortcutInput";
 export { AppDataDirectory } from "./AppDataDirectory";
 export { StartHidden } from "./StartHidden";
 export { AutostartToggle } from "./AutostartToggle";
-export { BackendUrl } from "./BackendUrl";
-export { VoiceSelector } from "./VoiceSelector";
-export { SpeedSlider } from "./SpeedSlider";
-export { VolumeSlider } from "./VolumeSlider";
