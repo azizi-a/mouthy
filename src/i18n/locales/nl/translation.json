@@ -167,17 +167,9 @@
         "notFound": "Sneltoets niet gevonden",
         "pressKeys": "Druk op toetsen...",
         "bindings": {
-          "transcribe": {
-            "name": "Sneltoets voor dicteren",
-            "description": "De sneltoets om je stem op te nemen en te transcriberen."
-          },
           "cancel": {
             "name": "Sneltoets voor annuleren",
             "description": "De sneltoets om de huidige opname te annuleren."
-          },
-          "transcribe_with_post_process": {
-            "name": "Sneltoets voor naverwerking",
-            "description": "Optioneel: Een specifieke sneltoets die altijd AI-naverwerking toepast op je transcriptie."
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "Talen zoeken...",
         "noResults": "Geen talen gevonden",
         "auto": "Automatisch"
-      },
-      "shortcutActivation": {
-        "title": "Gedrag van sneltoets",
-        "description": "Kies hoe de sneltoets voor dicteren de opname start en stopt.",
-        "options": {
-          "holdOrToggle": "Automatisch",
-          "pushToTalk": "Vasthouden",
-          "toggle": "Schakelen"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Houd ingedrukt om op te nemen of tik om te schakelen",
-          "push_to_talk": "Neemt op zolang je de sneltoets ingedrukt houdt",
-          "toggle": "Tik op de sneltoets om de opname te starten, tik opnieuw om te stoppen"
-        }
       }
     },
     "models": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Sneltoets"
-      },
       "api": {
         "title": "API (OpenAI-compatibel)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Verwijderen uit opgeslagen",
       "delete": "Item verwijderen",
       "deleteError": "Item verwijderen mislukt. Probeer het opnieuw.",
-      "retranscribe": "Opnieuw transcriberen",
-      "retranscribeError": "Opnieuw transcriberen mislukt. Probeer het opnieuw.",
-      "transcribing": "Transcriberen...",
       "transcriptionFailed": "Transcriptie mislukt. Je kunt het opnieuw proberen via het herlaad-pictogram."
     },
     "debug": {
@@ -567,10 +539,6 @@
         "title": "Plakvertraging (na)",
         "description": "Vertraging (in milliseconden) na de plak-toetsaanslag, voordat je vorige klembord wordt hersteld. Verhoog dit als de oude klembordinhoud wordt geplakt in plaats van de transcriptie."
       },
-      "holdThreshold": {
-        "title": "Vasthouddrempel",
-        "description": "Alleen in de modus Automatisch: hoe lang (in milliseconden) de sneltoets ingedrukt moet blijven om als vasthouden te tellen in plaats van als tik. Verlaag dit als de opname na kort vasthouden blijft doorlopen; verhoog het als bewuste tikken als vasthouden worden gezien."
-      },
       "reliablePaste": {
         "title": "Betrouwbaar plakken (Beta)",
         "description": "Herstel het klembord pas nadat de doelapp de transcriptie daadwerkelijk heeft gelezen, in plaats van na een vaste vertraging. Bedoeld om te verhelpen dat bij systeembelasting de oude klembordinhoud wordt geplakt. Vereist een plakmethode via het klembord; alleen macOS en Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Fout bij laden van map: {{error}}",
-    "micPermissionDeniedTitle": "Microfoontoegang geweigerd",
-    "micPermissionDenied": {
-      "generic": "Microfoontoegang is geweigerd door het besturingssysteem. Verleen microfoonmachtiging in je systeeminstellingen.",
-      "windows": "Schakel microfoontoegang in via Instellingen → Privacy & beveiliging → Microfoon (inclusief toegang voor desktop-apps).",
-      "macos": "Verleen microfoontoegang via Systeeminstellingen → Privacy & Beveiliging → Microfoon.",
-      "linux": "Verleen microfoontoegang in de geluids- of privacyinstellingen van je systeem."
-    },
-    "noInputDeviceTitle": "Geen microfoon gevonden",
-    "noInputDevice": "Er is geen audio-invoerapparaat gedetecteerd. Sluit een microfoon of headset aan en probeer het opnieuw.",
-    "recordingFailed": "Opname starten mislukt: {{error}}",
     "modelLoadFailed": "Model laden mislukt: {{model}}",
-    "modelLoadFailedUnknown": "onbekend model",
-    "pasteFailedTitle": "Tekst plakken mislukt",
-    "pasteFailed": "Tekst kon niet worden geplakt in de actieve applicatie.",
-    "transcriptionFailedTitle": "Transcriptie mislukt"
+    "modelLoadFailedUnknown": "onbekend model"
   },
   "appLanguage": {
     "title": "Interfacetaal",

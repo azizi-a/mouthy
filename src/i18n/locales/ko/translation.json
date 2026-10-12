@@ -167,17 +167,9 @@
         "notFound": "단축키를 찾을 수 없음",
         "pressKeys": "키를 눌러주세요...",
         "bindings": {
-          "transcribe": {
-            "name": "음성 텍스트 변환 단축키",
-            "description": "음성을 녹음하고 테스트로 변환하는 키보드 단축키입니다."
-          },
           "cancel": {
             "name": "취소 단축키",
             "description": "현재 녹음을 취소하는 키보드 단축키입니다."
-          },
-          "transcribe_with_post_process": {
-            "name": "후처리 단축키",
-            "description": "선택 사항: 항상 AI 후처리를 적용하는 전용 단축키입니다."
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "언어 검색...",
         "noResults": "언어를 찾을 수 없습니다",
         "auto": "자동"
-      },
-      "shortcutActivation": {
-        "title": "단축키 동작",
-        "description": "음성 텍스트 변환 단축키로 녹음을 시작하고 중지하는 방식을 선택합니다.",
-        "options": {
-          "holdOrToggle": "자동",
-          "pushToTalk": "길게 누르기",
-          "toggle": "전환"
-        },
-        "descriptions": {
-          "hold_or_toggle": "길게 누르면 녹음, 탭하면 전환",
-          "push_to_talk": "단축키를 누르고 있는 동안 녹음합니다",
-          "toggle": "단축키를 탭하면 녹음을 시작하고, 다시 탭하면 중지합니다"
-        }
       }
     },
     "sound": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "단축키"
-      },
       "api": {
         "title": "API (OpenAI 호환)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "저장에서 제거",
       "delete": "항목 삭제",
       "deleteError": "항목 삭제에 실패했습니다. 다시 시도해주세요.",
-      "retranscribe": "다시 전사",
-      "retranscribeError": "다시 전사에 실패했습니다. 다시 시도해주세요.",
-      "transcribing": "전사 중...",
       "transcriptionFailed": "전사에 실패했습니다. 재시도 아이콘을 사용하여 다시 전사할 수 있습니다."
     },
     "debug": {
@@ -554,10 +526,6 @@
       "pasteDelayAfter": {
         "title": "붙여넣기 지연 (이후)",
         "description": "붙여넣기 키 입력을 보낸 후 이전 클립보드를 복원하기 전의 지연 시간(밀리초). 전사된 텍스트 대신 이전 클립보드 내용이 붙여넣어지면 늘리세요."
-      },
-      "holdThreshold": {
-        "title": "길게 누르기 기준 시간",
-        "description": "자동 모드 전용: 탭이 아닌 길게 누르기로 인식되려면 단축키를 얼마나 오래(밀리초) 누르고 있어야 하는지 설정합니다. 짧게 누른 뒤에도 녹음이 계속 켜져 있으면 낮추고, 의도한 탭이 길게 누르기로 처리되면 높이세요."
       },
       "reliablePaste": {
         "title": "안정적인 붙여넣기 (Beta)",
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "디렉토리 로딩 오류: {{error}}",
-    "micPermissionDeniedTitle": "마이크 접근이 거부되었습니다",
-    "micPermissionDenied": {
-      "generic": "운영 체제에서 마이크 접근을 거부했습니다. 시스템 설정에서 마이크 권한을 허용해 주세요.",
-      "windows": "설정 → 개인 정보 및 보안 → 마이크(데스크톱 앱 접근 포함)에서 마이크 접근을 활성화하세요.",
-      "macos": "시스템 설정 → 개인 정보 보호 및 보안 → 마이크에서 마이크 접근을 허용하세요.",
-      "linux": "시스템의 소리 또는 개인 정보 설정에서 마이크 접근을 허용하세요."
-    },
-    "noInputDeviceTitle": "마이크를 찾을 수 없음",
-    "noInputDevice": "오디오 입력 장치가 감지되지 않았습니다. 마이크 또는 헤드셋을 연결한 후 다시 시도해 주세요.",
-    "recordingFailed": "녹음을 시작하지 못했습니다: {{error}}",
     "modelLoadFailed": "모델을 불러오지 못했습니다: {{model}}",
-    "modelLoadFailedUnknown": "알 수 없는 모델",
-    "pasteFailedTitle": "텍스트 붙여넣기 실패",
-    "pasteFailed": "활성 애플리케이션에 텍스트를 붙여넣을 수 없습니다.",
-    "transcriptionFailedTitle": "음성 인식 실패"
+    "modelLoadFailedUnknown": "알 수 없는 모델"
   },
   "appLanguage": {
     "title": "애플리케이션 언어",

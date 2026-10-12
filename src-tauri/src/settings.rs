@@ -112,8 +112,7 @@ pub enum OverlayPosition {
     Top,
     // `none` is retired: overlay visibility is owned by `OverlayStyle` now. The
     // alias keeps legacy stores (`"overlay_position": "none"`) deserializing
-    // instead of failing the whole load; the one-time overlay migration reads the
-    // raw stored string to recover the old "hidden" intent as `OverlayStyle::None`.
+    // instead of failing the whole load.
     #[serde(alias = "none")]
     Bottom,
 }
@@ -153,21 +152,6 @@ pub enum PasteMethod {
     ShiftInsert,
     CtrlShiftV,
     ExternalScript,
-}
-
-/// How the transcribe shortcut's key events drive a recording.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum ShortcutActivation {
-    /// Press to start, press again to stop.
-    Toggle,
-    /// Hold to record, release to stop.
-    PushToTalk,
-    /// Hold to record and release to stop, or tap to keep recording until the
-    /// next press. Which one it was is decided by how long the key was held
-    /// (`hold_threshold_ms`).
-    #[default]
-    HoldOrToggle,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
@@ -373,23 +357,11 @@ impl std::ops::DerefMut for SecretMap {
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
 #[serde(default)]
 pub struct AppSettings {
-    /// Internal settings schema marker for one-time migrations. Fresh installs
-    /// start at the current version; existing stores missing this key are
-    /// treated as version 0 and migrated forward.
-    #[serde(default = "default_settings_schema_version")]
-    pub settings_schema_version: u32,
-    /// Defaults to empty on partial stores; the load path merges in the
-    /// default bindings for any missing keys before the settings are used.
+    /// Defaults to empty on partial stores; the load path syncs the ids with
+    /// the default bindings (see `sync_bindings_with_defaults`) before the
+    /// settings are used.
     #[serde(default)]
     pub bindings: HashMap<String, ShortcutBinding>,
-    /// Replaces the pre-0.10 `push_to_talk` bool; stores missing this key are
-    /// migrated from it in `apply_settings_migrations`.
-    #[serde(default)]
-    pub shortcut_activation: ShortcutActivation,
-    /// Hold-or-toggle only: a press held at least this long is push-to-talk,
-    /// anything shorter is a tap that locks recording on.
-    #[serde(default = "default_hold_threshold_ms")]
-    pub hold_threshold_ms: u64,
     #[serde(default)]
     pub audio_feedback: bool,
     #[serde(default = "default_audio_feedback_volume")]
@@ -491,8 +463,7 @@ pub struct AppSettings {
     pub filler_word_removal_enabled: bool,
     #[serde(default)]
     pub custom_filler_words: Option<Vec<String>>,
-    /// Fresh installs default from the OS locale; existing stores are migrated
-    /// in `apply_settings_migrations`.
+    /// Defaults from the OS locale.
     #[serde(default)]
     pub chinese_script: ChineseScript,
     #[serde(default)]
@@ -515,24 +486,13 @@ pub struct AppSettings {
     #[serde(default)]
     pub vad_backend: VadBackend,
     /// Which recording overlay to show: None / Minimal / Live. Streaming mode is
-    /// not gated on this — that follows model capability. Migrated from the old
-    /// `overlay_position` (position `none` → style `None`).
+    /// not gated on this — that follows model capability.
     #[serde(default = "default_overlay_style")]
     pub overlay_style: OverlayStyle,
 }
 
 fn default_model() -> String {
     "".to_string()
-}
-
-const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 2;
-
-fn default_settings_schema_version() -> u32 {
-    CURRENT_SETTINGS_SCHEMA_VERSION
-}
-
-fn default_hold_threshold_ms() -> u64 {
-    300
 }
 
 fn default_always_on_microphone() -> bool {
@@ -775,9 +735,9 @@ fn default_transcribe_gpu_device() -> Option<String> {
     None // automatic device selection
 }
 
-/// Accept the 0.1-era integer registry index long enough for the schema
-/// migration to clear it. Device indices are process-local in transcribe.cpp
-/// 0.2 and must never be carried across launches.
+/// Accept the 0.1-era integer registry index but drop it: device indices are
+/// process-local in transcribe.cpp 0.2 and must never be carried across
+/// launches.
 fn deserialize_transcribe_gpu_device<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: Deserializer<'de>,
@@ -855,46 +815,7 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
 pub const SETTINGS_STORE_PATH: &str = "settings_store.json";
 
 pub fn get_default_settings() -> AppSettings {
-    #[cfg(target_os = "windows")]
-    let default_shortcut = "ctrl+space";
-    #[cfg(target_os = "macos")]
-    let default_shortcut = "option+space";
-    #[cfg(target_os = "linux")]
-    let default_shortcut = "ctrl+space";
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    let default_shortcut = "alt+space";
-
     let mut bindings = HashMap::new();
-    bindings.insert(
-        "transcribe".to_string(),
-        ShortcutBinding {
-            id: "transcribe".to_string(),
-            name: "Transcribe".to_string(),
-            description: "Converts your speech into text.".to_string(),
-            default_binding: default_shortcut.to_string(),
-            current_binding: default_shortcut.to_string(),
-        },
-    );
-    #[cfg(target_os = "windows")]
-    let default_post_process_shortcut = "ctrl+shift+space";
-    #[cfg(target_os = "macos")]
-    let default_post_process_shortcut = "option+shift+space";
-    #[cfg(target_os = "linux")]
-    let default_post_process_shortcut = "ctrl+shift+space";
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    let default_post_process_shortcut = "alt+shift+space";
-
-    bindings.insert(
-        "transcribe_with_post_process".to_string(),
-        ShortcutBinding {
-            id: "transcribe_with_post_process".to_string(),
-            name: "Transcribe with Post-Processing".to_string(),
-            description: "Converts your speech into text and applies AI post-processing."
-                .to_string(),
-            default_binding: default_post_process_shortcut.to_string(),
-            current_binding: default_post_process_shortcut.to_string(),
-        },
-    );
     bindings.insert(
         "cancel".to_string(),
         ShortcutBinding {
@@ -907,10 +828,7 @@ pub fn get_default_settings() -> AppSettings {
     );
 
     AppSettings {
-        settings_schema_version: default_settings_schema_version(),
         bindings,
-        shortcut_activation: ShortcutActivation::default(),
-        hold_threshold_ms: default_hold_threshold_ms(),
         audio_feedback: false,
         audio_feedback_volume: default_audio_feedback_volume(),
         sound_theme: default_sound_theme(),
@@ -999,7 +917,7 @@ impl AppSettings {
     }
 }
 
-/// Startup entry point. Same load-or-create/salvage/migrate behavior as
+/// Startup entry point. Same load-or-create/salvage behavior as
 /// `get_settings`; kept as a named alias for call-site clarity, plus a
 /// one-time debug dump of the loaded settings.
 pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
@@ -1013,7 +931,7 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
         .store(crate::portable::store_path(SETTINGS_STORE_PATH))
         .expect("Failed to initialize store");
 
-    // Settings reads also persist one-time migrations. Migration helpers are
+    // Settings reads also persist salvage and binding sync. Both are
     // idempotent, so this converges after the first read of an older store.
     let mut settings = if let Some(settings_value) = store.get("settings") {
         let (mut settings, mut updated) =
@@ -1025,17 +943,8 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
                 }
             };
 
-        if apply_settings_migrations(&mut settings, &settings_value) {
+        if sync_bindings_with_defaults(&mut settings.bindings) {
             updated = true;
-        }
-
-        // Merge in any bindings added since this store was written.
-        for (key, value) in get_default_settings().bindings {
-            if let std::collections::hash_map::Entry::Vacant(entry) = settings.bindings.entry(key) {
-                debug!("Adding missing binding: {}", entry.key());
-                entry.insert(value);
-                updated = true;
-            }
         }
 
         if updated {
@@ -1094,102 +1003,31 @@ fn salvage_settings(stored: &serde_json::Value) -> AppSettings {
     })
 }
 
-fn apply_settings_migrations(
-    settings: &mut AppSettings,
-    settings_value: &serde_json::Value,
-) -> bool {
-    let mut updated = false;
+/// Adds default bindings missing from a stored map and drops stored ids that
+/// are no longer defaults, so retired bindings never register or get shadowed.
+/// Returns whether the map changed.
+fn sync_bindings_with_defaults(bindings: &mut HashMap<String, ShortcutBinding>) -> bool {
+    let defaults = get_default_settings().bindings;
+    let mut changed = false;
 
-    // One-time onboarding migration: users with an explicit selected model have
-    // already made it through model selection. Users who merely have compatible
-    // files on disk should still see onboarding.
-    if settings_value.get("onboarding_completed").is_none() {
-        settings.onboarding_completed = !settings.selected_model.is_empty();
-        updated = true;
-    }
+    bindings.retain(|id, _| {
+        let keep = defaults.contains_key(id);
+        if !keep {
+            debug!("Dropping binding no longer in defaults: {}", id);
+            changed = true;
+        }
+        keep
+    });
 
-    // One-time shortcut activation migration (only while the new key is
-    // absent): the retired `push_to_talk` bool maps onto the two legacy modes so
-    // upgrading users keep exactly the behavior they had. Only fresh installs
-    // get the hold-or-toggle default.
-    if settings_value.get("shortcut_activation").is_none() {
-        if let Some(push_to_talk) = settings_value.get("push_to_talk").and_then(|v| v.as_bool()) {
-            settings.shortcut_activation = if push_to_talk {
-                ShortcutActivation::PushToTalk
-            } else {
-                ShortcutActivation::Toggle
-            };
-            updated = true;
+    for (key, value) in defaults {
+        if let std::collections::hash_map::Entry::Vacant(entry) = bindings.entry(key) {
+            debug!("Adding missing binding: {}", entry.key());
+            entry.insert(value);
+            changed = true;
         }
     }
 
-    // One-time Chinese script migration: the script used to be chosen through
-    // `zh-Hans`/`zh-Hant` language intents. Split those into the recognition
-    // language and the script setting; every other upgrading user keeps the
-    // unconverted output they had. Only fresh installs get the locale default.
-    if settings_value.get("chinese_script").is_none() {
-        settings.chinese_script = match settings.selected_language.as_str() {
-            "zh-Hans" => ChineseScript::Simplified,
-            "zh-Hant" => ChineseScript::Traditional,
-            _ => ChineseScript::AsTranscribed,
-        };
-        if settings.chinese_script != ChineseScript::AsTranscribed {
-            settings.selected_language = "zh".to_string();
-        }
-        updated = true;
-    }
-
-    let stored_schema_version = settings_value
-        .get("settings_schema_version")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
-    if stored_schema_version < 1 {
-        // Before schema 1 this was a UI ordinal. Preserve the original safety
-        // migration: a positive selection was ambiguous even in 0.1.
-        let had_positive_legacy_selection = settings_value
-            .get("transcribe_gpu_device")
-            .and_then(|value| value.as_i64())
-            .is_some_and(|value| value > 0);
-        if had_positive_legacy_selection {
-            settings.transcribe_accelerator = TranscribeAcceleratorSetting::Auto;
-        }
-    }
-    if stored_schema_version < 2 {
-        // transcribe.cpp 0.2 replaced integer registry indices with opaque
-        // process-local handles. Clear every old index once.
-        settings.transcribe_gpu_device = default_transcribe_gpu_device();
-        settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
-        updated = true;
-    }
-
-    // The generic GPU choice was removed in favor of Auto or an exact device.
-    // Normalize settings created by builds that exposed that short-lived option.
-    if settings.transcribe_accelerator == TranscribeAcceleratorSetting::Gpu
-        && settings.transcribe_gpu_device.is_none()
-    {
-        settings.transcribe_accelerator = TranscribeAcceleratorSetting::Auto;
-        updated = true;
-    }
-
-    // One-time overlay migration (only while the new key is absent): the retired
-    // overlay_position `none` meant "hide the overlay" → OverlayStyle::None; any
-    // other position had it visible → Live. The position enum no longer has a
-    // `none` variant (legacy "none" deserializes to Bottom via a serde alias), so
-    // read the raw stored string to recover the old intent.
-    if settings_value.get("overlay_style").is_none() {
-        let was_hidden = settings_value
-            .get("overlay_position")
-            .and_then(|v| v.as_str())
-            == Some("none");
-        settings.overlay_style = if was_hidden {
-            OverlayStyle::None
-        } else {
-            OverlayStyle::Live
-        };
-        updated = true;
-    }
-
-    updated
+    changed
 }
 
 pub fn write_settings(app: &AppHandle, settings: AppSettings) {
@@ -1232,9 +1070,9 @@ mod tests {
     fn stored_binding_returns_the_requested_binding() {
         let settings = get_default_settings();
 
-        let result = get_stored_binding(&settings, "transcribe");
+        let result = get_stored_binding(&settings, "cancel");
 
-        assert_eq!(result.unwrap().id, "transcribe");
+        assert_eq!(result.unwrap().id, "cancel");
     }
 
     #[test]
@@ -1256,146 +1094,10 @@ mod tests {
     fn empty_store_parses_with_defaults() {
         let settings: AppSettings = serde_json::from_value(serde_json::json!({}))
             .expect("all AppSettings fields need serde defaults");
-        assert_eq!(
-            settings.shortcut_activation,
-            ShortcutActivation::HoldOrToggle
-        );
-        assert_eq!(settings.hold_threshold_ms, default_hold_threshold_ms());
         assert!(!settings.audio_feedback);
         assert!(settings.filler_word_removal_enabled);
         // Bindings default to empty; the load path merges the real defaults in.
         assert!(settings.bindings.is_empty());
-    }
-
-    /// Frozen snapshot of a real v0.9.0-era settings store, as written to
-    /// disk. This pins backwards compatibility: it must always parse strictly
-    /// (no salvage). Schema migrations may then rewrite fields whose native
-    /// meaning changed.
-    ///
-    /// If a schema change breaks this test, do NOT just update the fixture —
-    /// it stands in for the stores on users' machines. Add a
-    /// `#[serde(alias)]`/`#[serde(other)]` or a one-time migration in
-    /// `apply_settings_migrations` so old values keep loading, and only extend
-    /// the fixture alongside that.
-    #[test]
-    fn frozen_v0_9_store_parses_strictly_then_migrates_device_index() {
-        // Note "log_level": 2 — the legacy numeric format, kept deliberately.
-        let stored: serde_json::Value = serde_json::from_str(
-            r##"{
-            "settings_schema_version": 1,
-            "bindings": {
-                "transcribe": {
-                    "id": "transcribe",
-                    "name": "Transcribe",
-                    "description": "Converts your speech into text.",
-                    "default_binding": "option+space",
-                    "current_binding": "f13"
-                },
-                "transcribe_with_post_process": {
-                    "id": "transcribe_with_post_process",
-                    "name": "Transcribe with Post-Processing",
-                    "description": "Converts your speech into text and applies AI post-processing.",
-                    "default_binding": "option+shift+space",
-                    "current_binding": "option+shift+space"
-                },
-                "cancel": {
-                    "id": "cancel",
-                    "name": "Cancel",
-                    "description": "Cancels the current recording.",
-                    "default_binding": "escape",
-                    "current_binding": "escape"
-                }
-            },
-            "push_to_talk": false,
-            "audio_feedback": true,
-            "audio_feedback_volume": 0.8,
-            "sound_theme": "pop",
-            "start_hidden": false,
-            "autostart_enabled": true,
-            "selected_model": "whisper-large-v3-turbo",
-            "onboarding_completed": true,
-            "always_on_microphone": false,
-            "selected_microphone": "MacBook Pro Microphone",
-            "clamshell_microphone": null,
-            "selected_output_device": null,
-            "translate_to_english": false,
-            "selected_language": "en",
-            "overlay_position": "bottom",
-            "debug_mode": false,
-            "log_level": 2,
-            "custom_words": ["Handy", "cjpais"],
-            "model_unload_timeout": "min5",
-            "word_correction_threshold": 0.18,
-            "history_limit": 5,
-            "recording_retention_period": "preserve_limit",
-            "paste_method": "ctrl_v",
-            "clipboard_handling": "dont_modify",
-            "auto_submit": false,
-            "auto_submit_key": "enter",
-            "post_process_enabled": false,
-            "post_process_provider_id": "openai",
-            "post_process_providers": [
-                {
-                    "id": "openai",
-                    "label": "OpenAI",
-                    "base_url": "https://api.openai.com/v1",
-                    "allow_base_url_edit": false,
-                    "models_endpoint": null,
-                    "supports_structured_output": true
-                }
-            ],
-            "post_process_api_keys": { "openai": "" },
-            "post_process_models": { "openai": "gpt-4o-mini" },
-            "post_process_prompts": [
-                { "id": "default", "name": "Default", "prompt": "Clean up the transcript." }
-            ],
-            "post_process_selected_prompt_id": null,
-            "mute_while_recording": false,
-            "append_trailing_space": false,
-            "app_language": "en",
-            "experimental_enabled": false,
-            "lazy_stream_close": false,
-            "keyboard_implementation": "handy_keys",
-            "show_tray_icon": true,
-            "paste_delay_ms": 60,
-            "typing_tool": "auto",
-            "external_script_path": null,
-            "custom_filler_words": null,
-            "transcribe_accelerator": "gpu",
-            "ort_accelerator": "auto",
-            "transcribe_gpu_device": 0,
-            "extra_recording_buffer_ms": 0,
-            "vad_enabled": true,
-            "overlay_style": "live"
-        }"##,
-        )
-        .expect("fixture is valid JSON");
-
-        let mut settings: AppSettings = serde_json::from_value(stored.clone())
-            .expect("a stored v0.9.0 settings object must keep parsing strictly");
-
-        assert_eq!(settings.selected_model, "whisper-large-v3-turbo");
-        assert_eq!(settings.bindings["transcribe"].current_binding, "f13");
-        assert_eq!(settings.log_level, LogLevel::Debug);
-        assert_eq!(settings.sound_theme, SoundTheme::Pop);
-        assert!(settings.filler_word_removal_enabled);
-        assert_eq!(settings.vad_backend, VadBackend::Silero);
-
-        // The 0.1 integer device index is cleared once for transcribe.cpp 0.2.
-        // Without an exact device, the retired generic GPU choice becomes Auto.
-        assert!(apply_settings_migrations(&mut settings, &stored));
-        assert_eq!(
-            settings.settings_schema_version,
-            CURRENT_SETTINGS_SCHEMA_VERSION
-        );
-        assert_eq!(
-            settings.transcribe_accelerator,
-            TranscribeAcceleratorSetting::Auto
-        );
-        // The retired push_to_talk bool (false in this fixture) becomes the
-        // matching legacy mode rather than the new hold-or-toggle default.
-        assert_eq!(settings.shortcut_activation, ShortcutActivation::Toggle);
-        assert_eq!(settings.transcribe_gpu_device, None);
     }
 
     #[test]
@@ -1410,7 +1112,7 @@ mod tests {
         // An enum variant this build doesn't know, e.g. written by a newer
         // version before a downgrade.
         map.insert("sound_theme".into(), serde_json::json!("theremin"));
-        stored["bindings"]["transcribe"]["current_binding"] = serde_json::json!("f13");
+        stored["bindings"]["cancel"]["current_binding"] = serde_json::json!("f13");
 
         // Precondition: this is exactly the whole-store parse failure from
         // #1619 that used to reset everything to defaults.
@@ -1419,7 +1121,7 @@ mod tests {
         let salvaged = salvage_settings(&stored);
         assert_eq!(salvaged.selected_model, "parakeet-tdt-0.6b-v3");
         assert!(salvaged.onboarding_completed);
-        assert_eq!(salvaged.bindings["transcribe"].current_binding, "f13");
+        assert_eq!(salvaged.bindings["cancel"].current_binding, "f13");
         assert_eq!(salvaged.sound_theme, default_sound_theme());
     }
 
@@ -1447,7 +1149,7 @@ mod tests {
         // take the rest of the settings down with it.
         map.insert(
             "bindings".into(),
-            serde_json::json!({ "transcribe": { "id": 42 } }),
+            serde_json::json!({ "cancel": { "id": 42 } }),
         );
         map.insert("selected_model".into(), serde_json::json!("whisper-small"));
 
@@ -1457,8 +1159,8 @@ mod tests {
         assert_eq!(salvaged.selected_model, "whisper-small");
         let defaults = get_default_settings();
         assert_eq!(
-            salvaged.bindings["transcribe"].current_binding,
-            defaults.bindings["transcribe"].current_binding
+            salvaged.bindings["cancel"].current_binding,
+            defaults.bindings["cancel"].current_binding
         );
     }
 
@@ -1493,15 +1195,73 @@ mod tests {
         }
     }
 
+    fn binding(id: &str, current: &str) -> ShortcutBinding {
+        ShortcutBinding {
+            id: id.to_string(),
+            name: id.to_string(),
+            description: String::new(),
+            default_binding: current.to_string(),
+            current_binding: current.to_string(),
+        }
+    }
+
+    fn current_bindings(bindings: &HashMap<String, ShortcutBinding>) -> Vec<(String, String)> {
+        let mut pairs: Vec<_> = bindings
+            .iter()
+            .map(|(id, b)| (id.clone(), b.current_binding.clone()))
+            .collect();
+        pairs.sort();
+        pairs
+    }
+
+    #[test]
+    fn binding_sync_drops_ids_not_in_defaults_and_keeps_customizations() {
+        let mut bindings = HashMap::from([
+            (
+                "transcribe".to_string(),
+                binding("transcribe", "option+space"),
+            ),
+            ("cancel".to_string(), binding("cancel", "f13")),
+        ]);
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+
+        assert!(!bindings.contains_key("transcribe"));
+        assert_eq!(bindings["cancel"].current_binding, "f13");
+        let mut ids: Vec<_> = bindings.keys().cloned().collect();
+        let mut default_ids: Vec<_> = get_default_settings().bindings.into_keys().collect();
+        ids.sort();
+        default_ids.sort();
+        assert_eq!(ids, default_ids);
+    }
+
+    #[test]
+    fn binding_sync_fills_an_empty_map_from_defaults() {
+        let mut bindings = HashMap::new();
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+        assert_eq!(
+            current_bindings(&bindings),
+            current_bindings(&get_default_settings().bindings)
+        );
+    }
+
+    #[test]
+    fn binding_sync_leaves_current_bindings_unchanged() {
+        let mut bindings = get_default_settings().bindings;
+
+        assert!(!sync_bindings_with_defaults(&mut bindings));
+        assert_eq!(
+            current_bindings(&bindings),
+            current_bindings(&get_default_settings().bindings)
+        );
+    }
+
     #[test]
     fn default_settings_disable_auto_submit() {
         let settings = get_default_settings();
         assert!(!settings.auto_submit);
         assert_eq!(settings.auto_submit_key, AutoSubmitKey::Enter);
-        assert_eq!(
-            settings.settings_schema_version,
-            CURRENT_SETTINGS_SCHEMA_VERSION
-        );
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -1509,20 +1269,6 @@ mod tests {
     fn default_overlay_style_is_live_when_overlay_defaults_on() {
         let settings = get_default_settings();
         assert_eq!(settings.overlay_style, OverlayStyle::Live);
-    }
-
-    #[test]
-    fn overlay_migration_keeps_disabled_overlay_off() {
-        let mut settings = get_default_settings();
-
-        // Legacy store: overlay was hidden via the retired position "none".
-        let raw = serde_json::json!({
-            "selected_model": "",
-            "overlay_position": "none"
-        });
-
-        assert!(apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(settings.overlay_style, OverlayStyle::None);
     }
 
     #[test]
@@ -1534,173 +1280,6 @@ mod tests {
             serde_json::from_value(raw.get("overlay_position").unwrap().clone())
                 .expect("legacy \"none\" should deserialize, not error");
         assert_eq!(position, OverlayPosition::Bottom);
-    }
-
-    #[test]
-    fn overlay_migration_promotes_enabled_overlay_to_live() {
-        let mut settings = get_default_settings();
-        settings.overlay_position = OverlayPosition::Top;
-        settings.overlay_style = OverlayStyle::Minimal;
-
-        let raw = serde_json::json!({
-            "selected_model": "",
-            "overlay_position": "top"
-        });
-
-        assert!(apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(settings.overlay_style, OverlayStyle::Live);
-        assert_eq!(settings.overlay_position, OverlayPosition::Top);
-    }
-
-    #[test]
-    fn chinese_script_migration_only_carries_over_legacy_intents() {
-        for (intent, language, script) in [
-            ("zh-Hans", "zh", ChineseScript::Simplified),
-            ("zh-Hant", "zh", ChineseScript::Traditional),
-            ("auto", "auto", ChineseScript::AsTranscribed),
-        ] {
-            let mut settings = get_default_settings();
-            settings.selected_language = intent.to_string();
-            settings.chinese_script = ChineseScript::Traditional;
-            let raw = serde_json::json!({ "selected_language": intent });
-
-            assert!(apply_settings_migrations(&mut settings, &raw));
-            assert_eq!(settings.selected_language, language);
-            assert_eq!(settings.chinese_script, script);
-        }
-    }
-
-    #[test]
-    fn shortcut_activation_migration_maps_push_to_talk_true() {
-        let mut settings = get_default_settings();
-        let raw = serde_json::json!({
-            "selected_model": "",
-            "push_to_talk": true
-        });
-
-        assert!(apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(settings.shortcut_activation, ShortcutActivation::PushToTalk);
-    }
-
-    #[test]
-    fn shortcut_activation_migration_maps_push_to_talk_false() {
-        let mut settings = get_default_settings();
-        let raw = serde_json::json!({
-            "selected_model": "",
-            "push_to_talk": false
-        });
-
-        assert!(apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(settings.shortcut_activation, ShortcutActivation::Toggle);
-    }
-
-    #[test]
-    fn shortcut_activation_migration_respects_explicit_new_key() {
-        let mut settings = get_default_settings();
-        settings.shortcut_activation = ShortcutActivation::HoldOrToggle;
-        let raw = serde_json::json!({
-            "selected_model": "",
-            "push_to_talk": true,
-            "shortcut_activation": "hold_or_toggle"
-        });
-
-        apply_settings_migrations(&mut settings, &raw);
-        assert_eq!(
-            settings.shortcut_activation,
-            ShortcutActivation::HoldOrToggle
-        );
-    }
-
-    #[test]
-    fn shortcut_activation_defaults_to_hold_or_toggle_without_legacy_key() {
-        let mut settings = get_default_settings();
-        let raw = serde_json::json!({ "selected_model": "" });
-
-        apply_settings_migrations(&mut settings, &raw);
-        assert_eq!(
-            settings.shortcut_activation,
-            ShortcutActivation::HoldOrToggle
-        );
-    }
-
-    #[test]
-    fn gpu_device_migration_resets_legacy_positive_selection_to_auto() {
-        let mut settings = get_default_settings();
-        settings.transcribe_accelerator = TranscribeAcceleratorSetting::Gpu;
-
-        let raw = serde_json::json!({
-            "transcribe_accelerator": "gpu",
-            "transcribe_gpu_device": 2
-        });
-
-        assert!(apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(
-            settings.transcribe_accelerator,
-            TranscribeAcceleratorSetting::Auto
-        );
-        assert_eq!(settings.transcribe_gpu_device, None);
-        assert_eq!(
-            settings.settings_schema_version,
-            CURRENT_SETTINGS_SCHEMA_VERSION
-        );
-    }
-
-    #[test]
-    fn gpu_device_migration_maps_v1_automatic_gpu_to_auto() {
-        let raw = serde_json::json!({
-            "settings_schema_version": 1,
-            "transcribe_accelerator": "gpu",
-            "transcribe_gpu_device": 2
-        });
-        let mut settings: AppSettings = serde_json::from_value(raw.clone()).unwrap();
-
-        assert!(apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(
-            settings.transcribe_accelerator,
-            TranscribeAcceleratorSetting::Auto
-        );
-        assert_eq!(settings.transcribe_gpu_device, None);
-    }
-
-    #[test]
-    fn gpu_device_migration_maps_current_automatic_gpu_to_auto() {
-        let raw = serde_json::json!({
-            "settings_schema_version": CURRENT_SETTINGS_SCHEMA_VERSION,
-            "onboarding_completed": false,
-            "overlay_style": "live",
-            "transcribe_accelerator": "gpu",
-            "transcribe_gpu_device": null
-        });
-        let mut settings: AppSettings = serde_json::from_value(raw.clone()).unwrap();
-
-        assert!(apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(
-            settings.transcribe_accelerator,
-            TranscribeAcceleratorSetting::Auto
-        );
-        assert_eq!(settings.transcribe_gpu_device, None);
-    }
-
-    #[test]
-    fn gpu_device_migration_keeps_current_stable_selection() {
-        let mut settings = get_default_settings();
-        settings.transcribe_accelerator = TranscribeAcceleratorSetting::Gpu;
-        settings.transcribe_gpu_device = Some("[\"vulkan\",\"id\",\"0000:01:00.0\"]".into());
-
-        let raw = serde_json::json!({
-            "settings_schema_version": CURRENT_SETTINGS_SCHEMA_VERSION,
-            "onboarding_completed": false,
-            "overlay_style": "live",
-            "chinese_script": "as_transcribed",
-            "transcribe_accelerator": "gpu",
-            "transcribe_gpu_device": settings.transcribe_gpu_device
-        });
-
-        assert!(!apply_settings_migrations(&mut settings, &raw));
-        assert_eq!(
-            settings.transcribe_gpu_device.as_deref(),
-            Some("[\"vulkan\",\"id\",\"0000:01:00.0\"]")
-        );
     }
 
     #[test]

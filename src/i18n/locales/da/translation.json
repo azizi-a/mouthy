@@ -167,17 +167,9 @@
         "notFound": "Genvej ikke fundet",
         "pressKeys": "Tryk på ønskede taster...",
         "bindings": {
-          "transcribe": {
-            "name": "Transskriptionsgenvej",
-            "description": "Tastaturgenvejen til at optage og transskribere din stemme."
-          },
           "cancel": {
             "name": "Annulleringsgenvej",
             "description": "Tastaturgenvejen til at annullere den aktuelle optagelse."
-          },
-          "transcribe_with_post_process": {
-            "name": "Genvej til efterbehandling",
-            "description": "Valgfrit: En dedikeret genvej, der altid anvender AI-efterbehandling på din transskription."
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "Søg efter sprog...",
         "noResults": "Ingen sprog fundet",
         "auto": "Automatisk"
-      },
-      "shortcutActivation": {
-        "title": "Genvejens adfærd",
-        "description": "Vælg, hvordan transskriptionsgenvejen starter og stopper optagelsen.",
-        "options": {
-          "holdOrToggle": "Automatisk",
-          "pushToTalk": "Hold",
-          "toggle": "Skift"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Hold nede for at optage, eller tryk kort for at slå til/fra",
-          "push_to_talk": "Optager, mens du holder genvejen nede",
-          "toggle": "Tryk på genvejen for at starte optagelsen, tryk igen for at stoppe"
-        }
       }
     },
     "models": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Genvejstast"
-      },
       "api": {
         "title": "API (OpenAI-kompatibel)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Fjern fra gemte",
       "delete": "Slet post",
       "deleteError": "Kunne ikke slette posten. Prøv igen.",
-      "retranscribe": "Transskribér igen",
-      "retranscribeError": "Kunne ikke transskribere igen. Prøv igen.",
-      "transcribing": "Transskriberer...",
       "transcriptionFailed": "Transskription mislykkedes. Du kan transskribere igen ved hjælp af genforsøgsikonet."
     },
     "debug": {
@@ -567,10 +539,6 @@
         "title": "Forsinkelse af indsættelse (efter)",
         "description": "Forsinkelse (i millisekunder) efter tastetrykket for indsætning, før din tidligere udklipsholder gendannes. Øg, hvis dit gamle udklipsholderindhold bliver indsat i stedet for transskriptionen."
       },
-      "holdThreshold": {
-        "title": "Holdetærskel",
-        "description": "Kun i automatisk tilstand: hvor længe (i millisekunder) genvejen skal holdes nede, før det tæller som et hold i stedet for et tryk. Sænk værdien, hvis korte hold lader optagelsen køre videre; hæv den, hvis bevidste tryk behandles som hold."
-      },
       "reliablePaste": {
         "title": "Pålidelig indsættelse (Beta)",
         "description": "Gendan først din udklipsholder, når målappen faktisk har læst transskriptionen, i stedet for efter en fast forsinkelse. Skal afhjælpe, at gammelt udklipsholderindhold indsættes, når systemet er belastet. Kræver en indsætningsmetode via udklipsholderen; kun macOS og Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Fejl ved indlæsning af mappe: {{error}}",
-    "micPermissionDeniedTitle": "Mikrofonadgang nægtet",
-    "micPermissionDenied": {
-      "generic": "Mikrofonadgang blev nægtet af operativsystemet. Giv venligst mikrofontilladelse i dine systemindstillinger.",
-      "windows": "Aktivér mikrofonadgang under Indstillinger → Privatliv og sikkerhed → Mikrofon (inklusive adgang for skrivebordsapps).",
-      "macos": "Giv mikrofonadgang under Systemindstillinger → Privatliv og sikkerhed → Mikrofon.",
-      "linux": "Giv mikrofonadgang i dit systems lyd- eller privatlivsindstillinger."
-    },
-    "noInputDeviceTitle": "Ingen mikrofon fundet",
-    "noInputDevice": "Ingen lydinputenhed blev registreret. Tilslut en mikrofon eller et headset, og prøv igen.",
-    "recordingFailed": "Kunne ikke starte optagelse: {{error}}",
     "modelLoadFailed": "Kunne ikke indlæse model: {{model}}",
-    "modelLoadFailedUnknown": "ukendt model",
-    "pasteFailedTitle": "Kunne ikke indsætte tekst",
-    "pasteFailed": "Teksten kunne ikke indsættes i det aktive program.",
-    "transcriptionFailedTitle": "Transskription mislykkedes"
+    "modelLoadFailedUnknown": "ukendt model"
   },
   "appLanguage": {
     "title": "Applikationssprog",

@@ -167,17 +167,9 @@
         "notFound": "Atalho não encontrado",
         "pressKeys": "Pressione as teclas...",
         "bindings": {
-          "transcribe": {
-            "name": "Atalho de Transcrição",
-            "description": "O atalho de teclado para gravar e transcrever sua voz."
-          },
           "cancel": {
             "name": "Atalho de Cancelar",
             "description": "O atalho de teclado para cancelar a gravação atual."
-          },
-          "transcribe_with_post_process": {
-            "name": "Tecla de Pós-Processamento",
-            "description": "Opcional: Uma tecla de atalho dedicada que sempre aplica pós-processamento com IA à sua transcrição."
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "Buscar idiomas...",
         "noResults": "Nenhum idioma encontrado",
         "auto": "Automático"
-      },
-      "shortcutActivation": {
-        "title": "Comportamento do atalho",
-        "description": "Escolha como o atalho de transcrição inicia e para a gravação.",
-        "options": {
-          "holdOrToggle": "Automático",
-          "pushToTalk": "Segurar",
-          "toggle": "Alternar"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Segure para gravar ou toque para alternar",
-          "push_to_talk": "Grava enquanto você mantém o atalho pressionado",
-          "toggle": "Toque no atalho para começar a gravar, toque novamente para parar"
-        }
       }
     },
     "models": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Tecla de atalho"
-      },
       "api": {
         "title": "API (Compatível com OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Remover dos salvos",
       "delete": "Excluir entrada",
       "deleteError": "Falha ao excluir entrada. Por favor, tente novamente.",
-      "retranscribe": "Re-transcrever",
-      "retranscribeError": "Falha ao re-transcrever. Por favor, tente novamente.",
-      "transcribing": "Transcrevendo...",
       "transcriptionFailed": "A transcrição falhou. Você pode re-transcrever usando o ícone de tentar novamente."
     },
     "debug": {
@@ -560,10 +532,6 @@
         "title": "Atraso de colagem (depois)",
         "description": "Atraso (em milissegundos) após a tecla de colar, antes de restaurar a área de transferência anterior. Aumente se o conteúdo antigo da área de transferência estiver sendo colado em vez da transcrição."
       },
-      "holdThreshold": {
-        "title": "Limite de tempo de pressão",
-        "description": "Apenas no modo Automático: por quanto tempo (em milissegundos) o atalho precisa ficar pressionado para contar como segurar em vez de um toque. Diminua se a gravação continuar ativa após pressões curtas; aumente se toques intencionais forem tratados como segurar."
-      },
       "reliablePaste": {
         "title": "Colagem confiável (Beta)",
         "description": "Restaura a área de transferência somente depois que o aplicativo de destino realmente lê a transcrição, em vez de após um atraso fixo. Serve para corrigir a colagem do conteúdo antigo da área de transferência quando o sistema está sobrecarregado. Requer um método de colar via área de transferência; apenas macOS e Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Erro ao carregar diretório: {{error}}",
-    "micPermissionDeniedTitle": "Acesso ao microfone negado",
-    "micPermissionDenied": {
-      "generic": "O acesso ao microfone foi negado pelo sistema operacional. Conceda a permissão do microfone nas configurações do sistema.",
-      "windows": "Ative o acesso ao microfone em Configurações → Privacidade e segurança → Microfone (incluindo acesso de aplicativos da área de trabalho).",
-      "macos": "Conceda o acesso ao microfone em Ajustes do Sistema → Privacidade e Segurança → Microfone.",
-      "linux": "Conceda o acesso ao microfone nas configurações de som ou privacidade do seu sistema."
-    },
-    "noInputDeviceTitle": "Nenhum microfone encontrado",
-    "noInputDevice": "Nenhum dispositivo de entrada de áudio foi detectado. Conecte um microfone ou fone de ouvido e tente novamente.",
-    "recordingFailed": "Falha ao iniciar a gravação: {{error}}",
     "modelLoadFailed": "Falha ao carregar o modelo: {{model}}",
-    "modelLoadFailedUnknown": "modelo desconhecido",
-    "pasteFailedTitle": "Falha ao colar o texto",
-    "pasteFailed": "Não foi possível colar o texto no aplicativo ativo.",
-    "transcriptionFailedTitle": "Falha na transcrição"
+    "modelLoadFailedUnknown": "modelo desconhecido"
   },
   "appLanguage": {
     "title": "Idioma da Aplicação",

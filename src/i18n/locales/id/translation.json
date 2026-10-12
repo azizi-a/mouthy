@@ -167,17 +167,9 @@
         "notFound": "Pintasan tidak ditemukan",
         "pressKeys": "Tekan tombol...",
         "bindings": {
-          "transcribe": {
-            "name": "Pintasan Transkripsi",
-            "description": "Pintasan keyboard untuk merekam dan mentranskripsikan suara Anda."
-          },
           "cancel": {
             "name": "Pintasan Batal",
             "description": "Pintasan keyboard untuk membatalkan perekaman saat ini."
-          },
-          "transcribe_with_post_process": {
-            "name": "Pintasan Pascaproses",
-            "description": "Opsional: pintasan khusus yang selalu menerapkan pascaproses AI pada transkripsi Anda."
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "Cari bahasa...",
         "noResults": "Bahasa tidak ditemukan",
         "auto": "Otomatis"
-      },
-      "shortcutActivation": {
-        "title": "Perilaku Pintasan",
-        "description": "Pilih cara pintasan transkripsi memulai dan menghentikan perekaman.",
-        "options": {
-          "holdOrToggle": "Otomatis",
-          "pushToTalk": "Tahan",
-          "toggle": "Tekan"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Tahan untuk merekam atau tekan untuk mulai/berhenti",
-          "push_to_talk": "Merekam selama Anda menahan pintasan",
-          "toggle": "Ketuk pintasan untuk mulai merekam, lalu ketuk lagi untuk berhenti"
-        }
       }
     },
     "models": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Pintasan"
-      },
       "api": {
         "title": "API (Kompatibel dengan OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Hapus dari daftar tersimpan",
       "delete": "Hapus entri",
       "deleteError": "Gagal menghapus entri. Silakan coba lagi.",
-      "retranscribe": "Transkripsikan ulang",
-      "retranscribeError": "Gagal mentranskripsikan ulang. Silakan coba lagi.",
-      "transcribing": "Mentranskripsikan...",
       "transcriptionFailed": "Transkripsi gagal. Anda dapat mentranskripsikan ulang menggunakan ikon coba lagi."
     },
     "debug": {
@@ -567,10 +539,6 @@
         "title": "Jeda Tempel (Sesudah)",
         "description": "Jeda (dalam milidetik) setelah perintah tempel dikirim sebelum mengembalikan isi papan klip sebelumnya. Tingkatkan jika isi papan klip lama yang ditempel alih-alih transkripsi."
       },
-      "holdThreshold": {
-        "title": "Ambang Waktu Tahan",
-        "description": "Hanya mode Otomatis: berapa lama (dalam milidetik) pintasan harus ditahan agar dianggap ditahan, bukan ditekan singkat. Turunkan jika penahanan singkat membuat perekaman tetap aktif; naikkan jika ketukan yang disengaja dianggap sebagai penahanan."
-      },
       "reliablePaste": {
         "title": "Tempel Lebih Andal (Beta)",
         "description": "Kembalikan papan klip hanya setelah aplikasi target benar-benar membaca transkripsi, bukan setelah jeda tetap. Ditujukan untuk memperbaiki kasus isi papan klip lama yang tertempel saat sistem sedang terbebani. Memerlukan metode tempel papan klip; hanya macOS dan Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Kesalahan saat memuat direktori: {{error}}",
-    "micPermissionDeniedTitle": "Akses Mikrofon Ditolak",
-    "micPermissionDenied": {
-      "generic": "Akses mikrofon ditolak oleh sistem operasi. Berikan izin mikrofon di pengaturan sistem Anda.",
-      "windows": "Aktifkan akses mikrofon di Settings → Privacy & security → Microphone (termasuk akses aplikasi desktop).",
-      "macos": "Berikan akses mikrofon di System Settings → Privacy & Security → Microphone.",
-      "linux": "Berikan akses mikrofon di pengaturan suara atau privasi sistem Anda."
-    },
-    "noInputDeviceTitle": "Mikrofon Tidak Ditemukan",
-    "noInputDevice": "Tidak ada perangkat masukan audio yang terdeteksi. Hubungkan mikrofon atau headset lalu coba lagi.",
-    "recordingFailed": "Gagal memulai perekaman: {{error}}",
     "modelLoadFailed": "Gagal memuat model: {{model}}",
-    "modelLoadFailedUnknown": "model tidak dikenal",
-    "pasteFailedTitle": "Gagal Menempelkan Teks",
-    "pasteFailed": "Teks tidak dapat ditempelkan ke aplikasi aktif.",
-    "transcriptionFailedTitle": "Transkripsi Gagal"
+    "modelLoadFailedUnknown": "model tidak dikenal"
   },
   "appLanguage": {
     "title": "Bahasa Aplikasi",

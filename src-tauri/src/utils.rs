@@ -1,14 +1,8 @@
-use crate::managers::audio::AudioRecordingManager;
-use crate::managers::transcription::TranscriptionManager;
-use crate::shortcut;
-use crate::TranscriptionCoordinator;
 use log::info;
-use std::sync::Arc;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 // Re-export all utility modules for easy access
 // pub use crate::audio_feedback::*;
-pub use crate::clipboard::*;
 pub use crate::overlay::*;
 pub use crate::tray::*;
 
@@ -82,37 +76,12 @@ fn native_windows_machine() -> Option<u16> {
 }
 
 /// Centralized cancellation function that can be called from anywhere in the app.
-/// Handles cancelling both recording and transcription operations and updates UI state.
+/// Returns the UI to idle: hides the overlay and resets the tray icon.
 pub fn cancel_current_operation(app: &AppHandle) {
     info!("Initiating operation cancellation...");
 
-    // Unregister the cancel shortcut asynchronously
-    shortcut::unregister_cancel_shortcut(app);
-
-    // Cancel any ongoing recording
-    let audio_manager = app.state::<Arc<AudioRecordingManager>>();
-    let recording_was_active = audio_manager.is_recording();
-    audio_manager.cancel_recording();
-
-    // Abandon any live streaming transcription, and stop a transcription
-    // already in progress
-    let tm = app.state::<Arc<TranscriptionManager>>();
-    tm.cancel_stream();
-    tm.cancel_transcription();
-
-    // Update tray icon and hide overlay
     set_tray_state(app, crate::tray::TrayIconState::Idle);
     hide_recording_overlay(app);
-
-    // Unload model if immediate unload is enabled. Done before notifying the
-    // coordinator, so a recording started next always loads afresh; it
-    // doesn't wait for the cancelled work, so it never blocks this thread.
-    tm.maybe_unload_immediately("cancellation");
-
-    // Notify coordinator so it can keep lifecycle state coherent.
-    if let Some(coordinator) = app.try_state::<TranscriptionCoordinator>() {
-        coordinator.notify_cancel(recording_was_active);
-    }
 
     info!("Operation cancellation completed - returned to idle state");
 }

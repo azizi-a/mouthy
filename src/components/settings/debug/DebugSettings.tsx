@@ -4,7 +4,6 @@ import { WordCorrectionThreshold } from "./WordCorrectionThreshold";
 import { LogLevelSelector } from "./LogLevelSelector";
 import { LiveLogViewer } from "./LiveLogViewer";
 import { PasteDelay } from "./PasteDelay";
-import { HoldThreshold } from "./HoldThreshold";
 import { ReliablePasteToggle } from "./ReliablePaste";
 import { RecordingBuffer } from "./RecordingBuffer";
 import { SettingsGroup } from "../../ui/SettingsGroup";
@@ -51,7 +50,6 @@ export const DebugSettings: React.FC<DebugSettingsProps> = ({
           descriptionKey="settings.debug.pasteDelayAfter.description"
         />
         <ReliablePasteToggle descriptionMode="tooltip" grouped={true} />
-        <HoldThreshold descriptionMode="tooltip" grouped={true} />
         <RecordingBuffer descriptionMode="tooltip" grouped={true} />
         <AlwaysOnMicrophone descriptionMode="tooltip" grouped={true} />
         <ClamshellMicrophoneSelector descriptionMode="tooltip" grouped={true} />

@@ -21,22 +21,6 @@ async resetBinding(id: string) : Promise<Result<BindingResponse, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async changeShortcutActivationSetting(activation: ShortcutActivation) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_shortcut_activation_setting", { activation }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async changeHoldThresholdMsSetting(ms: number) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_hold_threshold_ms_setting", { ms }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async changeAudioFeedbackSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_audio_feedback_setting", { enabled }) };
@@ -856,14 +840,6 @@ async deleteHistoryEntry(id: number) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async retryHistoryEntryTranscription(id: number) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("retry_history_entry_transcription", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async updateHistoryLimit(limit: number) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("update_history_limit", { limit }) };
@@ -924,26 +900,11 @@ streamTextEvent: "stream-text-event"
  */
 export type AppSettings = { 
 /**
- * Internal settings schema marker for one-time migrations. Fresh installs
- * start at the current version; existing stores missing this key are
- * treated as version 0 and migrated forward.
+ * Defaults to empty on partial stores; the load path syncs the ids with
+ * the default bindings (see `sync_bindings_with_defaults`) before the
+ * settings are used.
  */
-settings_schema_version?: number; 
-/**
- * Defaults to empty on partial stores; the load path merges in the
- * default bindings for any missing keys before the settings are used.
- */
-bindings?: Partial<{ [key in string]: ShortcutBinding }>; 
-/**
- * Replaces the pre-0.10 `push_to_talk` bool; stores missing this key are
- * migrated from it in `apply_settings_migrations`.
- */
-shortcut_activation?: ShortcutActivation; 
-/**
- * Hold-or-toggle only: a press held at least this long is push-to-talk,
- * anything shorter is a tap that locks recording on.
- */
-hold_threshold_ms?: number; audio_feedback?: boolean; audio_feedback_volume?: number; sound_theme?: SoundTheme; start_hidden?: boolean; autostart_enabled?: boolean; selected_model?: string; onboarding_completed?: boolean; always_on_microphone?: boolean; selected_microphone?: string | null; 
+bindings?: Partial<{ [key in string]: ShortcutBinding }>; audio_feedback?: boolean; audio_feedback_volume?: number; sound_theme?: SoundTheme; start_hidden?: boolean; autostart_enabled?: boolean; selected_model?: string; onboarding_completed?: boolean; always_on_microphone?: boolean; selected_microphone?: string | null; 
 /**
  * Which input channel to use on the selected microphone device.
  * None means "average all channels" (original behavior).
@@ -956,8 +917,7 @@ selected_channel?: number | null; clamshell_microphone?: string | null; selected
  */
 reliable_paste?: boolean; typing_tool?: TypingTool; external_script_path?: string | null; filler_word_removal_enabled?: boolean; custom_filler_words?: string[] | null; 
 /**
- * Fresh installs default from the OS locale; existing stores are migrated
- * in `apply_settings_migrations`.
+ * Defaults from the OS locale.
  */
 chinese_script?: ChineseScript; transcribe_accelerator?: TranscribeAcceleratorSetting; ort_accelerator?: OrtAcceleratorSetting; 
 /**
@@ -972,8 +932,7 @@ transcribe_gpu_device?: string | null; extra_recording_buffer_ms?: number; vad_e
 vad_backend?: VadBackend; 
 /**
  * Which recording overlay to show: None / Minimal / Live. Streaming mode is
- * not gated on this — that follows model capability. Migrated from the old
- * `overlay_position` (position `none` → style `None`).
+ * not gated on this — that follows model capability.
  */
 overlay_style?: OverlayStyle }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
@@ -1091,24 +1050,6 @@ uncovered_bindings: string[];
  * warning banner appears and explains why recording refused.
  */
 recorder_blocked: boolean }
-/**
- * How the transcribe shortcut's key events drive a recording.
- */
-export type ShortcutActivation = 
-/**
- * Press to start, press again to stop.
- */
-"toggle" | 
-/**
- * Hold to record, release to stop.
- */
-"push_to_talk" | 
-/**
- * Hold to record and release to stop, or tap to keep recording until the
- * next press. Which one it was is decided by how long the key was held
- * (`hold_threshold_ms`).
- */
-"hold_or_toggle"
 export type ShortcutBinding = { id: string; name: string; description: string; default_binding: string; current_binding: string }
 export type SoundTheme = "marimba" | "pop" | "custom"
 /**

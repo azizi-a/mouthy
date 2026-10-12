@@ -187,17 +187,9 @@
         "notFound": "Atajo no encontrado",
         "pressKeys": "Presiona teclas...",
         "bindings": {
-          "transcribe": {
-            "name": "Atajo de transcripción",
-            "description": "El atajo de teclado para grabar y transcribir tu voz."
-          },
           "cancel": {
             "name": "Atajo de cancelar",
             "description": "El atajo de teclado para cancelar la grabación actual."
-          },
-          "transcribe_with_post_process": {
-            "name": "Tecla de post procesamiento",
-            "description": "Opcional: Una tecla de acceso rápido dedicada que siempre aplica post procesamiento con IA a tu transcripción."
           }
         },
         "errors": {
@@ -212,20 +204,6 @@
         "searchPlaceholder": "Buscar idiomas...",
         "noResults": "No se encontraron idiomas",
         "auto": "Automático"
-      },
-      "shortcutActivation": {
-        "title": "Comportamiento del atajo",
-        "description": "Elige cómo inicia y detiene la grabación el atajo de transcripción.",
-        "options": {
-          "holdOrToggle": "Automático",
-          "pushToTalk": "Mantener",
-          "toggle": "Alternar"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Mantén pulsado para grabar o toca para alternar",
-          "push_to_talk": "Graba mientras mantienes pulsado el atajo",
-          "toggle": "Toca el atajo para empezar a grabar, tócalo de nuevo para detener"
-        }
       }
     },
     "sound": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Tecla de acceso rápido"
-      },
       "api": {
         "title": "API (compatible con OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Eliminar de guardados",
       "delete": "Eliminar entrada",
       "deleteError": "Error al eliminar la entrada. Por favor, intenta de nuevo.",
-      "retranscribe": "Re-transcribir",
-      "retranscribeError": "No se pudo re-transcribir. Por favor, inténtalo de nuevo.",
-      "transcribing": "Transcribiendo...",
       "transcriptionFailed": "La transcripción falló. Puedes re-transcribir usando el icono de reintentar."
     },
     "debug": {
@@ -560,10 +532,6 @@
         "title": "Retraso de pegado (después)",
         "description": "Retraso (en milisegundos) después de la pulsación de tecla de pegar, antes de restaurar el portapapeles anterior. Auméntelo si se pega el contenido antiguo del portapapeles en lugar de la transcripción."
       },
-      "holdThreshold": {
-        "title": "Umbral de pulsación",
-        "description": "Solo en el modo Automático: cuánto tiempo (en milisegundos) debe mantenerse pulsado el atajo para contar como mantener en lugar de un toque. Redúcelo si la grabación sigue activa tras pulsaciones cortas; auméntalo si los toques deliberados se interpretan como mantener."
-      },
       "reliablePaste": {
         "title": "Pegado fiable (Beta)",
         "description": "Restaura el portapapeles solo después de que la aplicación de destino lea realmente la transcripción, en lugar de tras un retraso fijo. Pensado para corregir que se pegue el contenido antiguo del portapapeles cuando el sistema está cargado. Requiere un método de pegado por portapapeles; solo macOS y Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Error al cargar el directorio: {{error}}",
-    "micPermissionDeniedTitle": "Acceso al micrófono denegado",
-    "micPermissionDenied": {
-      "generic": "El sistema operativo denegó el acceso al micrófono. Por favor, conceda el permiso del micrófono en la configuración del sistema.",
-      "windows": "Active el acceso al micrófono en Configuración → Privacidad y seguridad → Micrófono (incluido el acceso de aplicaciones de escritorio).",
-      "macos": "Conceda el acceso al micrófono en Ajustes del Sistema → Privacidad y seguridad → Micrófono.",
-      "linux": "Conceda el acceso al micrófono en la configuración de sonido o privacidad de su sistema."
-    },
-    "noInputDeviceTitle": "No se encontró micrófono",
-    "noInputDevice": "No se detectó ningún dispositivo de entrada de audio. Conecta un micrófono o auriculares e inténtalo de nuevo.",
-    "recordingFailed": "Error al iniciar la grabación: {{error}}",
     "modelLoadFailed": "Error al cargar el modelo: {{model}}",
-    "modelLoadFailedUnknown": "modelo desconocido",
-    "pasteFailedTitle": "Error al pegar el texto",
-    "pasteFailed": "No se pudo pegar el texto en la aplicación activa.",
-    "transcriptionFailedTitle": "Error de transcripción"
+    "modelLoadFailedUnknown": "modelo desconocido"
   },
   "appLanguage": {
     "title": "Idioma de la aplicación",

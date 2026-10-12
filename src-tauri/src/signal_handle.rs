@@ -1,8 +1,8 @@
-use crate::TranscriptionCoordinator;
+use crate::actions::ACTION_MAP;
 #[cfg(unix)]
 use log::debug;
 use log::warn;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 #[cfg(target_os = "macos")]
 use signal_hook::consts::SIGUSR1;
@@ -13,13 +13,12 @@ use signal_hook::iterator::Signals;
 #[cfg(unix)]
 use std::thread;
 
-/// Send a transcription input to the coordinator.
+/// Run a binding's action as a single press; external triggers have no release.
 /// Used by signal handlers, CLI flags, and any other external trigger.
-pub fn send_transcription_input(app: &AppHandle, binding_id: &str, source: &str) {
-    if let Some(c) = app.try_state::<TranscriptionCoordinator>() {
-        c.send_external_input(binding_id, source);
-    } else {
-        warn!("TranscriptionCoordinator not initialized");
+pub fn send_external_input(app: &AppHandle, binding_id: &str, source: &str) {
+    match ACTION_MAP.get(binding_id) {
+        Some(action) => action.start(app, binding_id, source),
+        None => warn!("No action in ACTION_MAP for '{binding_id}' (from {source})"),
     }
 }
 
@@ -52,7 +51,7 @@ pub fn setup_signal_handler(app_handle: AppHandle) {
                 _ => continue,
             };
             debug!("Received {signal_name}");
-            send_transcription_input(&app_handle, binding_id, signal_name);
+            send_external_input(&app_handle, binding_id, signal_name);
         }
     });
 }

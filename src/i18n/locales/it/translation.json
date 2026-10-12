@@ -187,17 +187,9 @@
         "notFound": "Scorciatoia non trovata",
         "pressKeys": "Premi i tasti...",
         "bindings": {
-          "transcribe": {
-            "name": "Scorciatoia Trascrizione",
-            "description": "La scorciatoia da tastiera per registrare e trascrivere la tua voce."
-          },
           "cancel": {
             "name": "Scorciatoia Annulla",
             "description": "La scorciatoia da tastiera per annullare la registrazione in corso."
-          },
-          "transcribe_with_post_process": {
-            "name": "Tasto di post-elaborazione",
-            "description": "Facoltativo: Un tasto di scelta rapida dedicato che applica sempre la post-elaborazione IA alla trascrizione."
           }
         },
         "errors": {
@@ -212,20 +204,6 @@
         "searchPlaceholder": "Cerca lingue...",
         "noResults": "Nessuna lingua trovata",
         "auto": "Automatico"
-      },
-      "shortcutActivation": {
-        "title": "Comportamento della scorciatoia",
-        "description": "Scegli come la scorciatoia di trascrizione avvia e interrompe la registrazione.",
-        "options": {
-          "holdOrToggle": "Automatico",
-          "pushToTalk": "Tieni premuto",
-          "toggle": "Alterna"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Tieni premuto per registrare o tocca per alternare",
-          "push_to_talk": "Registra finché tieni premuta la scorciatoia",
-          "toggle": "Tocca la scorciatoia per avviare la registrazione, tocca di nuovo per fermarla"
-        }
       }
     },
     "sound": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Tasto di scelta rapida"
-      },
       "api": {
         "title": "API (Compatibile con OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Rimuovi dai salvataggi",
       "delete": "Elimina elemento",
       "deleteError": "Errore nell'eliminazione dell'elemento. Riprova.",
-      "retranscribe": "Ri-trascrivere",
-      "retranscribeError": "Impossibile ri-trascrivere. Riprova.",
-      "transcribing": "Trascrizione in corso...",
       "transcriptionFailed": "Trascrizione fallita. Puoi ri-trascrivere usando l'icona di ripetizione."
     },
     "debug": {
@@ -560,10 +532,6 @@
         "title": "Ritardo incolla (dopo)",
         "description": "Ritardo (in millisecondi) dopo il tasto incolla, prima di ripristinare gli appunti precedenti. Aumentare se viene incollato il vecchio contenuto degli appunti invece della trascrizione."
       },
-      "holdThreshold": {
-        "title": "Soglia di pressione prolungata",
-        "description": "Solo in modalità Automatico: per quanto tempo (in millisecondi) la scorciatoia deve restare premuta per contare come pressione prolungata invece di un tocco. Riduci se la registrazione resta attiva dopo pressioni brevi; aumenta se i tocchi intenzionali vengono interpretati come pressioni prolungate."
-      },
       "reliablePaste": {
         "title": "Incolla affidabile (Beta)",
         "description": "Ripristina gli appunti solo dopo che l'app di destinazione ha effettivamente letto la trascrizione, anziché dopo un ritardo fisso. Serve a risolvere l'incollaggio del vecchio contenuto degli appunti quando il sistema è sotto carico. Richiede un metodo di incollaggio tramite appunti; solo macOS e Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Errore di caricamento cartella: {{error}}",
-    "micPermissionDeniedTitle": "Accesso al microfono negato",
-    "micPermissionDenied": {
-      "generic": "L'accesso al microfono è stato negato dal sistema operativo. Concedi l'autorizzazione al microfono nelle impostazioni di sistema.",
-      "windows": "Abilita l'accesso al microfono in Impostazioni → Privacy e sicurezza → Microfono (incluso l'accesso delle app desktop).",
-      "macos": "Concedi l'accesso al microfono in Impostazioni di Sistema → Privacy e sicurezza → Microfono.",
-      "linux": "Concedi l'accesso al microfono nelle impostazioni audio o sulla privacy del tuo sistema."
-    },
-    "noInputDeviceTitle": "Nessun microfono trovato",
-    "noInputDevice": "Non è stato rilevato alcun dispositivo di ingresso audio. Collega un microfono o delle cuffie e riprova.",
-    "recordingFailed": "Impossibile avviare la registrazione: {{error}}",
     "modelLoadFailed": "Impossibile caricare il modello: {{model}}",
-    "modelLoadFailedUnknown": "modello sconosciuto",
-    "pasteFailedTitle": "Impossibile incollare il testo",
-    "pasteFailed": "Non è stato possibile incollare il testo nell'applicazione attiva.",
-    "transcriptionFailedTitle": "Trascrizione non riuscita"
+    "modelLoadFailedUnknown": "modello sconosciuto"
   },
   "appLanguage": {
     "title": "Lingua Applicazione",

@@ -167,17 +167,9 @@
         "notFound": "未找到快捷鍵",
         "pressKeys": "請按鍵...",
         "bindings": {
-          "transcribe": {
-            "name": "轉錄快捷鍵",
-            "description": "用於錄製和轉錄語音的鍵盤快捷鍵"
-          },
           "cancel": {
             "name": "取消快捷鍵",
             "description": "用於取消目前錄製的鍵盤快捷鍵"
-          },
-          "transcribe_with_post_process": {
-            "name": "後處理快捷鍵",
-            "description": "可選：專用快捷鍵，使用時一律對轉錄結果套用 AI 後處理"
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "搜尋語言...",
         "noResults": "未找到語言",
         "auto": "自動"
-      },
-      "shortcutActivation": {
-        "title": "快捷鍵行為",
-        "description": "選擇轉錄快捷鍵開始和停止錄音的方式。",
-        "options": {
-          "holdOrToggle": "自動",
-          "pushToTalk": "按住",
-          "toggle": "切換"
-        },
-        "descriptions": {
-          "hold_or_toggle": "按住錄音，或輕按切換",
-          "push_to_talk": "按住快捷鍵期間錄音",
-          "toggle": "輕按快捷鍵開始錄音，再次輕按停止"
-        }
       }
     },
     "models": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "快捷鍵"
-      },
       "api": {
         "title": "API（相容 OpenAI）",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "從已儲存中移除",
       "delete": "刪除條目",
       "deleteError": "刪除條目失敗，請重試",
-      "retranscribe": "重新轉錄",
-      "retranscribeError": "重新轉錄失敗，請重試。",
-      "transcribing": "轉錄中...",
       "transcriptionFailed": "轉錄失敗。您可以使用重試圖示重新轉錄。"
     },
     "debug": {
@@ -560,10 +532,6 @@
         "title": "貼上延遲（後）",
         "description": "發送貼上按鍵後、還原先前剪貼簿前的延遲（毫秒）。如果貼上的是舊的剪貼簿內容而非轉錄文字，請增加此值。"
       },
-      "holdThreshold": {
-        "title": "長按判定時長",
-        "description": "僅適用於「自動」模式：快捷鍵需要按住多久（毫秒）才算作按住而不是輕按。如果短暫按住後錄音仍持續，請調低；如果刻意的輕按被視為按住，請調高。"
-      },
       "reliablePaste": {
         "title": "可靠貼上（Beta）",
         "description": "在目標應用程式真正讀取轉錄文字之後才還原剪貼簿，而不是等待固定延遲。用於解決系統負載較高時貼上舊剪貼簿內容的問題。需要使用剪貼簿類的貼上方式；僅支援 macOS 與 Windows。"
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "載入目錄時發生錯誤: {{error}}",
-    "micPermissionDeniedTitle": "麥克風存取被拒絕",
-    "micPermissionDenied": {
-      "generic": "作業系統拒絕了麥克風存取。請在系統設定中授予麥克風權限。",
-      "windows": "在設定 → 隱私與安全性 → 麥克風（包括桌面應用程式存取）中啟用麥克風存取。",
-      "macos": "在系統設定 → 隱私與安全性 → 麥克風中授予麥克風存取權限。",
-      "linux": "在系統的聲音或隱私設定中授予麥克風存取權限。"
-    },
-    "noInputDeviceTitle": "找不到麥克風",
-    "noInputDevice": "未偵測到音訊輸入裝置。請連接麥克風或耳機後重試。",
-    "recordingFailed": "錄音啟動失敗: {{error}}",
     "modelLoadFailed": "載入模型失敗: {{model}}",
-    "modelLoadFailedUnknown": "未知模型",
-    "pasteFailedTitle": "貼上文字失敗",
-    "pasteFailed": "無法將文字貼上至目前作用中的應用程式。",
-    "transcriptionFailedTitle": "轉錄失敗"
+    "modelLoadFailedUnknown": "未知模型"
   },
   "appLanguage": {
     "title": "應用程式語言",

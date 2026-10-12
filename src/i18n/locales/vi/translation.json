@@ -187,17 +187,9 @@
         "notFound": "Không tìm thấy phím tắt",
         "pressKeys": "Nhấn phím...",
         "bindings": {
-          "transcribe": {
-            "name": "Phím tắt chuyển đổi",
-            "description": "Phím tắt để ghi âm và chuyển đổi giọng nói của bạn."
-          },
           "cancel": {
             "name": "Phím tắt hủy",
             "description": "Phím tắt để hủy bản ghi hiện tại."
-          },
-          "transcribe_with_post_process": {
-            "name": "Phím tắt xử lý sau",
-            "description": "Tùy chọn: Phím tắt chuyên dụng luôn áp dụng xử lý sau bằng AI cho bản chuyển đổi của bạn."
           }
         },
         "errors": {
@@ -212,20 +204,6 @@
         "searchPlaceholder": "Tìm kiếm ngôn ngữ...",
         "noResults": "Không tìm thấy ngôn ngữ",
         "auto": "Tự động"
-      },
-      "shortcutActivation": {
-        "title": "Hành vi phím tắt",
-        "description": "Chọn cách phím tắt chuyển đổi bắt đầu và dừng ghi âm.",
-        "options": {
-          "holdOrToggle": "Tự động",
-          "pushToTalk": "Giữ",
-          "toggle": "Bật/tắt"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Giữ để ghi âm hoặc nhấn nhanh để bật/tắt",
-          "push_to_talk": "Ghi âm trong lúc bạn giữ phím tắt",
-          "toggle": "Nhấn phím tắt để bắt đầu ghi âm, nhấn lại để dừng"
-        }
       }
     },
     "sound": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Phím tắt"
-      },
       "api": {
         "title": "API (Tương thích OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Xóa khỏi đã lưu",
       "delete": "Xóa mục",
       "deleteError": "Không thể xóa mục. Vui lòng thử lại.",
-      "retranscribe": "Phiên âm lại",
-      "retranscribeError": "Không thể phiên âm lại. Vui lòng thử lại.",
-      "transcribing": "Đang phiên âm...",
       "transcriptionFailed": "Phiên âm thất bại. Bạn có thể phiên âm lại bằng biểu tượng thử lại."
     },
     "debug": {
@@ -560,10 +532,6 @@
         "title": "Độ trễ dán (sau)",
         "description": "Độ trễ (tính bằng mili giây) sau khi gửi phím dán, trước khi khôi phục bảng nhớ tạm trước đó. Tăng nếu nội dung bảng nhớ tạm cũ được dán thay vì bản chép lời."
       },
-      "holdThreshold": {
-        "title": "Ngưỡng giữ phím",
-        "description": "Chỉ áp dụng cho chế độ Tự động: phím tắt phải được giữ trong bao lâu (mili giây) để được tính là giữ thay vì nhấn nhanh. Giảm xuống nếu bản ghi vẫn tiếp tục sau khi giữ ngắn; tăng lên nếu các lần nhấn nhanh có chủ ý bị coi là giữ phím."
-      },
       "reliablePaste": {
         "title": "Dán đáng tin cậy (Beta)",
         "description": "Chỉ khôi phục bảng nhớ tạm sau khi ứng dụng đích thực sự đọc bản chép lời, thay vì sau một độ trễ cố định. Nhằm khắc phục việc nội dung bảng nhớ tạm cũ bị dán khi hệ thống bị tải nặng. Cần một phương thức dán qua bảng nhớ tạm; chỉ dành cho macOS và Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Lỗi khi tải thư mục: {{error}}",
-    "micPermissionDeniedTitle": "Quyền truy cập micrô bị từ chối",
-    "micPermissionDenied": {
-      "generic": "Quyền truy cập micrô đã bị hệ điều hành từ chối. Vui lòng cấp quyền micrô trong cài đặt hệ thống.",
-      "windows": "Bật quyền truy cập micrô trong Cài đặt → Quyền riêng tư & bảo mật → Micrô (bao gồm quyền truy cập ứng dụng máy tính).",
-      "macos": "Cấp quyền truy cập micrô trong Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Micrô.",
-      "linux": "Cấp quyền truy cập micrô trong cài đặt âm thanh hoặc quyền riêng tư của hệ thống."
-    },
-    "noInputDeviceTitle": "Không tìm thấy micrô",
-    "noInputDevice": "Không phát hiện thiết bị đầu vào âm thanh nào. Vui lòng kết nối micrô hoặc tai nghe và thử lại.",
-    "recordingFailed": "Không thể bắt đầu ghi âm: {{error}}",
     "modelLoadFailed": "Không thể tải mô hình: {{model}}",
-    "modelLoadFailedUnknown": "mô hình không xác định",
-    "pasteFailedTitle": "Không thể dán văn bản",
-    "pasteFailed": "Không thể dán văn bản vào ứng dụng đang hoạt động.",
-    "transcriptionFailedTitle": "Phiên âm thất bại"
+    "modelLoadFailedUnknown": "mô hình không xác định"
   },
   "appLanguage": {
     "title": "Ngôn ngữ ứng dụng",

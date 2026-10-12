@@ -7,7 +7,6 @@ import type {
   ChineseScript,
   TranscribeAcceleratorSetting,
   OrtAcceleratorSetting,
-  ShortcutActivation,
   VadBackend,
 } from "@/bindings";
 import { commands } from "@/bindings";
@@ -90,10 +89,6 @@ const settingUpdaters: {
   start_hidden: (value) => commands.changeStartHiddenSetting(value as boolean),
   autostart_enabled: (value) =>
     commands.changeAutostartSetting(value as boolean),
-  shortcut_activation: (value) =>
-    commands.changeShortcutActivationSetting(value as ShortcutActivation),
-  hold_threshold_ms: (value) =>
-    commands.changeHoldThresholdMsSetting(value as number),
   selected_microphone: (value) =>
     commands.setSelectedMicrophone(
       (value as string) === "Default" || value === null

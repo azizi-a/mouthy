@@ -187,17 +187,9 @@
         "notFound": "Zkratka nenalezena",
         "pressKeys": "Stiskněte klávesy...",
         "bindings": {
-          "transcribe": {
-            "name": "Zkratka přepisu",
-            "description": "Klávesová zkratka pro nahrávání a přepis vašeho hlasu."
-          },
           "cancel": {
             "name": "Zkratka zrušení",
             "description": "Klávesová zkratka pro zrušení aktuálního nahrávání."
-          },
-          "transcribe_with_post_process": {
-            "name": "Klávesa pro následné zpracování",
-            "description": "Volitelné: Vyhrazená klávesová zkratka, která vždy použije AI následné zpracování na váš přepis."
           }
         },
         "errors": {
@@ -212,20 +204,6 @@
         "searchPlaceholder": "Hledat jazyky...",
         "noResults": "Žádné jazyky nenalezeny",
         "auto": "Automaticky"
-      },
-      "shortcutActivation": {
-        "title": "Chování zkratky",
-        "description": "Zvolte, jak má zkratka přepisu spouštět a zastavovat nahrávání.",
-        "options": {
-          "holdOrToggle": "Automaticky",
-          "pushToTalk": "Podržet",
-          "toggle": "Přepínat"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Podržte pro nahrávání nebo klepněte pro přepnutí",
-          "push_to_talk": "Nahrává, dokud držíte zkratku",
-          "toggle": "Klepněte na zkratku pro zahájení nahrávání, klepněte znovu pro zastavení"
-        }
       }
     },
     "sound": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Klávesová zkratka"
-      },
       "api": {
         "title": "API (kompatibilní s OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Odebrat z uložených",
       "delete": "Smazat záznam",
       "deleteError": "Nepodařilo se smazat záznam. Zkuste to prosím znovu.",
-      "retranscribe": "Přepsat znovu",
-      "retranscribeError": "Opětovný přepis se nezdařil. Zkuste to prosím znovu.",
-      "transcribing": "Přepisuji...",
       "transcriptionFailed": "Přepis selhal. Můžete zkusit přepis znovu pomocí ikony opakování."
     },
     "debug": {
@@ -560,10 +532,6 @@
         "title": "Zpoždění vložení (po)",
         "description": "Zpoždění (v milisekundách) po klávese pro vložení, před obnovením předchozí schránky. Zvyšte, pokud se místo přepisu vkládá starý obsah schránky."
       },
-      "holdThreshold": {
-        "title": "Práh podržení",
-        "description": "Pouze v automatickém režimu: jak dlouho (v milisekundách) musí být zkratka držena, aby se počítala jako podržení místo klepnutí. Snižte, pokud po krátkém podržení nahrávání zůstává zapnuté; zvyšte, pokud jsou záměrná klepnutí vyhodnocena jako podržení."
-      },
       "reliablePaste": {
         "title": "Spolehlivé vložení (Beta)",
         "description": "Obnoví schránku teprve poté, co cílová aplikace skutečně přečte přepis, místo po pevně daném zpoždění. Má odstranit vkládání starého obsahu schránky při zatížení systému. Vyžaduje způsob vložení přes schránku; pouze macOS a Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Chyba při načítání adresáře: {{error}}",
-    "micPermissionDeniedTitle": "Přístup k mikrofonu byl odepřen",
-    "micPermissionDenied": {
-      "generic": "Přístup k mikrofonu byl odepřen operačním systémem. Povolte prosím přístup k mikrofonu v nastavení systému.",
-      "windows": "Povolte přístup k mikrofonu v Nastavení → Soukromí a zabezpečení → Mikrofon (včetně přístupu desktopových aplikací).",
-      "macos": "Povolte přístup k mikrofonu v Nastavení systému → Soukromí a zabezpečení → Mikrofon.",
-      "linux": "Povolte přístup k mikrofonu v nastavení zvuku nebo soukromí vašeho systému."
-    },
-    "noInputDeviceTitle": "Mikrofon nebyl nalezen",
-    "noInputDevice": "Nebylo detekováno žádné zvukové vstupní zařízení. Připojte mikrofon nebo sluchátka a zkuste to znovu.",
-    "recordingFailed": "Nepodařilo se spustit nahrávání: {{error}}",
     "modelLoadFailed": "Nepodařilo se načíst model: {{model}}",
-    "modelLoadFailedUnknown": "neznámý model",
-    "pasteFailedTitle": "Vložení textu se nezdařilo",
-    "pasteFailed": "Text nebylo možné vložit do aktivní aplikace.",
-    "transcriptionFailedTitle": "Přepis selhal"
+    "modelLoadFailedUnknown": "neznámý model"
   },
   "appLanguage": {
     "title": "Jazyk aplikace",

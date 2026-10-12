@@ -167,17 +167,9 @@
         "notFound": "No s'ha trobat la drecera",
         "pressKeys": "Premeu les tecles...",
         "bindings": {
-          "transcribe": {
-            "name": "Drecera de transcripció",
-            "description": "La drecera de teclat per enregistrar i transcriure la vostra veu."
-          },
           "cancel": {
             "name": "Drecera de cancel·lació",
             "description": "La drecera de teclat per cancel·lar l'enregistrament actual."
-          },
-          "transcribe_with_post_process": {
-            "name": "Drecera de postprocessament",
-            "description": "Opcional: una drecera específica que sempre aplica postprocessament amb IA a la transcripció."
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "Cerca llengües...",
         "noResults": "No s'ha trobat cap llengua",
         "auto": "Automàtica"
-      },
-      "shortcutActivation": {
-        "title": "Comportament de la drecera",
-        "description": "Trieu com la drecera de transcripció inicia i atura l'enregistrament.",
-        "options": {
-          "holdOrToggle": "Automàtic",
-          "pushToTalk": "Mantén premuda",
-          "toggle": "Commuta"
-        },
-        "descriptions": {
-          "hold_or_toggle": "Manteniu-la premuda per enregistrar o feu una pulsació breu per iniciar o aturar l'enregistrament",
-          "push_to_talk": "Enregistreu mentre manteniu premuda la drecera",
-          "toggle": "Premeu la drecera per iniciar l'enregistrament i torneu-la a prémer per aturar-lo"
-        }
       }
     },
     "models": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "Drecera de teclat"
-      },
       "api": {
         "title": "API (compatible amb OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "Treu de les desades",
       "delete": "Suprimeix l'entrada",
       "deleteError": "No s'ha pogut suprimir l'entrada. Torneu-ho a provar.",
-      "retranscribe": "Torneu a transcriure",
-      "retranscribeError": "No s'ha pogut tornar a transcriure. Torneu-ho a provar.",
-      "transcribing": "S'està transcrivint...",
       "transcriptionFailed": "La transcripció ha fallat. Podeu tornar a transcriure amb la icona de reintent."
     },
     "debug": {
@@ -567,10 +539,6 @@
         "title": "Retard après d'enganxar",
         "description": "Retard (en mil·lisegons) després d'enviar la combinació de tecles per enganxar i abans de restaurar el porta-retalls anterior. Augmenteu-lo si s'enganxa el contingut antic del porta-retalls en lloc de la transcripció."
       },
-      "holdThreshold": {
-        "title": "Llindar de pulsació llarga",
-        "description": "Només en mode automàtic: temps (en mil·lisegons) que cal mantenir premuda la drecera perquè es consideri una pulsació llarga en lloc d'una de breu. Reduïu-lo si les pulsacions llargues curtes deixen l'enregistrament actiu; augmenteu-lo si les pulsacions breus intencionades es tracten com a llargues."
-      },
       "reliablePaste": {
         "title": "Enganxament fiable (beta)",
         "description": "Restaura el porta-retalls només quan l'aplicació de destinació ha llegit la transcripció, en lloc de fer-ho després d'un retard fix. Pensat per evitar que s'enganxi el contingut antic del porta-retalls quan el sistema està carregat. Requereix un mètode d'enganxament amb el porta-retalls; només al macOS i al Windows."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "Error en carregar el directori: {{error}}",
-    "micPermissionDeniedTitle": "Accés al micròfon denegat",
-    "micPermissionDenied": {
-      "generic": "El sistema operatiu ha denegat l'accés al micròfon. Concediu el permís del micròfon a la configuració del sistema.",
-      "windows": "Activa l'accés al micròfon a Configuració → Privadesa i seguretat → Micròfon (inclòs l'accés de les aplicacions d'escriptori).",
-      "macos": "Concediu l'accés al micròfon a Configuració del sistema → Privadesa i seguretat → Micròfon.",
-      "linux": "Concediu l'accés al micròfon a la configuració de so o de privadesa del sistema."
-    },
-    "noInputDeviceTitle": "No s'ha trobat cap micròfon",
-    "noInputDevice": "No s'ha detectat cap dispositiu d'entrada d'àudio. Connecteu un micròfon o uns auriculars amb micròfon i torneu-ho a provar.",
-    "recordingFailed": "No s'ha pogut iniciar l'enregistrament: {{error}}",
     "modelLoadFailed": "No s'ha pogut carregar el model: {{model}}",
-    "modelLoadFailedUnknown": "model desconegut",
-    "pasteFailedTitle": "No s'ha pogut enganxar el text",
-    "pasteFailed": "No s'ha pogut enganxar el text a l'aplicació activa.",
-    "transcriptionFailedTitle": "La transcripció ha fallat"
+    "modelLoadFailedUnknown": "model desconegut"
   },
   "appLanguage": {
     "title": "Llengua de l'aplicació",

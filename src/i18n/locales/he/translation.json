@@ -167,17 +167,9 @@
         "notFound": "קיצור הדרך לא נמצא",
         "pressKeys": "לחץ על המקשים...",
         "bindings": {
-          "transcribe": {
-            "name": "קיצור מקשים לתמלול",
-            "description": "קיצור המקלדת להקלטה ולתמלול הקול שלך."
-          },
           "cancel": {
             "name": "קיצור מקשים לביטול",
             "description": "קיצור המקלדת לביטול ההקלטה הנוכחית."
-          },
-          "transcribe_with_post_process": {
-            "name": "קיצור לעיבוד משלים",
-            "description": "אופציונלי: קיצור מקשים ייעודי שתמיד מפעיל עיבוד AI על התמלול."
           }
         },
         "errors": {
@@ -192,20 +184,6 @@
         "searchPlaceholder": "חפש שפות...",
         "noResults": "לא נמצאו שפות",
         "auto": "אוטומטי"
-      },
-      "shortcutActivation": {
-        "title": "התנהגות קיצור הדרך",
-        "description": "בחר כיצד קיצור התמלול מתחיל ומפסיק את ההקלטה.",
-        "options": {
-          "holdOrToggle": "אוטומטי",
-          "pushToTalk": "לחיצה ארוכה",
-          "toggle": "החלפת מצב"
-        },
-        "descriptions": {
-          "hold_or_toggle": "לחצו לחיצה ארוכה כדי להקליט או הקישו כדי להחליף מצב",
-          "push_to_talk": "מקליט כל עוד קיצור הדרך לחוץ",
-          "toggle": "הקישו על קיצור הדרך כדי להתחיל להקליט, והקישו שוב כדי לעצור"
-        }
       }
     },
     "models": {
@@ -409,9 +387,6 @@
       }
     },
     "postProcessing": {
-      "hotkey": {
-        "title": "קיצור מקשים"
-      },
       "api": {
         "title": "API (תואם OpenAI)",
         "provider": {
@@ -473,9 +448,6 @@
       "unsave": "הסר משמורים",
       "delete": "מחק רשומה",
       "deleteError": "מחיקת הרשומה נכשלה. נסה שוב.",
-      "retranscribe": "תמלל מחדש",
-      "retranscribeError": "תמלול מחדש נכשל. נסה שוב.",
-      "transcribing": "מתמלל...",
       "transcriptionFailed": "התמלול נכשל. אפשר לתמלל מחדש באמצעות אייקון הניסיון החוזר."
     },
     "debug": {
@@ -560,10 +532,6 @@
         "title": "השהיית הדבקה (אחרי)",
         "description": "השהיה (במילישניות) לאחר צירוף ההדבקה, לפני שחזור הלוח הקודם. הגדל אם התוכן הישן של הלוח מודבק במקום התמלול."
       },
-      "holdThreshold": {
-        "title": "סף לחיצה ארוכה",
-        "description": "במצב אוטומטי בלבד: כמה זמן (במילישניות) יש להחזיק את קיצור הדרך כדי שייחשב ללחיצה ארוכה במקום להקשה. הנמיכו אם ההקלטה ממשיכה לרוץ אחרי לחיצות ארוכות קצרות; הגביהו אם הקשות מכוונות מתפרשות כלחיצה ארוכה."
-      },
       "reliablePaste": {
         "title": "הדבקה אמינה (Beta)",
         "description": "שחזור הלוח רק אחרי שאפליקציית היעד קוראת בפועל את התמלול, במקום אחרי השהיה קבועה. נועד לתקן הדבקה של תוכן לוח ישן כשהמערכת עמוסה. דורש שיטת הדבקה דרך הלוח; ב-macOS וב-Windows בלבד."
@@ -640,21 +608,8 @@
   },
   "errors": {
     "loadDirectory": "שגיאה בטעינת תיקייה: {{error}}",
-    "micPermissionDeniedTitle": "הגישה למיקרופון נדחתה",
-    "micPermissionDenied": {
-      "generic": "מערכת ההפעלה חסמה את הגישה למיקרופון. תן הרשאת מיקרופון בהגדרות המערכת.",
-      "windows": "הפעל גישה למיקרופון ב-Settings > Privacy & security > Microphone, כולל גישה לאפליקציות שולחן עבודה.",
-      "macos": "תן גישה למיקרופון ב-System Settings > Privacy & Security > Microphone.",
-      "linux": "תן גישה למיקרופון דרך הגדרות השמע או הפרטיות במערכת שלך."
-    },
-    "noInputDeviceTitle": "לא נמצא מיקרופון",
-    "noInputDevice": "לא זוהה התקן קלט שמע. חבר מיקרופון או אוזנייה ונסה שוב.",
-    "recordingFailed": "הפעלת ההקלטה נכשלה: {{error}}",
     "modelLoadFailed": "טעינת המודל נכשלה: {{model}}",
-    "modelLoadFailedUnknown": "מודל לא ידוע",
-    "pasteFailedTitle": "ההדבקה נכשלה",
-    "pasteFailed": "לא ניתן היה להדביק את הטקסט ביישום הפעיל.",
-    "transcriptionFailedTitle": "התמלול נכשל"
+    "modelLoadFailedUnknown": "מודל לא ידוע"
   },
   "appLanguage": {
     "title": "שפת האפליקציה",
