@@ -356,6 +356,15 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 mod tests {
     use super::*;
 
+    /// Lets a failed assertion end the playback thread instead of hanging the scope.
+    struct StopOnDrop<'a>(&'a AtomicBool);
+
+    impl Drop for StopOnDrop<'_> {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
     #[test]
     fn every_default_binding_has_an_action() {
         for id in settings::get_default_settings().bindings.keys() {
@@ -421,6 +430,138 @@ mod tests {
 
             stop.store(true, Ordering::SeqCst);
             assert_eq!(playback.join().unwrap(), Some("server error".into()));
+        });
+    }
+
+    #[test]
+
+    fn report_panic_sends_exactly_one_error_on_unwind() {
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        let synth = thread::spawn({
+            let tx = tx.clone();
+            move || {
+                let _report_panic = ReportPanic(&tx);
+                panic!("synth thread panic (expected by this test)");
+            }
+        });
+        assert!(synth.join().is_err());
+        drop(tx);
+        assert_eq!(rx.recv(), Ok(Err("synthesis failed".to_string())));
+        assert!(
+            rx.recv().is_err(),
+            "a panic must be reported once, then the channel closes"
+        );
+    }
+
+    #[test]
+    fn report_panic_sends_nothing_on_normal_completion() {
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        {
+            let _report_panic = ReportPanic(&tx);
+        }
+        drop(tx);
+        assert!(
+            rx.recv().is_err(),
+            "a finished synth thread must not report an error"
+        );
+    }
+
+    #[test]
+    fn finished_synthesis_is_not_an_error_and_plays_out_first() {
+        let (player, mut output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        tx.send(Ok(vec![0; 480])).unwrap();
+        drop(tx);
+        let stop = AtomicBool::new(false);
+
+        let (player_ref, stop_ref) = (&player, &stop);
+        thread::scope(|scope| {
+            let _release = StopOnDrop(stop_ref);
+            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            thread::sleep(PLAYBACK_POLL * 10);
+            assert!(
+                !playback.is_finished(),
+                "playback must wait for queued audio even after the sender is gone"
+            );
+
+            output.by_ref().take(48_000).for_each(drop);
+            assert_eq!(playback.join().unwrap(), None);
+        });
+    }
+
+    #[test]
+    fn stop_mid_drain_returns_within_a_few_poll_ticks() {
+        let (player, mut output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        tx.send(Ok(vec![0; 480])).unwrap();
+        tx.send(Err("server error".into())).unwrap();
+        let stop = AtomicBool::new(false);
+
+        let (player_ref, stop_ref) = (&player, &stop);
+        thread::scope(|scope| {
+            let _release = StopOnDrop(stop_ref);
+            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            thread::sleep(PLAYBACK_POLL * 10);
+            assert!(!playback.is_finished());
+
+            let stopped_at = std::time::Instant::now();
+            stop.store(true, Ordering::SeqCst);
+            playback.join().unwrap();
+            assert!(
+                stopped_at.elapsed() < PLAYBACK_POLL * 10,
+                "stop took {:?}; it must not wait for the audio to finish",
+                stopped_at.elapsed()
+            );
+            // The device drops stopped audio on its next read.
+            output.by_ref().take(1_000).for_each(drop);
+            assert!(player.empty(), "stop must clear the queued audio");
+        });
+    }
+
+    #[test]
+    fn stop_before_a_chunk_arrives_never_queues_it() {
+        let (player, _output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        tx.send(Ok(vec![0; 480])).unwrap();
+        let stop = AtomicBool::new(true);
+
+        assert_eq!(play_chunks(&player, &rx, &stop), None);
+        assert!(
+            player.empty(),
+            "appending after stop would restart a stopped player"
+        );
+    }
+
+    #[test]
+    fn playback_holds_at_most_read_ahead_chunks() {
+        let (player, _output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        let stop = AtomicBool::new(false);
+
+        let (player_ref, stop_ref) = (&player, &stop);
+        thread::scope(|scope| {
+            let _release = StopOnDrop(stop_ref);
+            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            // Player takes READ_AHEAD, the channel holds READ_AHEAD more.
+            for _ in 0..READ_AHEAD * 2 {
+                tx.send(Ok(vec![0; 480])).unwrap();
+            }
+            thread::sleep(PLAYBACK_POLL * 10);
+            assert_eq!(
+                player.len(),
+                READ_AHEAD,
+                "nothing is playing out, so the player must not take more"
+            );
+            assert!(
+                matches!(
+                    tx.try_send(Ok(vec![0; 480])),
+                    Err(mpsc::TrySendError::Full(_))
+                ),
+                "the unread chunks must stay in the channel so synthesis blocks"
+            );
+
+            stop.store(true, Ordering::SeqCst);
+            assert_eq!(playback.join().unwrap(), None);
         });
     }
 }

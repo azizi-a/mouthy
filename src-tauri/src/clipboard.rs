@@ -82,12 +82,39 @@ fn poll<T>(
     }
 }
 
+/// What to do with the saved clipboard once the copy attempt is over.
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+enum RestoreAction {
+    /// The copy never happened, so the clipboard is still the user's own.
+    NoCopy,
+    Restore,
+    /// Something wrote after our read; restoring would overwrite it.
+    LeaveAlone,
+}
+
+/// `before` is the `changeCount` ahead of the copy, `observed_copy` the count
+/// seen when the text was read (if any) and `now` the count after that.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn restore_decision(before: isize, observed_copy: Option<isize>, now: isize) -> RestoreAction {
+    match observed_copy {
+        Some(copied_at) if copied_at != before => {
+            if now == copied_at {
+                RestoreAction::Restore
+            } else {
+                RestoreAction::LeaveAlone
+            }
+        }
+        _ => RestoreAction::NoCopy,
+    }
+}
+
 /// Selection capture against `NSPasteboard`. Copy detection uses
 /// `changeCount`, so the clipboard is never cleared beforehand and a copy of
 /// text identical to the clipboard still counts.
 #[cfg(target_os = "macos")]
 mod pasteboard {
-    use super::{poll, COPY_POLL_INTERVAL, COPY_TIMEOUT};
+    use super::{poll, restore_decision, RestoreAction, COPY_POLL_INTERVAL, COPY_TIMEOUT};
     use log::{debug, info, warn};
     use objc2::rc::{autoreleasepool, Retained};
     use objc2::runtime::ProtocolObject;
@@ -167,20 +194,20 @@ mod pasteboard {
                 Some(text.to_string())
             });
 
-            let Some(copied_at) = copied_at else {
-                debug!("Copy left the clipboard unchanged: nothing selected");
-                return Ok(None);
-            };
-            if text.is_none() {
-                debug!("Copied selection has no plain text");
-            }
-
             // A later write (the app finishing its copy, or the user copying)
             // wins over our restore.
-            if pasteboard.changeCount() == copied_at {
-                restore(&pasteboard, &saved);
-            } else {
-                info!("Clipboard changed again after the copy; leaving it as is");
+            match restore_decision(before, copied_at, pasteboard.changeCount()) {
+                RestoreAction::NoCopy => {
+                    debug!("Copy left the clipboard unchanged: nothing selected");
+                    return Ok(None);
+                }
+                RestoreAction::Restore => restore(&pasteboard, &saved),
+                RestoreAction::LeaveAlone => {
+                    info!("Clipboard changed again after the copy; leaving it as is");
+                }
+            }
+            if text.is_none() {
+                debug!("Copied selection has no plain text");
             }
             Ok(text)
         })
@@ -1193,5 +1220,23 @@ e.g. 28:1 28:0 means pressing on the Enter button on a standard US keyboard.
         });
         assert_eq!(value, None);
         assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn restore_decision_never_restores_when_no_copy_was_observed() {
+        assert_eq!(restore_decision(7, None, 7), RestoreAction::NoCopy);
+        // Another app wrote during our wait; that is not our copy to undo.
+        assert_eq!(restore_decision(7, None, 9), RestoreAction::NoCopy);
+    }
+
+    #[test]
+    fn restore_decision_ignores_an_observation_equal_to_the_starting_count() {
+        assert_eq!(restore_decision(7, Some(7), 7), RestoreAction::NoCopy);
+    }
+
+    #[test]
+    fn restore_decision_restores_only_when_the_count_has_not_moved_since_our_read() {
+        assert_eq!(restore_decision(7, Some(8), 8), RestoreAction::Restore);
+        assert_eq!(restore_decision(7, Some(8), 9), RestoreAction::LeaveAlone);
     }
 }

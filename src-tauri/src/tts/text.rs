@@ -570,4 +570,51 @@ mod tests {
         assert!(split_sentences("   \n\n  ").is_empty());
         assert_eq!(split_sentences("..."), vec!["..."]);
     }
+
+    #[test]
+    fn hard_wrapped_paragraph_keeps_every_word_in_order() {
+        let paragraph = "The quick brown fox jumps over the lazy dog and keeps\n\
+                         running through the field until it reaches the river. Then\n\
+                         it rests for a while, drinks some water, and goes home\n\
+                         before the sun goes down.";
+        let parts = split_sentences(&normalize(paragraph));
+        assert_eq!(
+            parts.join(" ").split_whitespace().collect::<Vec<_>>(),
+            paragraph.split_whitespace().collect::<Vec<_>>(),
+            "wrapping must not drop, duplicate or reorder words"
+        );
+        assert!(
+            parts
+                .iter()
+                .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS && !p.contains('\n')),
+            "{parts:?}"
+        );
+    }
+
+    #[test]
+    fn abbreviations_survive_the_normalize_then_split_pipeline() {
+        let text = normalize("Dr. Smith wrote to the U.S. Department of Energy about $1,500. At 10:30, we all leave together.");
+        assert_eq!(
+            split_sentences(&text),
+            vec![
+                "Dr. Smith wrote to the U.S. Department of Energy about $1,500.",
+                "At 10:30, we all leave together.",
+            ]
+        );
+    }
+
+    #[test]
+    fn splitting_a_large_json_blob_is_fast_and_lossless() {
+        let blob = r#"{"ids": [1, 2, 3], "tags": ["a", "b"]}, "#.repeat(1_000);
+        let started = Instant::now();
+        let parts = split_sentences(&normalize(&blob));
+        assert!(
+            started.elapsed() < Duration::from_millis(500),
+            "took {:?}",
+            started.elapsed()
+        );
+        assert!(parts
+            .iter()
+            .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS));
+    }
 }
