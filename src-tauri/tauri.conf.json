@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Handy",
+  "productName": "Mouthy",
   "version": "0.9.8",
-  "identifier": "com.pais.handy",
+  "identifier": "com.azizi.mouthy",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -45,10 +45,7 @@
     },
     "linux": {
       "deb": {
-        "depends": ["libgtk-layer-shell0", "libopenblas0"],
-        "files": {
-          "/usr/lib/Handy": "transcribe-libs"
-        }
+        "depends": ["libgtk-layer-shell0", "libopenblas0"]
       },
       "rpm": {
         "depends": [
@@ -57,9 +54,6 @@
         ],
         "compression": {
           "type": "none"
-        },
-        "files": {
-          "/usr/lib/Handy": "transcribe-libs"
         }
       },
       "appimage": {
@@ -70,7 +64,6 @@
       }
     },
     "windows": {
-      "signCommand": "trusted-signing-cli -e https://eus.codesigning.azure.net/ -a CJ-Signing -c cjpais-dev -d Handy %1",
       "nsis": {
         "template": "nsis/installer.nsi",
         "installerIcon": "icons/icon.ico"

@@ -9,7 +9,7 @@
 //! coalesced into it, so bursts of state changes never queue up native work.
 //!
 //! Why: native tray updates are the lever we control for the macOS tray
-//! disappearance bug (tauri-apps/tauri#12060, Handy #1948). Before this, every
+//! disappearance bug (tauri-apps/tauri#12060, cjpais/Handy#1948). Before this, every
 //! recording cycle rebuilt the full menu 3-6 times from several threads, and
 //! concurrent rebuilds could interleave and leave a stale menu behind.
 //!
@@ -195,22 +195,22 @@ pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'
             AppTheme::Light => "resources/tray_idle_warning_dark.png",
             // Linux never sets the warning flag (Secure Input is macOS-only),
             // but fall back to the normal icon just in case.
-            AppTheme::Colored => "resources/handy.png",
+            AppTheme::Colored => "resources/mouthy.png",
         };
     }
     match (theme, state) {
         // Dark theme uses light icons
         (AppTheme::Dark, TrayIconState::Idle) => "resources/tray_idle.png",
-        (AppTheme::Dark, TrayIconState::Recording) => "resources/tray_recording.png",
-        (AppTheme::Dark, TrayIconState::Transcribing) => "resources/tray_transcribing.png",
+        (AppTheme::Dark, TrayIconState::Recording | TrayIconState::Transcribing) => {
+            "resources/tray_speaking.png"
+        }
         // Light theme uses dark icons
         (AppTheme::Light, TrayIconState::Idle) => "resources/tray_idle_dark.png",
-        (AppTheme::Light, TrayIconState::Recording) => "resources/tray_recording_dark.png",
-        (AppTheme::Light, TrayIconState::Transcribing) => "resources/tray_transcribing_dark.png",
-        // Colored theme uses pink icons (for Linux)
-        (AppTheme::Colored, TrayIconState::Idle) => "resources/handy.png",
-        (AppTheme::Colored, TrayIconState::Recording) => "resources/recording.png",
-        (AppTheme::Colored, TrayIconState::Transcribing) => "resources/transcribing.png",
+        (AppTheme::Light, TrayIconState::Recording | TrayIconState::Transcribing) => {
+            "resources/tray_speaking_dark.png"
+        }
+        // Colored theme uses one colored icon for every state (for Linux)
+        (AppTheme::Colored, _) => "resources/mouthy.png",
     }
 }
 
@@ -445,9 +445,9 @@ pub fn tray_tooltip() -> String {
 
 fn version_label() -> String {
     if cfg!(debug_assertions) {
-        format!("Handy v{} (Dev)", env!("CARGO_PKG_VERSION"))
+        format!("Mouthy v{} (Dev)", env!("CARGO_PKG_VERSION"))
     } else {
-        format!("Handy v{}", env!("CARGO_PKG_VERSION"))
+        format!("Mouthy v{}", env!("CARGO_PKG_VERSION"))
     }
 }
 
@@ -613,7 +613,7 @@ pub fn set_tray_visibility(app: &AppHandle, visible: bool) {
 /// Recovery for the macOS tray-disappearance bug (#1948, tauri-apps/tauri#12060):
 /// the `NSStatusItem` can silently vanish with no error surfaced to the app.
 /// Hiding and re-showing the tray recreates it with its current icon, menu and
-/// tooltip. Called when the user "relaunches" Handy while it is already running
+/// tooltip. Called when the user "relaunches" Mouthy while it is already running
 /// (`RunEvent::Reopen` for Spotlight/Finder/Dock, the single-instance callback
 /// for a second process) — the natural "where did my icon go?" moment — so a
 /// relaunch brings the icon back without a full quit.
@@ -723,17 +723,15 @@ mod tests {
 
     #[test]
     fn recording_and_transcribing_share_a_menu() {
-        // The icon differs but the menu inputs are identical, so a
-        // Recording -> Transcribing transition must not rebuild the menu.
+        // A Recording -> Transcribing transition must not rebuild the menu.
         let recording = TrayDesired {
-            icon_path: "resources/tray_recording.png",
+            icon_path: "resources/tray_speaking.png",
             menu: inputs(TrayIconState::Recording.is_busy()),
         };
         let transcribing = TrayDesired {
-            icon_path: "resources/tray_transcribing.png",
+            icon_path: "resources/tray_speaking.png",
             menu: inputs(TrayIconState::Transcribing.is_busy()),
         };
-        assert_ne!(recording.icon_path, transcribing.icon_path);
         assert_eq!(recording.menu, transcribing.menu);
     }
 
