@@ -19,3 +19,7 @@ src-tauri/src/catalog/catalog.json
 # Misc
 .DS_Store
 *.log
+
+# Planning scratch
+docs/.scout-report.md
+docs/.plan-review-round1.md
