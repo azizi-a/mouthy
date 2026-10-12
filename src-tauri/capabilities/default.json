@@ -3,14 +3,5 @@
   "identifier": "default",
   "description": "Capabilities for the app",
   "windows": ["main", "overlay"],
-  "permissions": [
-    "core:default",
-    "opener:default",
-    "store:default",
-    "global-shortcut:allow-is-registered",
-    "global-shortcut:allow-register",
-    "global-shortcut:allow-unregister",
-    "global-shortcut:allow-unregister-all",
-    "macos-permissions:default"
-  ]
+  "permissions": ["core:default", "opener:default", "macos-permissions:default"]
 }

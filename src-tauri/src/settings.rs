@@ -98,8 +98,8 @@ pub enum OverlayPosition {
 #[serde(rename_all = "lowercase")]
 pub enum OverlayStyle {
     None,
-    // `live` (Handy's streaming-text panel) is retired; the alias keeps stores
-    // that still hold it deserializing instead of failing the whole load.
+    // `live` (a streaming-text panel) is retired; the alias keeps stores that
+    // still hold it deserializing instead of failing the whole load.
     #[serde(alias = "live")]
     Minimal,
 }
@@ -121,7 +121,7 @@ impl Default for KeyboardImplementation {
 }
 
 /// UI appearance mode. `System` follows the OS `prefers-color-scheme`; `Light`
-/// and `Dark` force one of the two palettes Handy already ships.
+/// and `Dark` force one of the two palettes the app ships.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum Theme {
@@ -130,7 +130,6 @@ pub enum Theme {
     Dark,
 }
 
-/* still handy for composing the initial JSON in the store ------------- */
 /// The container-level `serde(default)` (backed by the `Default` impl below)
 /// guarantees every field — including ones added in the future — falls back to
 /// its `get_default_settings()` value when missing from a stored settings
