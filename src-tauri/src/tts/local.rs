@@ -4,6 +4,7 @@
 //! export) and `voices/<voice>.bin`. The loaded model stays in memory between
 //! sessions; one session at a time holds it.
 
+use super::text::expand_numbers;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
 use misaki_rs::{Language, G2P};
@@ -367,7 +368,7 @@ impl LocalSynth {
     fn synthesize(&mut self, text: &str, speed: f32) -> Result<Vec<i16>, String> {
         let (raw, _) = self
             .g2p
-            .g2p(text)
+            .g2p(&expand_numbers(text))
             .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
         let (ids, dropped) = token_ids(&to_kokoro_phonemes(&raw, self.dialect));
         if dropped > 0 {

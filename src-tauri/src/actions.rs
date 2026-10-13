@@ -186,7 +186,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
         .text
         .map(|text| tts::text::normalize(&text))
         .unwrap_or_default();
-    let sentences = tts::text::split_sentences(&text);
+    let sentences = tts::text::split_first_clause(tts::text::split_sentences(&text));
     let captured_at = Instant::now();
     info!(
         "Captured {} chars, {} sentences in {} ms",
