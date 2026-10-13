@@ -19,8 +19,8 @@ use specta::Type;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::settings::{
-    self, get_settings, KeyboardImplementation, OverlayPosition, OverlayStyle, ShortcutBinding,
-    Theme,
+    self, get_settings, KeyboardImplementation, ModelVariant, OverlayPosition, OverlayStyle,
+    ShortcutBinding, Theme, TtsBackend,
 };
 use crate::tray;
 
@@ -668,6 +668,42 @@ pub fn change_tts_voice_setting(app: AppHandle, voice: String) -> Result<(), Str
     let mut settings = settings::get_settings(&app);
     settings.tts_voice = voice.trim().to_string();
     settings::write_settings(&app, settings);
+    crate::actions::preload_local_voice(&app);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_tts_backend_setting(app: AppHandle, backend: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_backend = match backend.as_str() {
+        "http" => TtsBackend::Http,
+        "local" => TtsBackend::Local,
+        other => {
+            warn!("Invalid TTS backend '{}', defaulting to http", other);
+            TtsBackend::Http
+        }
+    };
+    settings::write_settings(&app, settings);
+    crate::actions::preload_local_voice(&app);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_tts_model_variant_setting(app: AppHandle, variant: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_model_variant = match variant.as_str() {
+        "int8" => ModelVariant::Int8,
+        "fp16" => ModelVariant::Fp16,
+        "fp32" => ModelVariant::Fp32,
+        other => {
+            warn!("Invalid model variant '{}', defaulting to int8", other);
+            ModelVariant::Int8
+        }
+    };
+    settings::write_settings(&app, settings);
+    crate::actions::preload_local_voice(&app);
     Ok(())
 }
 

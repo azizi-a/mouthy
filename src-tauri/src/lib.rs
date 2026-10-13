@@ -284,6 +284,8 @@ pub fn run(cli_args: CliArgs) {
         shortcut::change_tts_voice_setting,
         shortcut::change_tts_speed_setting,
         shortcut::change_tts_volume_setting,
+        shortcut::change_tts_backend_setting,
+        shortcut::change_tts_model_variant_setting,
         shortcut::handy_keys::start_handy_keys_recording,
         shortcut::handy_keys::stop_handy_keys_recording,
         secure_input::get_secure_input_status,

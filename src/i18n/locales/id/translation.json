@@ -54,6 +54,14 @@
     },
     "speech": {
       "title": "Speech",
+      "backend": {
+        "title": "Speech Engine",
+        "description": "Local (offline) runs the Kokoro voice on this Mac from the files in Mouthy's models folder. HTTP server sends the selected text to the server URL below.",
+        "options": {
+          "local": "Local (offline)",
+          "http": "HTTP server"
+        }
+      },
       "backendUrl": {
         "title": "Server URL",
         "description": "Address of the OpenAI-compatible speech server, such as Kokoro-FastAPI. Selected text is sent to it; plain http is unencrypted. Default: http://127.0.0.1:8880"
@@ -61,6 +69,7 @@
       "voice": {
         "title": "Voice",
         "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
+        "descriptionLocal": "Voice file name in the models folder, such as bm_lewis. Type one, or pick from the voice files found there.",
         "choose": "Choose a voice..."
       },
       "speed": {

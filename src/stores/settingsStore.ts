@@ -71,6 +71,9 @@ const settingUpdaters: {
   tts_voice: (value) => commands.changeTtsVoiceSetting(value as string),
   tts_speed: (value) => commands.changeTtsSpeedSetting(value as number),
   tts_volume: (value) => commands.changeTtsVolumeSetting(value as number),
+  tts_backend: (value) => commands.changeTtsBackendSetting(value as string),
+  tts_model_variant: (value) =>
+    commands.changeTtsModelVariantSetting(value as string),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

@@ -20,12 +20,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const { getSetting, updateSetting, resetSetting, isUpdating } = useSettings();
   const voice = getSetting("tts_voice") ?? "";
   const baseUrl = getSetting("tts_base_url");
+  const backend = getSetting("tts_backend") ?? "http";
   const [draft, setDraft] = useState(voice);
   const [voices, setVoices] = useState<string[]>([]);
 
   useEffect(() => setDraft(voice), [voice]);
 
-  // Servers without a voice list keep the free-text field only.
+  // A server without a voice list, or no voice files yet, leaves the free-text field only.
   useEffect(() => {
     let current = true;
     setVoices([]);
@@ -38,7 +39,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     return () => {
       current = false;
     };
-  }, [baseUrl]);
+  }, [baseUrl, backend]);
 
   const commit = (value: string) => {
     const next = value.trim();
@@ -49,7 +50,11 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   return (
     <SettingContainer
       title={t("settings.speech.voice.title")}
-      description={t("settings.speech.voice.description")}
+      description={t(
+        backend === "local"
+          ? "settings.speech.voice.descriptionLocal"
+          : "settings.speech.voice.description",
+      )}
       descriptionMode={descriptionMode}
       grouped={grouped}
     >
