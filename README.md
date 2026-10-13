@@ -6,7 +6,7 @@ Mouthy is a free, open-source desktop text-to-speech app for macOS. Highlight te
 
 ## Requirements
 
-- An Apple Silicon Mac with macOS 13 or later
+- An Apple Silicon Mac with macOS 13.4 or later
 - A local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `bm_lewis` by default; both can be changed in Settings.
 
 Check the server is up:

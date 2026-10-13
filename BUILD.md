@@ -2,6 +2,8 @@
 
 Mouthy targets Apple-Silicon macOS first. Windows and Linux are kept compiling where cheap but are not tested.
 
+Intel and universal macOS builds fail to link: ONNX Runtime's prebuilt archive exists only for Apple Silicon (macOS 13.4+).
+
 ## Prerequisites
 
 - [Rust](https://rustup.rs/) (latest stable)
