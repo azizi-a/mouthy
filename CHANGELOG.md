@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MIT) at upstream commit 7b2a28a, with speech-to-text replaced by text-to-speech. The release app bundle is 9.6 MB on Apple Silicon (debug binary 62 MB, down from Handy's 152 MB).
+Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MIT) at upstream commit 7b2a28a, with speech-to-text replaced by text-to-speech. The release app bundle is 62 MB on Apple Silicon (19.7 MB zipped), most of it ONNX Runtime and the offline voice's English lexicons.
 
 ### Added
 
@@ -15,6 +15,8 @@ Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MI
 - Overlay states for speaking, "nothing selected" and errors, with an Open Settings button and a stop button.
 - Tray items Speak Selection and Stop, the `--speak-selection` and `--stop` flags, and the signals `SIGUSR2` (speak) and `SIGUSR1` (stop, macOS only).
 - Speech settings: server URL, voice (typed, or picked from the server's voice list), speed (0.5×–2×) and volume.
+- Offline speech: with Speech Engine set to Local (offline), the Kokoro-82M voice runs inside Mouthy from model files in its models folder, with no server. It loads in the background at launch, British voices (`b…`) get British pronunciations, and stopping ends synthesis at once. Missing files show a notice with Open Settings.
+- The offline voice reads money, decimals, version numbers, years and decades, ordinals, times and percentages as words.
 
 ### Changed
 
@@ -22,7 +24,9 @@ Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MI
 - Launch at login, start hidden and the overlay settings live on the General page with the hotkey and speech settings.
 - Wording no longer mentions transcription, recording or feedback sounds. Text whose meaning changed shows in English in other languages until translated.
 - The Windows installer uses Tauri's standard template.
-- Building now downloads a prebuilt ONNX Runtime (about 10 MB, cached after the first build) for the coming offline voice; the app does not use it yet.
+- Building downloads a prebuilt ONNX Runtime (about 10 MB, cached after the first build) for the offline voice. Intel and universal macOS builds no longer link.
+- A long first sentence starts playing after its first clause, so speech begins sooner.
+- Requires macOS 13.4 or later.
 
 ### Removed
 

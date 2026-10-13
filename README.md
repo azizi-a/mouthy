@@ -2,12 +2,12 @@
 
 Mouthy is a free, open-source desktop text-to-speech app for macOS. Highlight text in any app, press a global hotkey, and hear it read aloud by a neural voice; press the hotkey again to stop. Playback starts as soon as the first sentence is ready, and your clipboard is put back the way it was.
 
-**Status:** Phase 1. Mouthy works against a local OpenAI-compatible speech server. An offline engine that runs inside the app is planned for Phase 2 (see [PLAN.md](PLAN.md)). Windows and Linux builds compile but are untested.
+**Status:** Phase 2 in progress. Mouthy speaks through a local OpenAI-compatible speech server, or offline with the Kokoro voice running inside the app once its model files are in place (see [Offline voice](#offline-voice-preview) and [PLAN.md](PLAN.md)). Windows and Linux builds compile but are untested.
 
 ## Requirements
 
 - An Apple Silicon Mac with macOS 13.4 or later
-- A local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `bm_lewis` by default; both can be changed in Settings.
+- For the default HTTP engine: a local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `bm_lewis` by default; both can be changed in Settings.
 
 Check the server is up:
 
@@ -59,12 +59,26 @@ pkill -USR1 -x mouthy   # stop
 
 Call the binary directly: `open -a Mouthy --args …` drops the arguments. With no running instance, `--speak-selection` and `--stop` just launch the app. Launch flags: `--start-hidden` (no main window; tray icon only) and `--no-tray` (no tray icon; closing the window quits).
 
+## Offline voice (preview)
+
+Mouthy can run the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. It does not download the files yet, so put them in place by hand from that page, then choose **Local (offline)** under Settings → Speech → Speech Engine:
+
+```text
+~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/
+├── int8.onnx            ← onnx/model_quantized.onnx (92 MB, used by default)
+├── fp16.onnx            ← onnx/model_fp16.onnx (optional)
+├── fp32.onnx            ← onnx/model.onnx (optional)
+└── voices/bm_lewis.bin  ← voices/bm_lewis.bin (one file per voice)
+```
+
+Settings cannot switch to fp16 or fp32 yet. The Voice setting picks a file from `voices/`. Voices starting with `b` get British pronunciations, all others American. If a file is missing, the overlay says so. The loaded voice uses about 300 MB of memory while Local is selected.
+
 ## Settings
 
 Open Settings from the tray. The General page has three groups:
 
 - **General:** hotkey, launch at login, start hidden, overlay style and position
-- **Speech:** server URL, voice (a list when the server offers `/v1/audio/voices`, otherwise free text), speed (0.5×–2×), volume
+- **Speech:** engine (Local or HTTP server), server URL (HTTP only), voice (a list when the server offers `/v1/audio/voices` or voice files are installed, otherwise free text), speed (0.5×–2×), volume
 - **Sound:** output device
 - **Advanced page:** tray icon, experimental features (shortcut backend)
 - **About page:** language, theme, app data and log folders
@@ -76,6 +90,7 @@ Mouthy sends the selected text to the server URL you set. Plain `http://` is une
 - **⌥⎋ clashes with macOS "Speak selection",** which uses the same key by default. If it is on in System Settings → Accessibility → Spoken Content, turn it off or change either hotkey.
 - **Kokoro-FastAPI can hang.** Some input, such as Chinese text with an English voice, leaves the server listening but never replying, so speech fails with a timeout. Restart the server.
 - **VS Code copies the current line when nothing is selected,** so ⌥⎋ with no selection reads that line.
+- **The offline voice spells unknown words letter by letter,** which affects many names, brands and technical terms, and its first words take longer when the first sentence has no early comma.
 - **Clipboard:** rich content (images, files, formatted text) is restored after each copy. A clipboard larger than 16 MB is not restored; it keeps the copied selection instead.
 - **Windows and Linux are untested,** and `Alt+Escape` may already be taken by the window manager there.
 
