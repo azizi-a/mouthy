@@ -22,6 +22,7 @@ Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MI
 - Launch at login, start hidden and the overlay settings live on the General page with the hotkey and speech settings.
 - Wording no longer mentions transcription, recording or feedback sounds. Text whose meaning changed shows in English in other languages until translated.
 - The Windows installer uses Tauri's standard template.
+- Building now downloads a prebuilt ONNX Runtime (about 10 MB, cached after the first build) for the coming offline voice; the app does not use it yet.
 
 ### Removed
 
