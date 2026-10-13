@@ -48,6 +48,16 @@ clap = { version = "4", features = ["derive"] }
 specta = "=2.0.0-rc.22"
 specta-typescript = "0.0.9"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
+# In-process Kokoro. Every ort rc has broken the API, so it is pinned exactly;
+# ONNX Runtime is linked statically from pyke's prebuilt archive (no coreml: slower for Kokoro).
+ort = { version = "=2.0.0-rc.14", default-features = false, features = [
+  "std",
+  "download-binaries",
+  "tls-native",
+  "api-31",
+] }
+# English G2P with embedded lexicons; no espeak-ng, which is GPL.
+misaki-rs = { version = "0.6", default-features = false }
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"
