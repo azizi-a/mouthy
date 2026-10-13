@@ -5,9 +5,6 @@ use serde::Deserialize;
 use serde_json::json;
 use std::time::Duration;
 
-/// Rate of the headerless s16le mono audio returned for `response_format: "pcm"`.
-pub const SAMPLE_RATE: u32 = 24_000;
-
 /// From the 400 Kokoro-FastAPI returns for input with nothing to say, such as "...".
 const NO_SPEAKABLE_TEXT: &str = "no speakable text";
 
@@ -22,6 +19,7 @@ pub fn client() -> reqwest::Client {
 }
 
 /// PCM rather than WAV: the server streams WAV headers with placeholder sizes.
+/// The headerless s16le mono audio comes back at `tts::SAMPLE_RATE`.
 pub async fn synthesize(
     client: &reqwest::Client,
     base_url: &str,
@@ -269,7 +267,7 @@ mod tests {
             "Hello from Mouthy, this is a short test sentence.",
         ))
         .unwrap();
-        let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
+        let seconds = samples.len() as f32 / crate::tts::SAMPLE_RATE as f32;
         println!(
             "{} samples ({:.2} s of audio) in {:?}",
             samples.len(),

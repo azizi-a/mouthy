@@ -32,7 +32,8 @@
   background: color-mix(in srgb, var(--color-background) 98%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-mid-gray) 25%, transparent);
 }
-.ov-card.error {
+.ov-card.error,
+.ov-card.model-missing {
   width: 100vw;
   border-radius: 16px;
 }
@@ -44,7 +45,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ov-card.error .ov-text {
+.ov-card.error .ov-text,
+.ov-card.model-missing .ov-text {
   white-space: normal;
   display: -webkit-box;
   -webkit-box-orient: vertical;

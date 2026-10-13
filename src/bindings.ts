@@ -221,7 +221,8 @@ async stopSpeaking() : Promise<void> {
     await TAURI_INVOKE("stop_speaking");
 },
 /**
- * Voice ids offered by the configured speech server.
+ * Voice ids the selected backend offers: the server's list, or the voice
+ * files in the models folder.
  */
 async fetchTtsVoices() : Promise<Result<string[], string>> {
     try {
@@ -365,7 +366,7 @@ bindings?: Partial<{ [key in string]: ShortcutBinding }>; start_hidden?: boolean
 /**
  * Sent to the server; changing playback rate locally would shift pitch.
  */
-tts_speed?: number; tts_volume?: number }
+tts_speed?: number; tts_volume?: number; tts_backend?: TtsBackend; tts_model_variant?: ModelVariant }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 /**
@@ -383,6 +384,11 @@ export type KeyboardDiagnosticReport = { secure_input_enabled: boolean; culprit_
 key_down: number; key_up: number; flags_changed: number; mouse: number; duration_ms: number }
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
+/**
+ * Which Kokoro export the local backend loads. int8 is about twice as fast
+ * as fp32 on the CPU.
+ */
+export type ModelVariant = "int8" | "fp16" | "fp32"
 export type OverlayPosition = "top" | "bottom"
 /**
  * Which overlay to display: `Minimal` is the compact pill, `None` hides it.
@@ -426,6 +432,11 @@ export type ShortcutBinding = { id: string; name: string; description: string; d
  * and `Dark` force one of the two palettes the app ships.
  */
 export type Theme = "system" | "light" | "dark"
+/**
+ * Where speech is synthesised: an OpenAI-compatible server at
+ * `tts_base_url`, or Kokoro in-process from the files in the models folder.
+ */
+export type TtsBackend = "http" | "local"
 
 /** tauri-specta globals **/
 

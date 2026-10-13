@@ -243,6 +243,7 @@
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
     "error": "Speech failed",
+    "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",
     "dismiss": "Dismiss"
   },

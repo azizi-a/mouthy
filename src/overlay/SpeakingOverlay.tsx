@@ -10,7 +10,8 @@ import { syncLanguageFromSettings } from "@/i18n";
 type OverlayView =
   | { kind: "speaking" }
   | { kind: "nothing-selected" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string }
+  | { kind: "model-missing" };
 
 const SpeakingOverlay: React.FC = () => {
   const { t } = useTranslation();
@@ -42,7 +43,10 @@ const SpeakingOverlay: React.FC = () => {
   const message =
     view.kind === "error"
       ? `${t("overlay.error")}: ${view.message}`
-      : t("overlay.nothingSelected");
+      : view.kind === "model-missing"
+        ? t("overlay.modelMissing")
+        : t("overlay.nothingSelected");
+  const opensSettings = view.kind === "error" || view.kind === "model-missing";
 
   return (
     <div className={`ov-stage${visible ? " visible" : ""}`}>
@@ -60,7 +64,7 @@ const SpeakingOverlay: React.FC = () => {
         ) : (
           <span className="ov-text">{message}</span>
         )}
-        {view.kind === "error" && (
+        {opensSettings && (
           <button
             className="ov-button"
             onClick={() => commands.showMainWindowCommand()}

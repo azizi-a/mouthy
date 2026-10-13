@@ -1,7 +1,7 @@
 use crate::audio_out;
 use crate::clipboard;
 use crate::overlay::{self, OverlayView};
-use crate::settings;
+use crate::settings::{self, AppSettings, TtsBackend};
 use crate::tray::{self, TrayIconState};
 use crate::tts;
 use log::{debug, error, info, warn};
@@ -28,7 +28,7 @@ pub trait ShortcutAction: Send + Sync {
 const READ_AHEAD: usize = 2;
 const PLAYBACK_POLL: Duration = Duration::from_millis(20);
 const MONO: NonZero<u16> = NonZero::<u16>::MIN;
-const SAMPLE_RATE: NonZero<u32> = NonZero::new(tts::http::SAMPLE_RATE).unwrap();
+const SAMPLE_RATE: NonZero<u32> = NonZero::new(tts::SAMPLE_RATE).unwrap();
 /// A hotkey release this soon after a ⌘C sent with the hotkey still held is
 /// the hotkey listener taking our synthetic ⌘-up for the user letting go.
 const COPY_ECHO_WINDOW: Duration = Duration::from_millis(150);
@@ -164,6 +164,16 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
     }
 
     info!("Speaking selection ({source})");
+    let settings = settings::get_settings(app);
+    // Checked before the copy: without its files the local voice cannot speak.
+    let backend = match speech_backend(app, &settings) {
+        Ok(backend) => backend,
+        Err(view) => {
+            overlay::show_overlay(app, view);
+            return;
+        }
+    };
+    let capture_started = Instant::now();
     let selection = match clipboard::capture_selection(app) {
         Ok(selection) => selection,
         Err(e) => {
@@ -177,10 +187,12 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
         .map(|text| tts::text::normalize(&text))
         .unwrap_or_default();
     let sentences = tts::text::split_sentences(&text);
+    let captured_at = Instant::now();
     info!(
-        "Captured {} chars, {} sentences",
+        "Captured {} chars, {} sentences in {} ms",
         text.chars().count(),
-        sentences.len()
+        sentences.len(),
+        (captured_at - capture_started).as_millis()
     );
     if sentences.is_empty() {
         overlay::show_overlay(app, OverlayView::NothingSelected);
@@ -188,7 +200,12 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
     }
 
     let stop = Arc::new(AtomicBool::new(false));
-    if let Err(e) = start_speech(app, sentences, &stop) {
+    let speech = Speech {
+        sentences,
+        backend,
+        captured_at,
+    };
+    if let Err(e) = start_speech(app, settings, speech, &stop) {
         error!("Failed to start speech threads: {e}");
         stop.store(true, Ordering::SeqCst);
         let message = e.to_string();
@@ -250,12 +267,78 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
     tray::set_tray_state(app, TrayIconState::Idle);
 }
 
+/// The backend a request will use, or the notice to show instead.
+fn speech_backend(app: &AppHandle, settings: &AppSettings) -> Result<tts::Backend, OverlayView> {
+    match settings.tts_backend {
+        TtsBackend::Http => Ok(tts::Backend::Http {
+            base_url: settings.tts_base_url.clone(),
+            voice: settings.tts_voice.clone(),
+        }),
+        TtsBackend::Local => {
+            let files = local_model_files(app, settings)
+                .map_err(|message| OverlayView::Error { message })?;
+            match files.missing() {
+                Some(missing) => {
+                    info!("The local voice is missing {missing}");
+                    Err(OverlayView::ModelMissing)
+                }
+                None => Ok(tts::Backend::Local(files)),
+            }
+        }
+    }
+}
+
+fn local_model_files(
+    app: &AppHandle,
+    settings: &AppSettings,
+) -> Result<tts::local::ModelFiles, String> {
+    let models_dir = crate::commands::models_dir(app)?;
+    Ok(tts::local::ModelFiles::new(
+        &models_dir,
+        settings.tts_model_variant,
+        &settings.tts_voice,
+    ))
+}
+
+/// Loads the local voice in the background when the settings select it, so
+/// the next request does not wait for it, and frees it when they do not.
+pub fn preload_local_voice(app: &AppHandle) {
+    let app = app.clone();
+    let spawned = thread::Builder::new()
+        .name("tts-preload".into())
+        .spawn(move || {
+            let result = tts::local::preload(|| {
+                let settings = settings::get_settings(&app);
+                if settings.tts_backend != TtsBackend::Local {
+                    return None;
+                }
+                local_model_files(&app, &settings)
+                    .inspect_err(|e| warn!("Cannot find the local voice: {e}"))
+                    .ok()
+            });
+            if let Err(e) = result {
+                info!("The local voice is not loaded: {e}");
+            }
+        });
+    if let Err(e) = spawned {
+        warn!("Failed to start loading the local voice: {e}");
+    }
+}
+
+/// What a session speaks and how.
+struct Speech {
+    sentences: Vec<String>,
+    backend: tts::Backend,
+    /// When the selection was ready, for the first-audio timing.
+    captured_at: Instant,
+}
+
 fn start_speech(
     app: &AppHandle,
-    sentences: Vec<String>,
+    settings: AppSettings,
+    speech: Speech,
     stop: &Arc<AtomicBool>,
 ) -> std::io::Result<()> {
-    let settings = settings::get_settings(app);
     // The settings commands clamp too, but the store can be edited by hand.
     let speed = settings.tts_speed.clamp(0.5, 2.0);
     let volume = settings.tts_volume.clamp(0.0, 1.0);
@@ -264,46 +347,72 @@ fn start_speech(
         let app = app.clone();
         let stop = stop.clone();
         let device = settings.selected_output_device;
+        let captured_at = speech.captured_at;
         thread::Builder::new()
             .name("tts-playback".into())
-            .spawn(move || play(app, stop, rx, device, volume))?;
+            .spawn(move || play(app, stop, rx, device, volume, captured_at))?;
     }
     let stop = stop.clone();
-    let (base_url, voice) = (settings.tts_base_url, settings.tts_voice);
+    let Speech {
+        sentences, backend, ..
+    } = speech;
     thread::Builder::new()
         .name("tts-synth".into())
-        .spawn(move || synthesize(sentences, base_url, voice, speed, stop, tx))?;
+        .spawn(move || synthesize(sentences, backend, speed, stop, tx))?;
     Ok(())
 }
 
-/// Synth thread: one request per sentence, handed to playback in order.
+/// Synth thread: one sentence at a time, handed to playback in order.
 fn synthesize(
     sentences: Vec<String>,
-    base_url: String,
-    voice: String,
+    backend: tts::Backend,
     speed: f32,
     stop: Arc<AtomicBool>,
     tx: SyncSender<Chunk>,
 ) {
     let _report_panic = ReportPanic(&tx);
-    let client = tts::http::client();
+    let mut synth = match backend.open(&stop) {
+        Ok(synth) => synth,
+        Err(e) => {
+            let _ = tx.send(Err(e));
+            return;
+        }
+    };
     for sentence in &sentences {
         if stop.load(Ordering::SeqCst) {
             break;
         }
-        // The only block_on in the app: it panics on an async runtime worker,
-        // and this is a plain thread.
-        let chunk = tauri::async_runtime::block_on(tts::http::synthesize(
-            &client, &base_url, &voice, speed, sentence,
-        ));
-        if let Err(e) = &chunk {
-            if tts::http::is_unspeakable(e) {
-                debug!(
-                    "Skipping a sentence with no speakable text ({} chars)",
-                    sentence.chars().count()
-                );
-                continue;
-            }
+        let started = Instant::now();
+        let chunk = match &mut synth {
+            // The only block_on in the app: it panics on an async runtime
+            // worker, and this is a plain thread.
+            tts::Synth::Http {
+                client,
+                base_url,
+                voice,
+            } => tauri::async_runtime::block_on(tts::http::synthesize(
+                client, base_url, voice, speed, sentence,
+            )),
+            tts::Synth::Local(local) => local.synthesize(sentence, speed),
+        };
+        // Stopping cuts a local inference short; that is not a failure.
+        if stop.load(Ordering::SeqCst) {
+            break;
+        }
+        let chars = sentence.chars().count();
+        let unspeakable = match &chunk {
+            Ok(samples) => samples.is_empty(),
+            Err(e) => tts::http::is_unspeakable(e),
+        };
+        if unspeakable {
+            debug!("Skipping a sentence with no speakable text ({chars} chars)");
+            continue;
+        }
+        if chunk.is_ok() {
+            debug!(
+                "Synthesised {chars} chars in {} ms",
+                started.elapsed().as_millis()
+            );
         }
         let failed = chunk.is_err();
         // A send error means playback has ended.
@@ -371,6 +480,7 @@ fn play(
     rx: Receiver<Chunk>,
     device: Option<String>,
     volume: f32,
+    captured_at: Instant,
 ) {
     let mut guard = SessionGuard {
         app,
@@ -388,12 +498,17 @@ fn play(
     sink.log_on_drop(false);
     let player = Player::connect_new(sink.mixer());
     player.set_volume(volume);
-    guard.end = play_chunks(&player, &rx, &stop);
+    guard.end = play_chunks(&player, &rx, &stop, captured_at);
 }
 
 /// Plays chunks from `rx` until they run out, synthesis fails or `stop` is
 /// set. Returns a synthesis failure once the audio queued before it has played.
-fn play_chunks(player: &Player, rx: &Receiver<Chunk>, stop: &AtomicBool) -> PlaybackEnd {
+fn play_chunks(
+    player: &Player,
+    rx: &Receiver<Chunk>,
+    stop: &AtomicBool,
+    captured_at: Instant,
+) -> PlaybackEnd {
     let mut queued_any = false;
     loop {
         if stop.load(Ordering::SeqCst) {
@@ -413,6 +528,12 @@ fn play_chunks(player: &Player, rx: &Receiver<Chunk>, stop: &AtomicBool) -> Play
                     return PlaybackEnd::Done;
                 }
                 player.append(SamplesBuffer::new(MONO, SAMPLE_RATE, pcm_to_f32(&samples)));
+                if !queued_any {
+                    info!(
+                        "First audio {} ms after the capture",
+                        captured_at.elapsed().as_millis()
+                    );
+                }
                 queued_any = true;
             }
             Ok(Err(message)) => {
@@ -581,7 +702,8 @@ mod tests {
 
         let (player_ref, stop_ref) = (&player, &stop);
         thread::scope(|scope| {
-            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            let playback =
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
             // Nothing is consuming the audio yet, so the error must wait.
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(!playback.is_finished());
@@ -607,7 +729,8 @@ mod tests {
 
         let (player_ref, stop_ref) = (&player, &stop);
         thread::scope(|scope| {
-            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            let playback =
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(!playback.is_finished());
 
@@ -663,7 +786,8 @@ mod tests {
         let (player_ref, stop_ref) = (&player, &stop);
         thread::scope(|scope| {
             let _release = StopOnDrop(stop_ref);
-            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            let playback =
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(
                 !playback.is_finished(),
@@ -686,7 +810,8 @@ mod tests {
         let (player_ref, stop_ref) = (&player, &stop);
         thread::scope(|scope| {
             let _release = StopOnDrop(stop_ref);
-            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            let playback =
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(!playback.is_finished());
 
@@ -711,7 +836,10 @@ mod tests {
         tx.send(Ok(vec![0; 480])).unwrap();
         let stop = AtomicBool::new(true);
 
-        assert_eq!(play_chunks(&player, &rx, &stop), PlaybackEnd::Done);
+        assert_eq!(
+            play_chunks(&player, &rx, &stop, Instant::now()),
+            PlaybackEnd::Done
+        );
         assert!(
             player.empty(),
             "appending after stop would restart a stopped player"
@@ -727,7 +855,8 @@ mod tests {
         let (player_ref, stop_ref) = (&player, &stop);
         thread::scope(|scope| {
             let _release = StopOnDrop(stop_ref);
-            let playback = scope.spawn(move || play_chunks(player_ref, &rx, stop_ref));
+            let playback =
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
             // Player takes READ_AHEAD, the channel holds READ_AHEAD more.
             for _ in 0..READ_AHEAD * 2 {
                 tx.send(Ok(vec![0; 480])).unwrap();
@@ -758,9 +887,15 @@ mod tests {
         drop(tx);
 
         let stop = AtomicBool::new(false);
-        assert_eq!(play_chunks(&player, &rx, &stop), PlaybackEnd::NothingSpoken);
+        assert_eq!(
+            play_chunks(&player, &rx, &stop, Instant::now()),
+            PlaybackEnd::NothingSpoken
+        );
         // A stopped session ends quietly even when nothing played.
         stop.store(true, Ordering::SeqCst);
-        assert_eq!(play_chunks(&player, &rx, &stop), PlaybackEnd::Done);
+        assert_eq!(
+            play_chunks(&player, &rx, &stop, Instant::now()),
+            PlaybackEnd::Done
+        );
     }
 }

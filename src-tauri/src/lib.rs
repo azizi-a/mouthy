@@ -321,6 +321,8 @@ pub fn run(cli_args: CliArgs) {
         .plugin(
             LogBuilder::new()
                 .level(log::LevelFilter::Trace) // Set to most verbose level globally
+                // misaki-rs logs every sentence it reads at debug; keep selected text out of the logs.
+                .level_for("misaki_rs", log::LevelFilter::Warn)
                 .max_file_size(500_000)
                 .rotation_strategy(RotationStrategy::KeepOne)
                 .clear_targets()
@@ -450,6 +452,9 @@ pub fn run(cli_args: CliArgs) {
             let app_handle = app.handle().clone();
 
             initialize_core_logic(&app_handle);
+
+            // Load the local voice now rather than on the first request.
+            actions::preload_local_voice(&app_handle);
 
             // Secure Input monitor (macOS): detects stuck secure input that
             // silently blocks keyed shortcuts, warns the user, and activates

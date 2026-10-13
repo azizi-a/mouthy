@@ -459,7 +459,11 @@ pub fn create_overlay(app_handle: &AppHandle) {
 pub enum OverlayView {
     Speaking,
     NothingSelected,
-    Error { message: String },
+    Error {
+        message: String,
+    },
+    /// The local backend is selected but its model or voice file is not there.
+    ModelMissing,
 }
 
 impl OverlayView {
@@ -468,7 +472,7 @@ impl OverlayView {
         match self {
             OverlayView::Speaking => None,
             OverlayView::NothingSelected => Some(Duration::from_secs(2)),
-            OverlayView::Error { .. } => Some(Duration::from_secs(6)),
+            OverlayView::Error { .. } | OverlayView::ModelMissing => Some(Duration::from_secs(6)),
         }
     }
 }
@@ -702,6 +706,10 @@ mod tests {
                 message: "boom".into()
             }),
             serde_json::json!({ "kind": "error", "message": "boom" })
+        );
+        assert_eq!(
+            json(OverlayView::ModelMissing),
+            serde_json::json!({ "kind": "model-missing" })
         );
     }
 

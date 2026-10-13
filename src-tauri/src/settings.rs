@@ -130,6 +130,25 @@ pub enum Theme {
     Dark,
 }
 
+/// Where speech is synthesised: an OpenAI-compatible server at
+/// `tts_base_url`, or Kokoro in-process from the files in the models folder.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum TtsBackend {
+    Http,
+    Local,
+}
+
+/// Which Kokoro export the local backend loads. int8 is about twice as fast
+/// as fp32 on the CPU.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum ModelVariant {
+    Int8,
+    Fp16,
+    Fp32,
+}
+
 /// The container-level `serde(default)` (backed by the `Default` impl below)
 /// guarantees every field — including ones added in the future — falls back to
 /// its `get_default_settings()` value when missing from a stored settings
@@ -178,6 +197,10 @@ pub struct AppSettings {
     pub tts_speed: f32,
     #[serde(default = "default_tts_volume")]
     pub tts_volume: f32,
+    #[serde(default = "default_tts_backend")]
+    pub tts_backend: TtsBackend,
+    #[serde(default = "default_tts_model_variant")]
+    pub tts_model_variant: ModelVariant,
 }
 
 fn default_start_hidden() -> bool {
@@ -241,6 +264,14 @@ fn default_tts_volume() -> f32 {
     1.0
 }
 
+fn default_tts_backend() -> TtsBackend {
+    TtsBackend::Http
+}
+
+fn default_tts_model_variant() -> ModelVariant {
+    ModelVariant::Int8
+}
+
 pub const SETTINGS_STORE_PATH: &str = "settings_store.json";
 
 pub fn get_default_settings() -> AppSettings {
@@ -281,6 +312,8 @@ pub fn get_default_settings() -> AppSettings {
         tts_voice: default_tts_voice(),
         tts_speed: default_tts_speed(),
         tts_volume: default_tts_volume(),
+        tts_backend: default_tts_backend(),
+        tts_model_variant: default_tts_model_variant(),
     }
 }
 
@@ -617,6 +650,33 @@ mod tests {
     fn default_overlay_style_is_minimal_when_overlay_defaults_on() {
         let settings = get_default_settings();
         assert_eq!(settings.overlay_style, OverlayStyle::Minimal);
+    }
+
+    #[test]
+    fn speech_backend_settings_default_to_http_and_int8() {
+        let settings: AppSettings = serde_json::from_value(serde_json::json!({})).unwrap();
+        assert_eq!(settings.tts_backend, TtsBackend::Http);
+        assert_eq!(settings.tts_model_variant, ModelVariant::Int8);
+    }
+
+    #[test]
+    fn speech_backend_settings_store_as_lowercase_names() {
+        let mut settings = get_default_settings();
+        settings.tts_backend = TtsBackend::Local;
+        settings.tts_model_variant = ModelVariant::Fp16;
+        let stored = serde_json::to_value(&settings).unwrap();
+        assert_eq!(stored["tts_backend"], "local");
+        assert_eq!(stored["tts_model_variant"], "fp16");
+        for (name, variant) in [
+            ("int8", ModelVariant::Int8),
+            ("fp16", ModelVariant::Fp16),
+            ("fp32", ModelVariant::Fp32),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<ModelVariant>(name.into()).unwrap(),
+                variant
+            );
+        }
     }
 
     #[test]

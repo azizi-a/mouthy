@@ -1,6 +1,7 @@
 pub mod audio;
 
-use crate::settings::{get_settings, write_settings, AppSettings, LogLevel};
+use crate::settings::{get_settings, write_settings, AppSettings, LogLevel, TtsBackend};
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
 
@@ -10,12 +11,18 @@ pub fn stop_speaking(app: AppHandle) {
     crate::actions::stop_speaking(&app, "app");
 }
 
-/// Voice ids offered by the configured speech server.
+/// Voice ids the selected backend offers: the server's list, or the voice
+/// files in the models folder.
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_tts_voices(app: AppHandle) -> Result<Vec<String>, String> {
-    let base_url = get_settings(&app).tts_base_url;
-    crate::tts::http::list_voices(&crate::tts::http::client(), &base_url).await
+    let settings = get_settings(&app);
+    match settings.tts_backend {
+        TtsBackend::Http => {
+            crate::tts::http::list_voices(&crate::tts::http::client(), &settings.tts_base_url).await
+        }
+        TtsBackend::Local => Ok(crate::tts::local::installed_voices(&models_dir(&app)?)),
+    }
 }
 
 #[tauri::command]
@@ -27,6 +34,14 @@ pub fn get_app_dir_path(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     Ok(app_data_dir.to_string_lossy().to_string())
+}
+
+/// Where downloaded speech models live.
+pub fn models_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map(|dir| dir.join("models"))
+        .map_err(|e| format!("Failed to get app data directory: {}", e))
 }
 
 #[tauri::command]
