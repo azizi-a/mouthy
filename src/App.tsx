@@ -84,7 +84,7 @@ function App() {
   // The overlay's model-missing notice opens the Models page.
   useEffect(() => {
     const unlisten = listen<string>("show-section", ({ payload }) => {
-      if (payload in SECTIONS_CONFIG) {
+      if (Object.hasOwn(SECTIONS_CONFIG, payload)) {
         setCurrentSection(payload as SidebarSection);
       }
     });

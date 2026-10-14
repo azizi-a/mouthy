@@ -17,7 +17,7 @@ import { useSettings } from "../../../hooks/useSettings";
 export const GeneralSettings: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting } = useSettings();
-  const usesServer = (getSetting("tts_backend") ?? "http") === "http";
+  const usesServer = (getSetting("tts_backend") ?? "local") === "http";
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <SettingsGroup title={t("settings.general.title")}>

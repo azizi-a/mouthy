@@ -376,11 +376,16 @@ fn parse_stored_settings(mut stored: serde_json::Value) -> (AppSettings, bool) {
 }
 
 /// A store without `tts_backend` predates the local backend and spoke through
-/// the server, so it keeps doing so; only fresh installs default to local.
-/// Returns whether the key was added.
+/// the server, so it keeps doing so; only fresh installs default to local. An
+/// unreadable value gets the server too, which needs no downloaded files.
+/// Returns whether the key was written.
 fn keep_server_backend_for_older_stores(stored: &mut serde_json::Value) -> bool {
     match stored.as_object_mut() {
-        Some(map) if !map.contains_key("tts_backend") => {
+        Some(map)
+            if !map
+                .get("tts_backend")
+                .is_some_and(|value| TtsBackend::deserialize(value).is_ok()) =>
+        {
             map.insert("tts_backend".into(), serde_json::json!(TtsBackend::Http));
             true
         }
@@ -704,6 +709,23 @@ mod tests {
         let (settings, updated) = parse_stored_settings(stored);
         assert_eq!(settings.tts_backend, TtsBackend::Http);
         assert!(updated);
+    }
+
+    #[test]
+    fn an_unreadable_backend_becomes_the_server() {
+        for junk in [
+            serde_json::json!("cloud"),
+            serde_json::json!(3),
+            serde_json::Value::Null,
+        ] {
+            let mut stored = default_settings_json();
+            stored["tts_backend"] = junk.clone();
+            stored["tts_voice"] = serde_json::json!("bf_emma");
+            let (settings, updated) = parse_stored_settings(stored);
+            assert_eq!(settings.tts_backend, TtsBackend::Http, "{junk}");
+            assert_eq!(settings.tts_voice, "bf_emma");
+            assert!(updated);
+        }
     }
 
     #[test]

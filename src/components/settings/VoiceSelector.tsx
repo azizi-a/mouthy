@@ -20,7 +20,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const { getSetting, updateSetting, resetSetting, isUpdating } = useSettings();
   const voice = getSetting("tts_voice") ?? "";
   const baseUrl = getSetting("tts_base_url");
-  const backend = getSetting("tts_backend") ?? "http";
+  const backend = getSetting("tts_backend") ?? "local";
   const [draft, setDraft] = useState(voice);
   const [voices, setVoices] = useState<string[]>([]);
 

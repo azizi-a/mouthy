@@ -16,7 +16,7 @@ export const TtsBackendSelector: React.FC<TtsBackendSelectorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
-  const backend: TtsBackend = getSetting("tts_backend") ?? "http";
+  const backend: TtsBackend = getSetting("tts_backend") ?? "local";
 
   const options = [
     { value: "local", label: t("settings.speech.backend.options.local") },
