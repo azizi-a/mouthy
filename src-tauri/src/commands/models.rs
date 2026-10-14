@@ -31,12 +31,10 @@ pub struct ModelDownloads(Mutex<DownloadTable>);
 struct DownloadTable {
     running: HashMap<String, Running>,
     failed: HashMap<String, String>,
-    next_run: u64,
 }
 
+/// A file's entry stays until its task ends, so a file has one task at most.
 struct Running {
-    /// Tells this download apart from a later one of the same file.
-    run: u64,
     abort: AbortHandle,
     downloaded: u64,
 }
@@ -134,28 +132,18 @@ pub async fn download_model_file(app: AppHandle, id: String) -> Result<(), Strin
     let file = find(&app, &id)?;
     let client = download::client()?;
     let (abort, registration) = AbortHandle::new_pair();
-    let run = {
+    {
         let downloads = app.state::<ModelDownloads>();
         let mut table = downloads.lock();
         if table.running.contains_key(&id) {
             return Ok(());
         }
         table.failed.remove(&id);
-        table.next_run += 1;
-        let run = table.next_run;
         let downloaded = partial_len(&file.path);
-        table.running.insert(
-            id,
-            Running {
-                run,
-                abort,
-                downloaded,
-            },
-        );
-        run
-    };
+        table.running.insert(id, Running { abort, downloaded });
+    }
     files_changed(&app);
-    tauri::async_runtime::spawn(run_download(app, file, client, run, registration));
+    tauri::async_runtime::spawn(run_download(app, file, client, registration));
     Ok(())
 }
 
@@ -220,13 +208,11 @@ async fn run_download(
     app: AppHandle,
     file: CatalogFile,
     client: reqwest::Client,
-    run: u64,
     registration: AbortRegistration,
 ) {
     let mut finish = Finish {
         app: app.clone(),
         id: file.id.clone(),
-        run,
         error: Some("The download stopped unexpectedly".into()),
     };
     let progress = |downloaded: u64| {
@@ -236,9 +222,7 @@ async fn run_download(
             .running
             .get_mut(&file.id)
         {
-            if running.run == run {
-                running.downloaded = downloaded;
-            }
+            running.downloaded = downloaded;
         }
         let event = DownloadProgress {
             id: &file.id,
@@ -285,7 +269,6 @@ async fn run_download(
 struct Finish {
     app: AppHandle,
     id: String,
-    run: u64,
     error: Option<String>,
 }
 
@@ -294,13 +277,7 @@ impl Drop for Finish {
         {
             let downloads = self.app.state::<ModelDownloads>();
             let mut table = downloads.lock();
-            if table
-                .running
-                .get(&self.id)
-                .is_some_and(|running| running.run == self.run)
-            {
-                table.running.remove(&self.id);
-            }
+            table.running.remove(&self.id);
             if let Some(error) = self.error.take() {
                 table.failed.insert(self.id.clone(), error);
             }
