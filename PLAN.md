@@ -16,7 +16,7 @@ Design lane: not applicable · Intent-critical: yes
 - **Bindings export:** `cd src-tauri && perl -e 'alarm 20; exec @ARGV' ./target/debug/mouthy --start-hidden` (exit 142 expected; a full hidden launch with a tray icon for 20 s).
 - **Built app:** `bun run tauri build --bundles app` → `src-tauri/target/release/bundle/macos/Mouthy.app` (9.6 MB at T5; 62 MB / 63,176 KB at P2.3 now that it links ORT and misaki-rs; 63,304 KB at P2.4, binary 64,690,032 B, zipped 19.7 MB, unchanged at P2.3b; version 0.1.0, executable `mouthy`, `LSMinimumSystemVersion` 13.4); rebuilt at P2.3b but not launched. Quit it before `tauri dev`.
 - **Phase 1 complete (2026-10-13):** the user ran `docs/dod-checklist.md` on the built app on a second MacBook Pro; every step behaved as expected (H7 resolved).
-- **Next:** P2.6 (README/CHANGELOG + offline DoD).
+- **Next:** P2.4b (panel fix-ups), then P2.6 (offline DoD checklist rewrite, README/CHANGELOG, fresh-clone verification).
 - **Open questions:** H4 (README note applied as the default). Pre-existing: when handy-keys cannot start (no Accessibility), `init_shortcuts` reports success and the hotkey is silently dead instead of falling back to Tauri. Known limits of the T5 gate are listed in its Implementation Notes. P2.2: misaki-rs's eSpeak-regenerated lexicons differ from the hexgrad lexicons Kokoro was trained on (up to ~8% of running words); keep them or embed hexgrad's Apache-2.0 lexicons in P2.3 — needs a user call. Nobody has listened to the P2.2 WAVs or to P2.3's local speech (it played at volume 0.2 on the MacBook speakers, unheard). P2.3: first audio is ~200–260 ms only when the first clause is ≤ 6 words; a 10-word clause is ~320 ms and a sentence with no clause break is not split (see P2.3 notes). P2.3b: a first chunk over 150 ids is synthesised in pieces that play only once all are done (a 300-character sentence with no clause break: first audio 1.4–1.5 s); sending each piece to playback as it is ready would roughly halve that. P2.5: the espeak-ng path maps symbols the way hexgrad's `espeak.py` does (US flap `T`, `ɜɹ`, `əɹ`, `ɐ`→`ə`), while lexicon words keep misaki-rs's eSpeak forms (`ɾ`, `ɚ`, `ʔ`); part of H10.
 
 ## Human Asks
@@ -625,6 +625,20 @@ Panel: simplicity 62%, integration 86%, correctness 86%, adversary 70%. Arbiter 
 Done 2026-10-14: see P2.3b Implementation Notes.
 
 **H11 (new ask):** memory. Default applied: 150-token piece cap + README correction. Option for later: unload after N idle minutes (Handy had `model_unload_timeout`); unloading may not return memory to the OS (3 of 4 runs did not). Does the user want the idle unload too?
+
+### Stage P2.4b — fix-ups from the P2.4/P2.3b panel (after P2.5) `[fix]`
+
+Panel: simplicity 62%, integration 85%, correctness 84%, adversary 85%. Arbiter decisions:
+
+**Do (ranked):**
+
+1. Models page truth from the backend: `list_model_files` carries the selected files' `missing()` result and the last preload error; `model-files-changed` is emitted after every preload; delete the `local-voice-status` event and its TS type. The page shows "voice X has no file here — pick or download one" for non-catalog voices (e.g. `ef_dora`, `a+b` blends, free text) and shows load failures from launch.
+2. `plain_text`: strip combining marks U+0300–U+036F when the previous output char is ASCII (decomposed accents); map U+2212 → `-`; map `“ ” „` → `"`. Tests through the real G2P.
+3. Drop fp16: catalog row, `ModelVariant::Fp16`, UI row/key, README mention (measured: no faster than fp32, 2× slower than int8 on CPU). Reword fp32 label if needed.
+4. Salvage of a junk `tts_backend` resolves to `http`, not `local`; frontend `?? "http"` fallbacks → `"local"` (3 files); `App.tsx` section check via `Object.hasOwn`.
+5. Optional small: remove the `run`/`next_run` counter in `commands/models.rs` (keep the `Finish` drop guard).
+
+**Rejected:** dropping resume (fp32 is 326 MB; HF honours Range); replacing `futures-util` with `JoinHandle::abort` (no size win; naive swap breaks cancel messaging); single-click delete (dialog plugin was deleted in R5; mis-click = 326 MB); files-only Models page (model variant has no other home; keep). **Deferred (Phase 3 / later):** fold overrides (résumé, rosé, exposé, saké via misaki `[word](/ph/)` markers); `sync_all` on the full-size-partial path; spaced ranges "to"; `7.30-9.30pm`; two-number phone chains; "In use" badge on HTTP; Download button shows full size not remaining; Time Machine exclusion for `models/`; App Nap during hidden downloads (unverified); listen to 150- vs 510-token seams (H11 note).
 
 ## Amendments
 
