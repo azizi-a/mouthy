@@ -4,7 +4,7 @@
 //! export) and `voices/<voice>.bin`. The loaded model stays in memory between
 //! sessions; one session at a time holds it.
 
-use super::text::expand_numbers;
+use super::text::{expand_numbers, joins_numbers};
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
 use misaki_rs::{Language, G2P};
@@ -95,7 +95,7 @@ enum Dialect {
 
 impl Dialect {
     fn for_voice(voice: &str) -> Self {
-        if voice.starts_with('b') {
+        if voice.starts_with(['b', 'B']) {
             Dialect::British
         } else {
             Dialect::American
@@ -202,7 +202,7 @@ pub fn installed_voices(models_dir: &Path) -> Vec<String> {
 pub fn preload(target: impl FnOnce() -> Option<ModelFiles>) -> Result<bool, String> {
     let mut loaded = lock_loaded();
     match target() {
-        Some(files) => ensure_loaded(&mut loaded, &files).map(|_| true),
+        Some(files) => ensure_loaded(&mut loaded, &files).map(|()| true),
         None => {
             if loaded.take().is_some() {
                 info!("Unloaded the local voice");
@@ -216,15 +216,19 @@ pub fn preload(target: impl FnOnce() -> Option<ModelFiles>) -> Result<bool, Stri
 /// Setting `stop` cuts the inference in progress short.
 pub fn open(files: &ModelFiles, stop: &Arc<AtomicBool>) -> Result<Loaded, String> {
     let mut loaded = lock_loaded();
-    let synth = ensure_loaded(&mut loaded, files)?;
+    // The lock may come free only after a load or another session.
+    if stop.load(Ordering::SeqCst) {
+        return Err("Stopped before the local voice was ready".into());
+    }
+    ensure_loaded(&mut loaded, files)?;
     // Fresh per session: a late stop from the previous session must not end this one.
     let run_options =
         Arc::new(RunOptions::new().map_err(|e| format!("Cannot prepare ONNX Runtime: {e}"))?);
-    synth.run_options = run_options.clone();
     let finished = Arc::new(AtomicBool::new(false));
-    interrupt_on_stop(stop.clone(), finished.clone(), run_options);
+    interrupt_on_stop(stop.clone(), finished.clone(), run_options.clone());
     Ok(Loaded {
         synth: loaded,
+        run_options,
         finished,
     })
 }
@@ -232,13 +236,14 @@ pub fn open(files: &ModelFiles, stop: &Arc<AtomicBool>) -> Result<Loaded, String
 /// The model, held by one speech session until dropped.
 pub struct Loaded {
     synth: MutexGuard<'static, Option<LocalSynth>>,
+    run_options: Arc<RunOptions>,
     finished: Arc<AtomicBool>,
 }
 
 impl Loaded {
     pub fn synthesize(&mut self, text: &str, speed: f32) -> Result<Vec<i16>, String> {
         match self.synth.as_mut() {
-            Some(synth) => synth.synthesize(text, speed),
+            Some(synth) => synth.synthesize(text, speed, &self.run_options),
             None => Err("The local voice is not loaded".into()),
         }
     }
@@ -287,10 +292,7 @@ fn lock_loaded() -> MutexGuard<'static, Option<LocalSynth>> {
 }
 
 /// Makes `loaded` match `files`, reloading only what changed on disk.
-fn ensure_loaded<'a>(
-    loaded: &'a mut Option<LocalSynth>,
-    files: &ModelFiles,
-) -> Result<&'a mut LocalSynth, String> {
+fn ensure_loaded(loaded: &mut Option<LocalSynth>, files: &ModelFiles) -> Result<(), String> {
     let model = FileStamp::of(&files.model, "Kokoro model")?;
     let voice_path = files
         .voice
@@ -302,12 +304,12 @@ fn ensure_loaded<'a>(
     match loaded {
         // Each part is swapped only once its replacement has loaded, so a
         // failure leaves the stamps matching what is held.
-        Some(synth) => synth.refresh(model, voice, dialect)?,
-        None => *loaded = Some(LocalSynth::load(model, voice, dialect)?),
+        Some(synth) => synth.refresh(model, voice, dialect),
+        None => {
+            *loaded = Some(LocalSynth::load(model, voice, dialect)?);
+            Ok(())
+        }
     }
-    loaded
-        .as_mut()
-        .ok_or_else(|| "The local voice is not loaded".into())
 }
 
 /// A file as loaded: a replaced file at the same path loads again.
@@ -336,7 +338,6 @@ struct LocalSynth {
     voice: Voice,
     g2p: G2P,
     dialect: Dialect,
-    run_options: Arc<RunOptions>,
 }
 
 impl LocalSynth {
@@ -344,15 +345,12 @@ impl LocalSynth {
         let session = load_session(&model.path)?;
         let voice = Voice::load(voice)?;
         let g2p = build_g2p(dialect);
-        let run_options =
-            Arc::new(RunOptions::new().map_err(|e| format!("Cannot prepare ONNX Runtime: {e}"))?);
         Ok(Self {
             session,
             model,
             voice,
             g2p,
             dialect,
-            run_options,
         })
     }
 
@@ -377,8 +375,13 @@ impl LocalSynth {
     }
 
     /// Speaks `text` as 24 kHz mono PCM. Text with nothing to pronounce gives
-    /// no samples. Input longer than Kokoro's context is cut into phrases.
-    fn synthesize(&mut self, text: &str, speed: f32) -> Result<Vec<i16>, String> {
+    /// no samples. Long input is cut into phrases.
+    fn synthesize(
+        &mut self,
+        text: &str,
+        speed: f32,
+        run_options: &RunOptions,
+    ) -> Result<Vec<i16>, String> {
         let (ids, dropped) = text_to_ids(&self.g2p, self.dialect, text)?;
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
@@ -393,7 +396,7 @@ impl LocalSynth {
                 piece,
                 self.voice.style(piece.len()),
                 speed,
-                &self.run_options,
+                run_options,
             )
             .map_err(|e| format!("Local synthesis failed: {e}"))?;
             audio.extend(waveform.iter().copied().map(to_pcm));
@@ -433,11 +436,9 @@ fn load_session(path: &Path) -> Result<Session, String> {
     let started = Instant::now();
     let session = build_session(environment, path)
         .map_err(|e| format!("Cannot load the Kokoro model at {}: {e}", path.display()))?;
-    if !session
-        .inputs()
-        .iter()
-        .any(|input| input.name() == "input_ids")
-    {
+    let has_input = |name: &str| session.inputs().iter().any(|input| input.name() == name);
+    let has_output = |name: &str| session.outputs().iter().any(|output| output.name() == name);
+    if !(has_input("input_ids") && has_output("waveform")) {
         return Err(format!(
             "{} is not the onnx-community Kokoro export",
             path.display()
@@ -594,15 +595,23 @@ const FOLDS: &[(&str, &str)] = &[
 ];
 
 /// Text as misaki-rs reads it best. It splits a word at a curly apostrophe
-/// ("don’t" → "don", "❓", "t") and spells an unknown word letter by letter.
+/// ("don’t" → "don", "❓", "t"), spells an unknown word letter by letter and
+/// reads a dash as a plain space.
 fn plain_text(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
+    for (i, c) in text.char_indices() {
         match c {
             '’' | '‘' | 'ʼ' => out.push('\''),
             // Soft hyphen, zero-width space, byte order mark.
             '\u{ad}' | '\u{200b}' | '\u{feff}' => {}
             '\u{a0}' => out.push(' '),
+            '—' | '–' if is_spaced_dash(&text[..i], &text[i + c.len_utf8()..]) => {
+                // A comma keeps the dash's pause.
+                out.truncate(out.trim_end().len());
+                if !out.is_empty() && !out.ends_with([',', ';', ':', '.', '!', '?']) {
+                    out.push(',');
+                }
+            }
             c if c.is_ascii() => out.push(c),
             c => match FOLDS.iter().find(|(from, _)| from.contains(c)) {
                 Some((_, to)) => out.push_str(to),
@@ -611,6 +620,13 @@ fn plain_text(text: &str) -> String {
         }
     }
     out
+}
+
+/// " — " between words; "1914 – 1918" is a range.
+fn is_spaced_dash(before: &str, after: &str) -> bool {
+    before.ends_with(char::is_whitespace)
+        && after.starts_with(char::is_whitespace)
+        && !joins_numbers(before, after)
 }
 
 /// Turns misaki-rs output into the symbols Kokoro was trained on: tied
@@ -917,9 +933,25 @@ mod tests {
     }
 
     #[test]
+    fn a_spaced_dash_becomes_a_comma() {
+        assert_eq!(
+            plain_text("Tea — or coffee – is fine"),
+            "Tea, or coffee, is fine"
+        );
+        assert_eq!(plain_text("Wait, — no."), "Wait, no.");
+        for kept in ["well—maybe", "1914 – 1918", "£5 – £10", "— Yes", "fine —"] {
+            assert_eq!(plain_text(kept), kept);
+        }
+        let (g2p, _) = recording_g2p(Language::EnglishGB);
+        let (ids, _) = text_to_ids(&g2p, Dialect::British, "Tea — or coffee").unwrap();
+        assert!(ids.contains(&3), "a comma id: {ids:?}");
+    }
+
+    #[test]
     fn voice_prefix_picks_the_dialect() {
         assert_eq!(Dialect::for_voice("bm_lewis"), Dialect::British);
         assert_eq!(Dialect::for_voice("bf_emma"), Dialect::British);
+        assert_eq!(Dialect::for_voice("BM_Lewis"), Dialect::British);
         assert_eq!(Dialect::for_voice("af_heart"), Dialect::American);
         assert_eq!(Dialect::for_voice("am_adam"), Dialect::American);
         assert_eq!(Dialect::for_voice("ef_dora"), Dialect::American);
@@ -1125,6 +1157,15 @@ mod tests {
             fs::write(voices.join(name), b"").unwrap();
         }
         assert_eq!(installed_voices(dir.path()), vec!["af_heart", "bm_lewis"]);
+    }
+
+    #[test]
+    fn a_session_stopped_while_waiting_loads_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = ModelFiles::new(dir.path(), ModelVariant::Int8, "bm_lewis");
+        let stopped = Arc::new(AtomicBool::new(true));
+        let error = open(&files, &stopped).err().unwrap();
+        assert!(error.starts_with("Stopped"), "{error}");
     }
 
     /// Needs the model files: `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored local`.

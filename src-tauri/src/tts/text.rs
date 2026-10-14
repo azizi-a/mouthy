@@ -210,7 +210,7 @@ fn first_clause_break(sentence: &str) -> Option<(&str, &str)> {
 
 /// A dash with a number on each side, as in "1914–1918", "9:00 – 17:00" or
 /// "£5-£10", is a range.
-fn joins_numbers(before: &str, after: &str) -> bool {
+pub(super) fn joins_numbers(before: &str, after: &str) -> bool {
     let has_digit =
         |word: Option<&str>| word.is_some_and(|w| w.contains(|c: char| c.is_ascii_digit()));
     has_digit(before.split_whitespace().next_back()) && has_digit(after.split_whitespace().next())

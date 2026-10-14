@@ -403,6 +403,7 @@ fn synthesize(
     let _report_panic = ReportPanic(&tx);
     let mut synth = match backend.open(&stop) {
         Ok(synth) => synth,
+        Err(_) if stop.load(Ordering::SeqCst) => return,
         Err(e) => {
             let _ = tx.send(Err(e));
             return;
