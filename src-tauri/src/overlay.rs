@@ -462,9 +462,7 @@ fn prevent_activation(panel: &tauri_nspanel::NSPanel) {
     let selector = objc2::sel!(_setPreventsActivation:);
     // Private AppKit API: skip it if a macOS release drops it.
     if !objc2::runtime::NSObjectProtocol::respondsToSelector(panel, selector) {
-        log::warn!(
-            "Clicking the overlay will activate Mouthy: AppKit lacks _setPreventsActivation:"
-        );
+        log::warn!("Overlay clicks will activate Mouthy: no _setPreventsActivation:");
         return;
     }
     unsafe {
