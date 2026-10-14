@@ -160,9 +160,10 @@ fn strip_inline_markers(text: &str) -> String {
 /// its audio is ready sooner.
 const FIRST_CHUNK_WORDS: usize = 8;
 
-/// Cuts the first sentence at its first clause break (`,;:` or a dash) when it
-/// is longer than `FIRST_CHUNK_WORDS`. Both parts keep at least
-/// `MIN_SENTENCE_CHARS`; without such a break it stays whole.
+/// Cuts the first sentence at its first clause break (`,;:` or a dash, but
+/// not one inside a range such as "1914–1918") when it is longer than
+/// `FIRST_CHUNK_WORDS`. Both parts keep at least `MIN_SENTENCE_CHARS`; without
+/// such a break it stays whole.
 pub fn split_first_clause(mut sentences: Vec<String>) -> Vec<String> {
     let Some(first) = sentences.first() else {
         return sentences;
@@ -185,9 +186,13 @@ fn first_clause_break(sentence: &str) -> Option<(&str, &str)> {
         let is_break = match c {
             // Not inside "1,500" or "10:30".
             ',' | ';' | ':' => after.starts_with(char::is_whitespace),
-            '—' | '–' => true,
+            '—' | '–' => !joins_numbers(&sentence[..i], after),
             // A spaced hyphen is a dash; "long-delayed" is not.
-            '-' => sentence[..i].ends_with(' ') && after.starts_with(' '),
+            '-' => {
+                sentence[..i].ends_with(' ')
+                    && after.starts_with(' ')
+                    && !joins_numbers(&sentence[..i], after)
+            }
             _ => false,
         };
         if !is_break {
@@ -201,6 +206,14 @@ fn first_clause_break(sentence: &str) -> Option<(&str, &str)> {
         return (!is_short(tail)).then_some((head, tail));
     }
     None
+}
+
+/// A dash with a number on each side, as in "1914–1918", "9:00 – 17:00" or
+/// "£5-£10", is a range.
+fn joins_numbers(before: &str, after: &str) -> bool {
+    let has_digit =
+        |word: Option<&str>| word.is_some_and(|w| w.contains(|c: char| c.is_ascii_digit()));
+    has_digit(before.split_whitespace().next_back()) && has_digit(after.split_whitespace().next())
 }
 
 /// Splits normalized text into chunks to synthesise one request at a time.
@@ -1354,6 +1367,36 @@ mod tests {
             vec![
                 "The long-delayed housing white paper arrived -",
                 "finally - after many months.",
+            ]
+        );
+    }
+
+    #[test]
+    fn first_split_never_breaks_a_number_range() {
+        for text in [
+            "The war that began in Europe that summer lasted from 1914–1918 and changed everything.",
+            "The office downstairs is open from 9:00–17:00 on weekdays and closed at weekends.",
+            "Tickets for the whole season went up from £5 – £10 each in a single year.",
+            "Every class from the 1990s - 2000s is invited back to the reunion next spring.",
+        ] {
+            assert_eq!(first_chunks(text), vec![text]);
+        }
+        assert_eq!(
+            first_chunks(
+                "Charles Darwin (1809–1882) was an English naturalist, geologist and biologist."
+            ),
+            vec![
+                "Charles Darwin (1809–1882) was an English naturalist,",
+                "geologist and biologist.",
+            ]
+        );
+        assert_eq!(
+            first_chunks(
+                "Prices have doubled since the 1990s — and nobody seems to mind it at all."
+            ),
+            vec![
+                "Prices have doubled since the 1990s —",
+                "and nobody seems to mind it at all."
             ]
         );
     }

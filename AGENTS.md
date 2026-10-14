@@ -52,7 +52,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - `lib.rs` - Entry point, Tauri setup, plugin and command registration
 - `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction` is a thin wrapper); `speak_selection`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
 - `tts/mod.rs` - `Backend` (chosen per request from settings) and `Synth` (opened on the synth thread)
-- `tts/text.rs` - `normalize` (URLs, markdown, whitespace), `split_sentences`, `split_first_clause`, and `expand_numbers` (local backend only)
+- `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences`; for the local backend only, `split_first_clause` and `expand_numbers`
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
 - `tts/local.rs` - in-process Kokoro: model files, the loaded model (kept between sessions, locked by one session at a time, never on the main thread), phoneme mapping, inference
 - `tts/catalog.rs` / `tts/download.rs` - the downloadable Kokoro files (URL pinned to one Hugging Face revision, size, sha256) and the resumable, checksum-verified downloader
