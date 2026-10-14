@@ -50,11 +50,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   return (
     <SettingContainer
       title={t("settings.speech.voice.title")}
-      description={t(
-        backend === "local"
-          ? "settings.speech.voice.descriptionLocal"
-          : "settings.speech.voice.description",
-      )}
+      description={t("settings.speech.voice.description")}
       descriptionMode={descriptionMode}
       grouped={grouped}
     >

@@ -69,8 +69,7 @@
       },
       "voice": {
         "title": "Voice",
-        "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
-        "descriptionLocal": "Voice file name in the models folder, such as bm_lewis. Type one, or pick from the downloaded voices; get more on the Models page.",
+        "description": "Voice name, such as bm_lewis. Type one, or pick from your downloaded voices (Local) or the server's list (HTTP).",
         "choose": "Choose a voice..."
       },
       "speed": {
