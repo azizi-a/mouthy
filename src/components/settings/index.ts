@@ -1,5 +1,6 @@
 // Settings section components
 export { GeneralSettings } from "./general/GeneralSettings";
+export { ModelsSettings } from "./models/ModelsSettings";
 export { AdvancedSettings } from "./advanced/AdvancedSettings";
 export { DebugSettings } from "./debug/DebugSettings";
 export type { OnboardingPreviewStep } from "./debug/OnboardingPreview";

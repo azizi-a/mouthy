@@ -1,10 +1,17 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Cog, FlaskConical, Info, SlidersHorizontal } from "lucide-react";
+import {
+  Cog,
+  FlaskConical,
+  HardDriveDownload,
+  Info,
+  SlidersHorizontal,
+} from "lucide-react";
 import MouthyWordmark from "./icons/MouthyWordmark";
 import { useSettings } from "../hooks/useSettings";
 import {
   GeneralSettings,
+  ModelsSettings,
   AdvancedSettings,
   DebugSettings,
   AboutSettings,
@@ -32,6 +39,12 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.general",
     icon: SlidersHorizontal,
     component: GeneralSettings,
+    enabled: () => true,
+  },
+  models: {
+    labelKey: "sidebar.models",
+    icon: HardDriveDownload,
+    component: ModelsSettings,
     enabled: () => true,
   },
   advanced: {

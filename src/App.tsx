@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { platform } from "@tauri-apps/plugin-os";
 import { checkAccessibilityPermission } from "tauri-plugin-macos-permissions-api";
 import "./App.css";
@@ -78,6 +79,18 @@ function App() {
 
   useEffect(() => {
     checkOnboardingStatus();
+  }, []);
+
+  // The overlay's model-missing notice opens the Models page.
+  useEffect(() => {
+    const unlisten = listen<string>("show-section", ({ payload }) => {
+      if (payload in SECTIONS_CONFIG) {
+        setCurrentSection(payload as SidebarSection);
+      }
+    });
+    return () => {
+      unlisten.then((stop) => stop());
+    };
   }, []);
 
   // Initialize RTL direction when language changes

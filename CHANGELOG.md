@@ -17,6 +17,7 @@ Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MI
 - Speech settings: server URL, voice (typed, or picked from the server's voice list), speed (0.5×–2×) and volume.
 - Offline speech: with Speech Engine set to Local (offline), the Kokoro-82M voice runs inside Mouthy from model files in its models folder, with no server. It loads in the background at launch, British voices (`b…`) get British pronunciations, and stopping ends synthesis at once. Missing files show a notice with Open Settings.
 - The offline voice reads money, decimals, version numbers, years and decades, ordinals, times and percentages as words.
+- Settings → Models downloads the offline voice from Hugging Face: the int8, fp16 or fp32 model and any of 28 English voices, with progress, cancel and resume, each checked against its published SHA-256. The page also picks the model and voice and deletes files; deleting the files in use frees their memory. The missing-files notice's Open Settings opens it.
 
 ### Changed
 

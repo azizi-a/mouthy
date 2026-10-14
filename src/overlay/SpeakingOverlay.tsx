@@ -1,4 +1,4 @@
-import { listen } from "@tauri-apps/api/event";
+import { emitTo, listen } from "@tauri-apps/api/event";
 import { X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -47,6 +47,12 @@ const SpeakingOverlay: React.FC = () => {
         ? t("overlay.modelMissing")
         : t("overlay.nothingSelected");
   const opensSettings = view.kind === "error" || view.kind === "model-missing";
+  const openSettings = async () => {
+    if (view.kind === "model-missing") {
+      await emitTo("main", "show-section", "models");
+    }
+    await commands.showMainWindowCommand();
+  };
 
   return (
     <div className={`ov-stage${visible ? " visible" : ""}`}>
@@ -65,10 +71,7 @@ const SpeakingOverlay: React.FC = () => {
           <span className="ov-text">{message}</span>
         )}
         {opensSettings && (
-          <button
-            className="ov-button"
-            onClick={() => commands.showMainWindowCommand()}
-          >
+          <button className="ov-button" onClick={openSettings}>
             {t("overlay.openSettings")}
           </button>
         )}

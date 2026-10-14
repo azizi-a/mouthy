@@ -8,6 +8,7 @@
   },
   "sidebar": {
     "general": "Общи",
+    "models": "Models",
     "advanced": "Разширени",
     "debug": "Отстраняване",
     "about": "За приложението"
@@ -56,7 +57,7 @@
       "title": "Speech",
       "backend": {
         "title": "Speech Engine",
-        "description": "Local (offline) runs the Kokoro voice on this Mac from the files in Mouthy's models folder. HTTP server sends the selected text to the server URL below.",
+        "description": "Local (offline) runs the Kokoro voice on this Mac, from files you download on the Models page. HTTP server sends the selected text to the server URL below.",
         "options": {
           "local": "Local (offline)",
           "http": "HTTP server"
@@ -69,7 +70,7 @@
       "voice": {
         "title": "Voice",
         "description": "Voice name sent to the server, such as bm_lewis. Type one, or pick from the server's list when it offers one.",
-        "descriptionLocal": "Voice file name in the models folder, such as bm_lewis. Type one, or pick from the voice files found there.",
+        "descriptionLocal": "Voice file name in the models folder, such as bm_lewis. Type one, or pick from the downloaded voices; get more on the Models page.",
         "choose": "Choose a voice..."
       },
       "speed": {
@@ -89,6 +90,59 @@
         "placeholder": "Изберете изходно устройство...",
         "loading": "Зареждане..."
       }
+    },
+    "models": {
+      "title": "Offline Voice",
+      "status": {
+        "title": "Status",
+        "server": "Mouthy is using the HTTP server. These files are used when Speech Engine is Local (offline).",
+        "useLocal": "Use Local (offline)",
+        "missing": "To speak offline, Mouthy needs: {{files}}.",
+        "downloadMissing": "Download ({{size}})",
+        "failed": "The offline voice did not load: {{error}}",
+        "ready": "Ready to speak offline with the {{model}} model and the {{voice}} voice."
+      },
+      "model": {
+        "title": "Model",
+        "description": "Mouthy uses one model at a time. int8 is the smallest and fastest; fp32 is the original, full-precision model.",
+        "int8": "Recommended: smallest and fastest",
+        "fp16": "Half precision",
+        "fp32": "Full precision: slowest, uses the most memory"
+      },
+      "voices": {
+        "title": "Voices",
+        "description": "Voices starting with b speak British English, the rest American English.",
+        "british": "British",
+        "american": "American",
+        "female": "Female",
+        "male": "Male"
+      },
+      "files": {
+        "title": "Files",
+        "folder": {
+          "title": "Models Folder",
+          "description": "Where the downloaded files are kept."
+        },
+        "licence": {
+          "title": "Licence",
+          "description": "Kokoro-82M by hexgrad, converted to ONNX by onnx-community and downloaded from Hugging Face, is released under the Apache License 2.0.",
+          "licence": "Apache License 2.0",
+          "source": "Hugging Face"
+        }
+      },
+      "size": "{{size}} MB",
+      "download": "Download",
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "confirmDelete": "Delete?",
+      "use": "Use",
+      "inUse": "In use",
+      "selected": "Selected",
+      "downloading": "Downloading… {{percent}}%",
+      "checking": "Checking…",
+      "paused": "Paused at {{percent}}%",
+      "failed": "Download failed: {{error}}"
     },
     "advanced": {
       "groups": {
@@ -212,7 +266,7 @@
         "kokoro": {
           "title": "Kokoro",
           "description": "Open-weight text-to-speech model",
-          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad, served locally by Kokoro-FastAPI."
+          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad (Apache-2.0), which runs inside Mouthy or through Kokoro-FastAPI."
         },
         "rodio": {
           "title": "rodio",
