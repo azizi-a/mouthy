@@ -525,6 +525,9 @@ fn build_session(environment: &Environment, path: &Path) -> ort::Result<Session>
         .with_auto_device(AutoDevicePolicy::PreferCPU)?
         // Spinning costs CPU between sentences and gained nothing measurable.
         .with_intra_op_spinning(false)?
+        // A memory plan per input length fragments the arena as lengths vary,
+        // so it grew ~40% past the longest run's need; no slower without.
+        .with_memory_pattern(false)?
         .commit_from_file(path)
 }
 
