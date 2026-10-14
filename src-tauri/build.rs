@@ -1,32 +1,18 @@
 fn main() {
     generate_tray_translations();
 
-    // CPAL (via rodio) links two CoreAudio functions that only exist on
-    // macOS 14.2+. Weak-link the framework so Mouthy still launches on older
-    // macOS (minimumSystemVersion is 10.15).
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
+        // CPAL (via rodio) links two CoreAudio functions that only exist on
+        // macOS 14.2+. Weak-link the framework so Mouthy still launches on
+        // older macOS (minimumSystemVersion is 13.4).
         println!("cargo:rustc-link-arg=-Wl,-weak_framework,CoreAudio");
-        link_clang_runtime();
+        // ONNX Runtime's CoreML code calls `__isPlatformVersionAtLeast`. Rust's
+        // std defines it only weakly and LTO drops it, so clang's runtime must
+        // be linked too; rustc passes `-nodefaultlibs`, which leaves it out.
+        println!("cargo:rustc-link-arg=-fapple-link-rtlib");
     }
 
     tauri_build::build()
-}
-
-/// ONNX Runtime's CoreML code calls `__isPlatformVersionAtLeast`. Rust's std
-/// defines it only weakly and LTO drops it, so link clang's runtime as well.
-fn link_clang_runtime() {
-    let resource_dir = std::process::Command::new("cc")
-        .arg("--print-resource-dir")
-        .output()
-        .ok()
-        .and_then(|out| String::from_utf8(out.stdout).ok());
-    let runtime = resource_dir
-        .map(|dir| std::path::Path::new(dir.trim()).join("lib/darwin/libclang_rt.osx.a"))
-        .filter(|path| path.exists());
-    match runtime {
-        Some(path) => println!("cargo:rustc-link-arg={}", path.display()),
-        None => println!("cargo:warning=clang runtime not found; release builds may not link"),
-    }
 }
 
 /// Generate tray menu translations from frontend locale files.
