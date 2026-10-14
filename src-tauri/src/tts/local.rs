@@ -24,9 +24,15 @@ use std::time::{Duration, Instant, SystemTime};
 
 /// The folder under the models directory that one Kokoro release lives in.
 const KOKORO_DIR: &str = "kokoro-v1.0";
-/// The most ids one inference gets. Kokoro takes up to 510, but ONNX Runtime
-/// keeps the memory its longest run needed for as long as the model is loaded.
-const PIECE_TOKENS: usize = 150;
+/// The most ids one inference gets: Kokoro's limit. A chunk that fits is read
+/// in one go, so its intonation carries across the sentence. ONNX Runtime keeps
+/// the memory its longest run needed (~1 GB at this limit) while loaded.
+const PIECE_TOKENS: usize = 510;
+/// Longer sentences are cut at a clause break before this. English prose runs
+/// about one id per character, so a chunk, even with a short tail merged back,
+/// fits one inference; numbers and spelled-out words run longer and
+/// `split_tokens` cuts those.
+pub(super) const MAX_CHUNK_CHARS: usize = 450;
 const STYLE_DIM: usize = 256;
 /// How often a running inference checks whether its session was stopped.
 const STOP_POLL: Duration = Duration::from_millis(20);
@@ -834,6 +840,7 @@ fn trim_spaces(mut run: &[i64]) -> &[i64] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tts::text::split_sentences;
     use misaki_rs::fallback::FallbackError;
     use misaki_rs::lexicon::PhonemeEntry;
     use misaki_rs::Fallback;
@@ -1127,7 +1134,12 @@ mod tests {
     fn long_input_is_cut_after_the_last_pause_that_fits() {
         // "aaa, aaa, …" well past the limit.
         let phrase = [43, 43, 43, 3, SPACE_ID];
-        let ids: Vec<i64> = phrase.iter().copied().cycle().take(1200).collect();
+        let ids: Vec<i64> = phrase
+            .iter()
+            .copied()
+            .cycle()
+            .take(8 * PIECE_TOKENS)
+            .collect();
         let pieces = split_tokens(&ids, PIECE_TOKENS);
         assert!(pieces.len() >= 8);
         for piece in &pieces {
@@ -1152,7 +1164,7 @@ mod tests {
             .iter()
             .copied()
             .cycle()
-            .take(600)
+            .take(4 * PIECE_TOKENS)
             .collect();
         let pieces = split_tokens(&words, PIECE_TOKENS);
         assert_eq!(pieces.len(), 4);
@@ -1161,7 +1173,7 @@ mod tests {
             assert_eq!((piece.first(), piece.last()), (Some(&43), Some(&43)));
         }
 
-        let solid = vec![43; 400];
+        let solid = vec![43; 2 * PIECE_TOKENS + 100];
         let pieces = split_tokens(&solid, PIECE_TOKENS);
         assert_eq!(
             pieces.iter().map(|p| p.len()).collect::<Vec<_>>(),
@@ -1181,28 +1193,32 @@ mod tests {
         // A comma first, then one long word: cutting after the comma would
         // send a piece with nothing to say.
         let mut ids = vec![3, SPACE_ID];
-        ids.extend(std::iter::repeat_n(43, 600));
+        ids.extend(std::iter::repeat_n(43, 2 * PIECE_TOKENS));
         let pieces = split_tokens(&ids, PIECE_TOKENS);
         assert!(pieces.iter().all(|p| has_phonemes(p)), "{pieces:?}");
     }
 
     #[test]
-    fn the_longest_sentence_is_cut_at_its_clauses() {
+    fn a_long_sentence_is_read_in_one_inference() {
         let g2p = G2P::new(Language::EnglishGB);
-        // 300 characters, the most `split_sentences` puts in one chunk.
-        let text = "When the committee finally reconvened after the long summer recess, \
-                    it became clear that none of the proposals circulated in July had \
-                    survived contact with the treasury's revised forecasts, and the chair, \
-                    visibly tired, asked members for patience while officials redrafted them \
-                    over the coming month.";
-        assert_eq!(text.chars().count(), 300);
-        let (ids, _) = text_to_ids(&g2p, Dialect::British, text).unwrap();
-        let pieces = split_tokens(&ids, PIECE_TOKENS);
-        assert!(pieces.len() >= 2, "{} ids", ids.len());
-        for piece in &pieces[..pieces.len() - 1] {
-            assert!(piece.len() <= PIECE_TOKENS);
-            assert_eq!(piece.last(), Some(&3), "cut after a comma");
-        }
+        let ids = |text: &str| text_to_ids(&g2p, Dialect::British, text).unwrap().0;
+        let sentence = "The committee that met on the first floor of the old library building \
+                        every Thursday afternoon decided after a long and careful discussion \
+                        that the annual report should be rewritten from the beginning in plain \
+                        language so that every member of the public could understand exactly \
+                        what had been done with the money during the year.";
+        let chunks = split_sentences(sentence, MAX_CHUNK_CHARS);
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(split_tokens(&ids(&chunks[0].text), PIECE_TOKENS).len(), 1);
+
+        // As long as a chunk gets: the limit plus a tail too short to stand alone.
+        let prose = sentence.repeat(2);
+        let longest: String = prose.chars().take(MAX_CHUNK_CHARS + 20).collect();
+        assert!(
+            ids(&longest).len() <= PIECE_TOKENS,
+            "{} ids",
+            ids(&longest).len()
+        );
     }
 
     #[test]

@@ -21,6 +21,14 @@ pub enum Backend {
 }
 
 impl Backend {
+    /// The longest sentence one request gets before it is cut.
+    pub fn max_chunk_chars(&self) -> usize {
+        match self {
+            Backend::Http { .. } => http::MAX_CHUNK_CHARS,
+            Backend::Local(_) => local::MAX_CHUNK_CHARS,
+        }
+    }
+
     /// Readies the backend on the synth thread. `stop` cuts a local inference
     /// short.
     pub fn open(self, stop: &Arc<AtomicBool>) -> Result<Synth, String> {

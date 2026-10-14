@@ -7,6 +7,8 @@ use std::time::Duration;
 
 /// From the 400 Kokoro-FastAPI returns for input with nothing to say, such as "...".
 const NO_SPEAKABLE_TEXT: &str = "no speakable text";
+/// Longer sentences are cut so the first audio arrives sooner.
+pub(super) const MAX_CHUNK_CHARS: usize = 300;
 
 pub fn client() -> reqwest::Client {
     reqwest::Client::builder()

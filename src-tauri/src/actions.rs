@@ -186,7 +186,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
         .text
         .map(|text| tts::text::normalize(&text))
         .unwrap_or_default();
-    let mut sentences = tts::text::split_sentences(&text);
+    let mut sentences = tts::text::split_sentences(&text, backend.max_chunk_chars());
     if matches!(backend, tts::Backend::Local(_)) {
         sentences = tts::text::split_first_clause(sentences);
     }

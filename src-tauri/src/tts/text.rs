@@ -3,8 +3,6 @@
 /// Fragments shorter than this are merged with a neighbour so the voice keeps
 /// natural prosody across one-word sentences and clause cuts.
 const MIN_SENTENCE_CHARS: usize = 20;
-/// Longer sentences are split so the first audio chunk arrives quickly.
-const MAX_SENTENCE_CHARS: usize = 300;
 
 const TERMINATORS: &[char] = &['.', '!', '?', '…'];
 const CLOSERS: &[char] = &['"', '\'', '”', '’', ')', ']', '»'];
@@ -234,9 +232,10 @@ pub struct Chunk {
     pub ends_sentence: bool,
 }
 
-/// Splits normalized text into chunks to synthesise one request at a time.
-/// Every line break ends a sentence, so headings and bullets need no punctuation.
-pub fn split_sentences(text: &str) -> Vec<Chunk> {
+/// Splits normalized text into chunks to synthesise one request at a time,
+/// cutting sentences longer than `max_chars`. Every line break ends a
+/// sentence, so headings and bullets need no punctuation.
+pub fn split_sentences(text: &str, max_chars: usize) -> Vec<Chunk> {
     let sentences = text
         .lines()
         .flat_map(raw_sentences)
@@ -244,7 +243,7 @@ pub fn split_sentences(text: &str) -> Vec<Chunk> {
     merge_short(sentences)
         .iter()
         .flat_map(|sentence| {
-            let parts = merge_short(split_long(sentence));
+            let parts = merge_short(split_long(sentence, max_chars));
             let last = parts.len().saturating_sub(1);
             parts.into_iter().enumerate().map(move |(i, text)| Chunk {
                 text,
@@ -311,12 +310,12 @@ fn ends_with_abbreviation(text: &str) -> bool {
 }
 
 /// Cuts at the last clause break (`,;:` then whitespace, so "$1,500" and "10:30"
-/// survive) before the limit, else the last space, else mid-word; always on a
-/// char boundary.
-fn split_long(sentence: &str) -> Vec<String> {
+/// survive) before `max_chars`, else the last space, else mid-word; always on
+/// a char boundary.
+fn split_long(sentence: &str, max_chars: usize) -> Vec<String> {
     let mut pieces = Vec::new();
     let mut rest = sentence.trim();
-    while let Some((limit, _)) = rest.char_indices().nth(MAX_SENTENCE_CHARS) {
+    while let Some((limit, _)) = rest.char_indices().nth(max_chars) {
         let head = &rest[..limit];
         let clause_break = head
             .char_indices()
@@ -984,12 +983,14 @@ mod tests {
     use super::*;
     use std::time::{Duration, Instant};
 
+    const MAX_CHARS: usize = 300;
+
     fn texts(chunks: Vec<Chunk>) -> Vec<String> {
         chunks.into_iter().map(|chunk| chunk.text).collect()
     }
 
     fn sentences(text: &str) -> Vec<String> {
-        texts(split_sentences(text))
+        texts(split_sentences(text, MAX_CHARS))
     }
 
     #[test]
@@ -1221,9 +1222,7 @@ mod tests {
         let parts = sentences(&text);
         assert_eq!(parts.len(), 3);
         assert!(parts[0].ends_with(','));
-        assert!(parts
-            .iter()
-            .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS));
+        assert!(parts.iter().all(|p| p.chars().count() <= MAX_CHARS));
         assert_eq!(parts.join(" "), text);
     }
 
@@ -1256,7 +1255,7 @@ mod tests {
             "A heading long enough to stand alone\n{}\nThe last line, which has a full stop.",
             long.trim()
         );
-        let ends: Vec<bool> = split_sentences(&text)
+        let ends: Vec<bool> = split_sentences(&text, MAX_CHARS)
             .iter()
             .map(|chunk| chunk.ends_sentence)
             .collect();
@@ -1281,9 +1280,7 @@ mod tests {
         let words = "word ".repeat(100);
         let parts = sentences(words.trim());
         assert!(parts.len() > 1);
-        assert!(parts
-            .iter()
-            .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS));
+        assert!(parts.iter().all(|p| p.chars().count() <= MAX_CHARS));
         assert!(parts
             .iter()
             .all(|p| p.starts_with("word") && p.ends_with("word")));
@@ -1297,6 +1294,14 @@ mod tests {
     }
 
     #[test]
+    fn the_limit_decides_whether_a_long_sentence_is_cut() {
+        let words = "word ".repeat(70);
+        let sentence = words.trim();
+        assert_eq!(split_sentences(sentence, 300).len(), 2);
+        assert_eq!(texts(split_sentences(sentence, 450)), vec![sentence]);
+    }
+
+    #[test]
     fn split_is_utf8_safe() {
         let accented = "é".repeat(350);
         let parts = sentences(&accented);
@@ -1307,9 +1312,7 @@ mod tests {
         let emoji = "🎉".repeat(650);
         let parts = sentences(&emoji);
         assert_eq!(parts.concat(), emoji);
-        assert!(parts
-            .iter()
-            .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS));
+        assert!(parts.iter().all(|p| p.chars().count() <= MAX_CHARS));
 
         assert_eq!(
             sentences("Ça marche très bien aujourd’hui. Où est la bibliothèque, s’il vous plaît ?"),
@@ -1342,7 +1345,7 @@ mod tests {
         assert!(
             parts
                 .iter()
-                .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS && !p.contains('\n')),
+                .all(|p| p.chars().count() <= MAX_CHARS && !p.contains('\n')),
             "{parts:?}"
         );
     }
@@ -1369,13 +1372,11 @@ mod tests {
             "took {:?}",
             started.elapsed()
         );
-        assert!(parts
-            .iter()
-            .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS));
+        assert!(parts.iter().all(|p| p.chars().count() <= MAX_CHARS));
     }
 
     fn first_chunks(text: &str) -> Vec<String> {
-        texts(split_first_clause(split_sentences(text)))
+        texts(split_first_clause(split_sentences(text, MAX_CHARS)))
     }
 
     #[test]
