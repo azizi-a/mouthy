@@ -326,6 +326,16 @@ pub fn expand_numbers(text: &str) -> String {
             .then(|| Number::parse(rest))
             .flatten()
         {
+            let (count, len) = dash_joined(rest);
+            if count > 2 {
+                // Dates, phone and card numbers ("2026-10-13", "020-7946-0958")
+                // read better as written than as years or ranges.
+                let (span, tail) = rest.split_at(len);
+                out.push_str(span);
+                rest = tail;
+                prev = span.chars().next_back();
+                continue;
+            }
             let (span, tail) = rest.split_at(number.len);
             rest = tail;
             prev = span.chars().next_back();
@@ -361,6 +371,25 @@ pub fn expand_numbers(text: &str) -> String {
         rest = &rest[c.len_utf8()..];
     }
     out
+}
+
+/// How many numbers are joined by dashes from the start of `text`, and the
+/// bytes they span.
+fn dash_joined(text: &str) -> (usize, usize) {
+    let (mut count, mut len) = (0, 0);
+    let (mut rest, mut prev) = (text, None);
+    while let Some(number) = may_start_number(prev, rest)
+        .then(|| Number::parse(rest))
+        .flatten()
+    {
+        count += 1;
+        len = text.len() - rest.len() + number.len;
+        match rest[number.len..].strip_prefix(['-', '–']) {
+            Some(after) => (rest, prev) = (after, Some('-')),
+            None => break,
+        }
+    }
+    (count, len)
 }
 
 /// Whether a number can start at `rest`: a digit, or a sign, currency symbol
@@ -524,6 +553,15 @@ impl<'a> Number<'a> {
             read_suffix(&text[i..])
         };
         i += len;
+        // British "7.30pm".
+        let dotted_time = matches!(suffix, Suffix::Meridiem { .. })
+            && minutes.is_none()
+            && matches!(parts.as_slice(), [m] if m.len() == 2)
+            && whole.len() <= 2
+            && currency.is_none()
+            && !negative
+            && !version;
+        let minutes = if dotted_time { parts.pop() } else { minutes };
 
         let mut scale = None;
         if currency.is_some() && suffix == Suffix::None {
@@ -808,8 +846,8 @@ fn below_thousand(n: u64) -> String {
     }
 }
 
-/// British style, as the phonemiser reads plain integers: "one hundred and
-/// five". `None` from a trillion up.
+/// British style, "one hundred and five"; the phonemiser reads "105" without
+/// the "and". `None` from a trillion up.
 fn cardinal(n: u64) -> Option<String> {
     if n == 0 {
         return Some(ONES[0].to_string());
@@ -1548,6 +1586,19 @@ mod tests {
     }
 
     #[test]
+    fn british_dotted_times_read_as_times() {
+        assert_eq!(expand_numbers("7.30pm"), "seven thirty PM");
+        assert_eq!(
+            expand_numbers("at 7.30 p.m. on Friday"),
+            "at seven thirty PM on Friday"
+        );
+        assert_eq!(expand_numbers("7.05am"), "seven oh five AM");
+        assert_eq!(expand_numbers("7.3pm"), "7.3pm");
+        assert_eq!(expand_numbers("7.75pm"), "7.75pm");
+        assert_eq!(expand_numbers("7.30"), "seven point three zero");
+    }
+
+    #[test]
     fn impossible_times_stay_as_written() {
         assert_eq!(expand_numbers("25:00"), "25:00");
         assert_eq!(expand_numbers("10:75"), "10:75");
@@ -1585,7 +1636,28 @@ mod tests {
             "open nine o'clock to seventeen hundred"
         );
         assert_eq!(expand_numbers("£5-£10"), "five pounds to ten pounds");
-        assert_eq!(expand_numbers("2026-10-13"), "twenty twenty-six-10-13");
+        assert_eq!(
+            expand_numbers("7.30pm–9.30pm"),
+            "seven thirty PM to nine thirty PM"
+        );
+    }
+
+    #[test]
+    fn three_or_more_joined_numbers_stay_as_written() {
+        for text in [
+            "2026-10-13",
+            "on 2026-10-13.",
+            "1234-5678-9012-3456",
+            "call 020-7946-0958 now",
+            "1914-1918-1939",
+            "£5-£10-£20",
+        ] {
+            assert_eq!(expand_numbers(text), text, "{text}");
+        }
+        assert_eq!(
+            expand_numbers("1914-1918 and 2026-10-13"),
+            "nineteen fourteen to nineteen eighteen and 2026-10-13"
+        );
     }
 
     #[test]
