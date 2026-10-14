@@ -6,6 +6,7 @@
 
 use super::espeak;
 use super::text::{expand_numbers, joins_numbers};
+use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
 use misaki_rs::{Language, G2P};
@@ -30,6 +31,20 @@ const STYLE_DIM: usize = 256;
 /// How often a running inference checks whether its session was stopped.
 const STOP_POLL: Duration = Duration::from_millis(20);
 
+/// Kokoro pads every inference with ~0.4 s of silence before the speech and
+/// 0.5–0.8 s after it, whatever the punctuation, so untrimmed pieces meet
+/// with a gap of about a second. At or below this (about -50 dBFS) is silence.
+const SILENCE: f32 = 0.003;
+/// Silence kept before the speech, enough for the softest onset.
+const LEAD_MS: f32 = 50.0;
+/// Silence kept after a piece, by how it ends. With `LEAD_MS`, a seam matches
+/// Kokoro's own pause inside one inference: ~470 ms at a full stop, ~380 ms at
+/// a comma (at 1×; pauses scale with the speed).
+const SENTENCE_END_MS: f32 = 420.0;
+const CLAUSE_END_MS: f32 = 330.0;
+/// After a piece cut mid-phrase: a breath, not a stop.
+const PHRASE_END_MS: f32 = 100.0;
+
 /// Kokoro v1.0 phoneme vocabulary (onnx-community `tokenizer.json`; id 0 is the pad).
 #[rustfmt::skip]
 const VOCAB: &[(char, i64)] = &[
@@ -53,6 +68,8 @@ const VOCAB: &[(char, i64)] = &[
 const SPACE_ID: i64 = 16;
 /// `;:,.!?—…`: where a long input can be cut without breaking a phrase.
 const PAUSE_IDS: &[i64] = &[1, 2, 3, 4, 5, 6, 9, 10];
+/// `.!?`
+const SENTENCE_END_IDS: &[i64] = &[4, 5, 6];
 
 /// misaki-rs 0.6 lexicons tie diphthongs and affricates with U+200D, eSpeak
 /// style; Kokoro was trained on misaki's single-symbol forms.
@@ -440,7 +457,9 @@ impl LocalSynth {
                 run_options,
             )
             .map_err(|e| format!("Local synthesis failed: {e}"))?;
-            audio.extend(waveform.iter().copied().map(to_pcm));
+            let keep = |ms: f32| (ms / speed * SAMPLE_RATE as f32 / 1000.0) as usize;
+            let speech = trim_silence(&waveform, keep(LEAD_MS), keep(pause_after_ms(piece)));
+            audio.extend(speech.iter().copied().map(to_pcm));
         }
         Ok(audio)
     }
@@ -542,6 +561,32 @@ fn run(
 
 fn to_pcm(sample: f32) -> i16 {
     (sample.clamp(-1.0, 1.0) * f32::from(i16::MAX)) as i16
+}
+
+/// Cuts `waveform` to its sound plus at most `lead` samples of silence before
+/// and `trail` after. All silence gives nothing.
+fn trim_silence(waveform: &[f32], lead: usize, trail: usize) -> &[f32] {
+    let loud = |sample: &f32| sample.abs() > SILENCE;
+    let (Some(first), Some(last)) = (
+        waveform.iter().position(loud),
+        waveform.iter().rposition(loud),
+    ) else {
+        return &[];
+    };
+    let end = (last + 1).saturating_add(trail).min(waveform.len());
+    &waveform[first.saturating_sub(lead)..end]
+}
+
+/// The pause to leave after a piece, from the punctuation it ends with.
+fn pause_after_ms(piece: &[i64]) -> f32 {
+    let ending = || piece.iter().rev().take_while(|&&id| id <= SPACE_ID);
+    if ending().any(|id| SENTENCE_END_IDS.contains(id)) {
+        SENTENCE_END_MS
+    } else if ending().any(|id| PAUSE_IDS.contains(id)) {
+        CLAUSE_END_MS
+    } else {
+        PHRASE_END_MS
+    }
 }
 
 /// A voice's style table: one 256-wide row per input length, raw
@@ -1159,6 +1204,53 @@ mod tests {
         assert_eq!(to_pcm(-2.0), -i16::MAX);
     }
 
+    /// `silent` samples of near-silence, `loud` of sound, then `silent` again.
+    fn padded(silent: usize, loud: usize) -> Vec<f32> {
+        let mut waveform = vec![0.002; silent];
+        waveform.extend((0..loud).map(|i| if i % 2 == 0 { 0.5 } else { -0.5 }));
+        waveform.extend(vec![-0.002; silent]);
+        waveform
+    }
+
+    #[test]
+    fn long_silence_is_trimmed_to_the_caps() {
+        let waveform = padded(100, 10);
+        let trimmed = trim_silence(&waveform, 5, 20);
+        assert_eq!(trimmed.len(), 5 + 10 + 20);
+        assert_eq!(trimmed[5], 0.5);
+        assert_eq!(trimmed[14], -0.5);
+    }
+
+    #[test]
+    fn short_silence_is_kept_whole() {
+        let waveform = padded(3, 10);
+        assert_eq!(trim_silence(&waveform, 5, 20), &waveform[..]);
+    }
+
+    #[test]
+    fn sound_without_silence_is_unchanged() {
+        let waveform = padded(0, 10);
+        assert_eq!(trim_silence(&waveform, 5, 20), &waveform[..]);
+    }
+
+    #[test]
+    fn all_silence_gives_nothing() {
+        assert!(trim_silence(&padded(50, 0), 5, 20).is_empty());
+        assert!(trim_silence(&[SILENCE, -SILENCE], 5, 20).is_empty());
+        assert!(trim_silence(&[], 5, 20).is_empty());
+    }
+
+    #[test]
+    fn the_pause_after_a_piece_follows_its_punctuation() {
+        let pause = |phonemes: &str| pause_after_ms(&token_ids(phonemes).0);
+        assert_eq!(pause("ab."), SENTENCE_END_MS);
+        assert_eq!(pause("ab?\""), SENTENCE_END_MS);
+        assert_eq!(pause("ab,"), CLAUSE_END_MS);
+        assert_eq!(pause("ab —"), CLAUSE_END_MS);
+        assert_eq!(pause("ab"), PHRASE_END_MS);
+        assert_eq!(pause("a. b"), PHRASE_END_MS);
+    }
+
     #[test]
     fn model_files_follow_the_documented_layout() {
         let models = Path::new("/models");
@@ -1315,10 +1407,16 @@ mod tests {
         let samples = loaded
             .synthesize("Hello from Mouthy, this is a short test sentence.", 1.0)
             .unwrap();
-        let seconds = samples.len() as f32 / crate::tts::SAMPLE_RATE as f32;
+        let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
         println!("{seconds:.2} s of audio in {:?}", started.elapsed());
         assert!((1.0..8.0).contains(&seconds), "{seconds} s of audio");
         assert!(samples.iter().any(|&s| s != 0));
+        // Kokoro's ~0.4 s lead-in is trimmed.
+        let sound = samples.iter().position(|&s| s.abs() > 100).unwrap();
+        assert!(
+            sound < SAMPLE_RATE as usize / 10,
+            "{sound} samples before the sound"
+        );
         assert!(loaded.synthesize("...", 1.0).unwrap().is_empty());
 
         // A long input, stopped mid-way, ends within a poll or two.
