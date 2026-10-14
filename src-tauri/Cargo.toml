@@ -58,6 +58,9 @@ ort = { version = "=2.0.0-rc.14", default-features = false, features = [
 ] }
 # English G2P with embedded lexicons; no espeak-ng, which is GPL.
 misaki-rs = { version = "0.6", default-features = false }
+# Model downloads: checksums, and cancelling a download mid-transfer.
+sha2 = "0.10"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"

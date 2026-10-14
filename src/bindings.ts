@@ -352,6 +352,57 @@ async getSelectedOutputDevice() : Promise<Result<string, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async listModelFiles() : Promise<Result<ModelFileList, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_model_files") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Starts downloading a file, or resumes its partial download. Returns at
+ * once; a file already downloading is left alone.
+ */
+async downloadModelFile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("download_model_file", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stops a download, keeping what arrived for the next one to resume.
+ */
+async cancelModelDownload(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cancel_model_download", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Deletes a file and any partial download of it. A running speech session
+ * keeps its loaded copy; the model is unloaded once its files are gone.
+ */
+async deleteModelFile(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_model_file", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async openModelsDir() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("open_models_dir") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -400,6 +451,26 @@ export type KeyboardDiagnosticReport = { secure_input_enabled: boolean; culprit_
 key_down: number; key_up: number; flags_changed: number; mouse: number; duration_ms: number }
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
+export type ModelFile = { 
+/**
+ * A model variant (`int8`) or a voice (`bm_lewis`).
+ */
+id: string; kind: ModelFileKind; size: number; installed: boolean; 
+/**
+ * Bytes downloaded so far: a running download's, or a stopped one's that
+ * the next download resumes from.
+ */
+partial: number; downloading: boolean; 
+/**
+ * Why the last download failed, until the next one starts.
+ */
+error: string | null }
+export type ModelFileKind = "model" | "voice"
+export type ModelFileList = { 
+/**
+ * The folder the files live in.
+ */
+dir: string; files: ModelFile[] }
 /**
  * Which Kokoro export the local backend loads. int8 is about twice as fast
  * as fp32 on the CPU.

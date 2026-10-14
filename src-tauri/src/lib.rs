@@ -305,6 +305,11 @@ pub fn run(cli_args: CliArgs) {
         commands::audio::get_available_output_devices,
         commands::audio::set_selected_output_device,
         commands::audio::get_selected_output_device,
+        commands::models::list_model_files,
+        commands::models::download_model_file,
+        commands::models::cancel_model_download,
+        commands::models::delete_model_file,
+        commands::models::open_models_dir,
     ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
@@ -391,6 +396,7 @@ pub fn run(cli_args: CliArgs) {
             Some(vec![]),
         ))
         .manage(cli_args.clone())
+        .manage(commands::models::ModelDownloads::default())
         .setup(move |app| {
             // Only used on Windows, to disable WebView2 browser accelerators.
             #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]

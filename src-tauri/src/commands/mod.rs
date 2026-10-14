@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod models;
 
 use crate::settings::{get_settings, write_settings, AppSettings, LogLevel, TtsBackend};
 use std::path::PathBuf;

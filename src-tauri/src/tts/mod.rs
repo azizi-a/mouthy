@@ -1,5 +1,7 @@
 //! Speech synthesis: text preparation and the two backends.
 
+pub mod catalog;
+pub mod download;
 pub mod http;
 pub mod local;
 pub mod text;

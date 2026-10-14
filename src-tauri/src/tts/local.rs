@@ -127,19 +127,10 @@ pub struct ModelFiles {
 
 impl ModelFiles {
     pub fn new(models_dir: &Path, variant: ModelVariant, voice: &str) -> Self {
-        let kokoro = models_dir.join(KOKORO_DIR);
-        let file_name = match variant {
-            ModelVariant::Int8 => "int8.onnx",
-            ModelVariant::Fp16 => "fp16.onnx",
-            ModelVariant::Fp32 => "fp32.onnx",
-        };
-        // The voice name is typed by the user; keep it inside the voices folder.
-        let voice_path =
-            is_voice_name(voice).then(|| voices_dir(models_dir).join(format!("{voice}.bin")));
         Self {
-            model: kokoro.join(file_name),
+            model: model_path(models_dir, variant),
             voice_id: voice.to_string(),
-            voice: voice_path,
+            voice: voice_path(models_dir, voice),
         }
     }
 
@@ -156,8 +147,28 @@ impl ModelFiles {
     }
 }
 
+/// The folder one Kokoro release's files live in.
+pub fn kokoro_dir(models_dir: &Path) -> PathBuf {
+    models_dir.join(KOKORO_DIR)
+}
+
+pub fn model_path(models_dir: &Path, variant: ModelVariant) -> PathBuf {
+    let file_name = match variant {
+        ModelVariant::Int8 => "int8.onnx",
+        ModelVariant::Fp16 => "fp16.onnx",
+        ModelVariant::Fp32 => "fp32.onnx",
+    };
+    kokoro_dir(models_dir).join(file_name)
+}
+
+/// `None` when `voice` could not be a file name. Voice names are typed by the
+/// user, so this keeps them inside the voices folder.
+pub fn voice_path(models_dir: &Path, voice: &str) -> Option<PathBuf> {
+    is_voice_name(voice).then(|| voices_dir(models_dir).join(format!("{voice}.bin")))
+}
+
 fn voices_dir(models_dir: &Path) -> PathBuf {
-    models_dir.join(KOKORO_DIR).join("voices")
+    kokoro_dir(models_dir).join("voices")
 }
 
 fn is_voice_name(name: &str) -> bool {
@@ -183,18 +194,19 @@ pub fn installed_voices(models_dir: &Path) -> Vec<String> {
     voices
 }
 
-/// Loads the files `target` names, or unloads the model when it names none.
-/// `target` runs once the lock is held, so when several calls queue behind a
-/// session, each sees the settings as they are by then.
-pub fn preload(target: impl FnOnce() -> Option<ModelFiles>) -> Result<(), String> {
+/// Loads the files `target` names, or unloads the model when it names none,
+/// and says whether a model is loaded. `target` runs once the lock is held, so
+/// when several calls queue behind a session, each sees the settings as they
+/// are by then.
+pub fn preload(target: impl FnOnce() -> Option<ModelFiles>) -> Result<bool, String> {
     let mut loaded = lock_loaded();
     match target() {
-        Some(files) => ensure_loaded(&mut loaded, &files).map(drop),
+        Some(files) => ensure_loaded(&mut loaded, &files).map(|_| true),
         None => {
             if loaded.take().is_some() {
                 info!("Unloaded the local voice");
             }
-            Ok(())
+            Ok(false)
         }
     }
 }
