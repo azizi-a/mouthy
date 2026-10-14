@@ -1,15 +1,13 @@
 //! Launch-at-login (autostart) handling.
 //!
-//! All platforms apply the setting through tauri-plugin-autostart, except
-//! macOS 13+ where the app registers itself as a login item via
-//! `SMAppService`. The plugin's launch agent plist carries no app
-//! association, so the System Settings Login Items pane attributes it to the
-//! code-signing certificate's developer name instead of the app (#337).
-//! `SMAppService` login items are attributed to the app bundle itself and
-//! appear under "Open at Login" with the app's name and icon.
+//! macOS registers the app as a login item via `SMAppService`; other
+//! platforms use tauri-plugin-autostart. The plugin's launch agent plist
+//! carries no app association, so the System Settings Login Items pane
+//! attributes it to the code-signing certificate's developer name instead of
+//! the app (#337). `SMAppService` login items are attributed to the app bundle
+//! itself and appear under "Open at Login" with the app's name and icon.
 
 use tauri::AppHandle;
-use tauri_plugin_autostart::ManagerExt;
 
 /// Apply the user's autostart preference using the best mechanism for the
 /// current platform.
@@ -20,24 +18,28 @@ use tauri_plugin_autostart::ManagerExt;
 /// enable()/disable() results.
 pub fn apply_autostart(app: &AppHandle, enabled: bool) {
     #[cfg(target_os = "macos")]
-    if macos::login_item_api_available() {
+    {
         macos::remove_plugin_launch_agent(app);
         macos::set_login_item(enabled);
-        return;
     }
 
-    let manager = app.autolaunch();
-    let result = if enabled {
-        manager.enable()
-    } else {
-        manager.disable()
-    };
-    if let Err(e) = result {
-        log::warn!(
-            "Failed to apply autostart setting (enabled={}): {}",
-            enabled,
-            e
-        );
+    #[cfg(not(target_os = "macos"))]
+    {
+        use tauri_plugin_autostart::ManagerExt;
+
+        let manager = app.autolaunch();
+        let result = if enabled {
+            manager.enable()
+        } else {
+            manager.disable()
+        };
+        if let Err(e) = result {
+            log::warn!(
+                "Failed to apply autostart setting (enabled={}): {}",
+                enabled,
+                e
+            );
+        }
     }
 }
 
@@ -45,17 +47,8 @@ pub fn apply_autostart(app: &AppHandle, enabled: bool) {
 mod macos {
     use std::path::{Path, PathBuf};
 
-    use objc2::runtime::AnyClass;
     use objc2_service_management::{SMAppService, SMAppServiceStatus};
     use tauri::{AppHandle, Manager};
-
-    /// `SMAppService` requires macOS 13. The ServiceManagement framework is
-    /// linked unconditionally (it has existed since 10.6), so looking up the
-    /// class doubles as the OS version check: present exactly when the API is
-    /// usable.
-    pub fn login_item_api_available() -> bool {
-        AnyClass::get(c"SMAppService").is_some()
-    }
 
     /// Register or unregister the app as a login item, skipping the call when
     /// the service is already in the requested state (unregistering a
@@ -88,9 +81,9 @@ mod macos {
     }
 
     /// Remove the launch agent plist that tauri-plugin-autostart (via the
-    /// auto-launch crate) wrote on older versions, so login doesn't start the
-    /// app twice after migrating to `SMAppService`. Runs on every launch;
-    /// missing file is the normal case.
+    /// auto-launch crate) wrote for builds that ran on macOS before 13, so
+    /// login doesn't start the app twice. Runs on every launch; missing file
+    /// is the normal case.
     pub fn remove_plugin_launch_agent(app: &AppHandle) {
         let Ok(home) = app.path().home_dir() else {
             return;
@@ -117,15 +110,6 @@ mod macos {
     #[cfg(test)]
     mod tests {
         use super::*;
-
-        /// Validates the assumption `login_item_api_available` rests on: the
-        /// ServiceManagement framework is linked into the binary, so the
-        /// class lookup finds `SMAppService` whenever the host is macOS 13+
-        /// (which anything able to build this crate is).
-        #[test]
-        fn sm_app_service_class_resolves() {
-            assert!(login_item_api_available());
-        }
 
         #[test]
         fn launch_agent_path_matches_auto_launch_crate() {

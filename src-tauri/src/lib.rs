@@ -242,7 +242,7 @@ fn initialize_core_logic(app_handle: &AppHandle) {
         tray::set_tray_visibility(app_handle, false);
     }
 
-    // Apply the autostart preference (SMAppService login item on macOS 13+,
+    // Apply the autostart preference (SMAppService login item on macOS,
     // tauri-plugin-autostart elsewhere)
     autostart::apply_autostart(app_handle, settings.autostart_enabled);
 
