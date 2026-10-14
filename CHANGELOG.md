@@ -20,6 +20,10 @@ Offline speech: the Kokoro-82M voice runs inside Mouthy through ONNX Runtime, wi
 - Requires macOS 13.4 or later.
 - Building downloads a prebuilt ONNX Runtime (about 10 MB, cached after the first build) for the offline voice and needs Rust 1.92 or newer. Intel and universal macOS builds no longer link.
 
+### Fixed
+
+- × on the overlay closes it without bringing the Settings window to the front.
+
 ## 0.1.0 (not released)
 
 Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MIT) at upstream commit 7b2a28a, with speech-to-text replaced by text-to-speech. The release app bundle is 9.6 MB on Apple Silicon (4.4 MB zipped).

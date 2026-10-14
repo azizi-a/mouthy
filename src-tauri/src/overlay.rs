@@ -444,12 +444,31 @@ pub fn create_overlay(app_handle: &AppHandle) {
             .build()
         {
             Ok(panel) => {
+                prevent_activation(panel.as_panel());
                 panel.hide();
             }
             Err(e) => {
                 log::error!("Failed to create overlay panel: {}", e);
             }
         }
+    }
+}
+
+/// AppKit applies a panel's non-activating style only when the window is
+/// created with it, and this one becomes a panel afterwards. Without this a
+/// click on the overlay activates Mouthy, which brings Settings to the front.
+#[cfg(target_os = "macos")]
+fn prevent_activation(panel: &tauri_nspanel::NSPanel) {
+    let selector = objc2::sel!(_setPreventsActivation:);
+    // Private AppKit API: skip it if a macOS release drops it.
+    if !objc2::runtime::NSObjectProtocol::respondsToSelector(panel, selector) {
+        log::warn!(
+            "Clicking the overlay will activate Mouthy: AppKit lacks _setPreventsActivation:"
+        );
+        return;
+    }
+    unsafe {
+        let _: () = objc2::msg_send![panel, _setPreventsActivation: true];
     }
 }
 
