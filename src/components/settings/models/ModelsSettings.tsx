@@ -15,15 +15,8 @@ const SOURCE_URL = "https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX";
 export const ModelsSettings: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { getSetting, updateSetting } = useSettings();
-  const {
-    list,
-    voiceStatus,
-    downloaded,
-    download,
-    cancel,
-    remove,
-    openFolder,
-  } = useModelFiles();
+  const { list, downloaded, download, cancel, remove, openFolder } =
+    useModelFiles();
 
   if (!list) return null;
 
@@ -36,7 +29,14 @@ export const ModelsSettings: React.FC = () => {
     models.find((file) => file.id === variant),
     voices.find((file) => file.id === voice),
   ].filter((file): file is ModelFile => file !== undefined);
-  const needed = activeFiles.filter((file) => !file.installed);
+  // What the backend found missing, so voices outside the list count too.
+  const needed = [
+    models.find((file) => file.id === list.missing_model),
+    voices.find((file) => file.id === list.missing_voice),
+  ].filter((file): file is ModelFile => file !== undefined);
+  const unlistedVoice =
+    list.missing_voice !== null &&
+    !voices.some((file) => file.id === list.missing_voice);
 
   const megabytes = (bytes: number) =>
     t("settings.models.size", {
@@ -60,39 +60,42 @@ export const ModelsSettings: React.FC = () => {
         ),
       };
     }
-    if (needed.length > 0) {
-      const waiting = needed.filter((file) => !file.downloading);
-      const bytes = waiting.reduce((sum, file) => sum + file.size, 0);
-      return {
-        text: t("settings.models.status.missing", {
+    const problems = [
+      needed.length > 0 &&
+        t("settings.models.status.missing", {
           files: needed.map((file) => file.id).join(", "),
         }),
-        action: (
-          <Button
-            variant="primary-soft"
-            size="sm"
-            disabled={waiting.length === 0}
-            onClick={() => waiting.forEach((file) => download(file.id))}
-          >
-            {t("settings.models.status.downloadMissing", {
-              size: megabytes(bytes),
-            })}
-          </Button>
-        ),
-      };
-    }
-    if (voiceStatus?.kind === "failed") {
+      unlistedVoice &&
+        t("settings.models.status.unlistedVoice", {
+          voice: list.missing_voice,
+        }),
+      list.load_error &&
+        t("settings.models.status.failed", { error: list.load_error }),
+    ].filter((problem): problem is string => Boolean(problem));
+    if (problems.length === 0) {
       return {
-        text: t("settings.models.status.failed", {
-          error: voiceStatus.message,
+        text: t("settings.models.status.ready", {
+          model: variant,
+          voice,
         }),
       };
     }
+    const waiting = needed.filter((file) => !file.downloading);
+    const bytes = waiting.reduce((sum, file) => sum + file.size, 0);
     return {
-      text: t("settings.models.status.ready", {
-        model: variant,
-        voice,
-      }),
+      text: problems.join(" "),
+      action: needed.length > 0 && (
+        <Button
+          variant="primary-soft"
+          size="sm"
+          disabled={waiting.length === 0}
+          onClick={() => waiting.forEach((file) => download(file.id))}
+        >
+          {t("settings.models.status.downloadMissing", {
+            size: megabytes(bytes),
+          })}
+        </Button>
+      ),
     };
   };
   const { text, action } = status();

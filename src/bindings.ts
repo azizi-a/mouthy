@@ -488,7 +488,19 @@ export type ModelFileList = {
 /**
  * The folder the files live in.
  */
-dir: string; files: ModelFile[] }
+dir: string; files: ModelFile[]; 
+/**
+ * The selected model, if its file is not there.
+ */
+missing_model: ModelVariant | null; 
+/**
+ * The selected voice, if the local backend finds no file for it.
+ */
+missing_voice: string | null; 
+/**
+ * Why the local voice last failed to load, if it did.
+ */
+load_error: string | null }
 /**
  * Which Kokoro export the local backend loads. int8 is about twice as fast
  * as fp32 on the CPU.

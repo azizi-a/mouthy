@@ -8,7 +8,6 @@ use log::{debug, error, info, warn};
 use once_cell::sync::Lazy;
 use rodio::buffer::SamplesBuffer;
 use rodio::Player;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::num::NonZero;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -16,7 +15,7 @@ use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 
 // Shortcut Action Trait
 pub trait ShortcutAction: Send + Sync {
@@ -303,16 +302,6 @@ fn local_model_files(
     )
 }
 
-/// Whether the local voice is in memory after a preload, sent to the settings
-/// window as `local-voice-status`.
-#[derive(Clone, Serialize)]
-#[serde(tag = "kind", rename_all = "kebab-case")]
-enum LocalVoiceStatus {
-    Loaded,
-    Unloaded,
-    Failed { message: String },
-}
-
 /// Loads the local voice in the background when the settings select it, so
 /// the next request does not wait for it, and frees it when they do not or
 /// its files are gone.
@@ -337,17 +326,11 @@ pub fn preload_local_voice(app: &AppHandle) {
                     None => Some(files),
                 }
             });
-            let status = match result {
-                Ok(true) => LocalVoiceStatus::Loaded,
-                Ok(false) => LocalVoiceStatus::Unloaded,
-                Err(message) => {
-                    info!("The local voice is not loaded: {message}");
-                    LocalVoiceStatus::Failed { message }
-                }
-            };
-            if let Err(e) = app.emit("local-voice-status", status) {
-                warn!("Failed to report the local voice status: {e}");
+            if let Err(message) = result {
+                info!("The local voice is not loaded: {message}");
             }
+            // The Models page shows what this preload found.
+            crate::commands::models::files_changed(&app);
         });
     if let Err(e) = spawned {
         warn!("Failed to start loading the local voice: {e}");

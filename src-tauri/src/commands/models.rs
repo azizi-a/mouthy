@@ -2,11 +2,14 @@
 //!
 //! Downloads run as tasks on the async runtime. Each reports
 //! `model-download-progress` while it runs, and `model-files-changed` is sent
-//! whenever a file starts, stops or goes, so the page re-reads the list.
+//! whenever a file starts, stops or goes and after every preload of the local
+//! voice, so the page re-reads the list.
 
 use super::models_dir;
+use crate::settings::{self, ModelVariant};
 use crate::tts::catalog::{self, CatalogFile, ModelFileKind};
 use crate::tts::download;
+use crate::tts::local::{self, ModelFiles};
 use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
 use log::{info, warn};
 use serde::Serialize;
@@ -49,6 +52,12 @@ pub struct ModelFileList {
     /// The folder the files live in.
     pub dir: String,
     pub files: Vec<ModelFile>,
+    /// The selected model, if its file is not there.
+    pub missing_model: Option<ModelVariant>,
+    /// The selected voice, if the local backend finds no file for it.
+    pub missing_voice: Option<String>,
+    /// Why the local voice last failed to load, if it did.
+    pub load_error: Option<String>,
 }
 
 #[derive(Serialize, Type)]
@@ -102,11 +111,18 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
             id: file.id,
         })
         .collect();
+    let settings = settings::get_settings(&app);
+    let selected = ModelFiles::new(&models_dir, settings.tts_model_variant, &settings.tts_voice);
     Ok(ModelFileList {
-        dir: crate::tts::local::kokoro_dir(&models_dir)
+        dir: local::kokoro_dir(&models_dir)
             .to_string_lossy()
             .into_owned(),
         files,
+        missing_model: selected
+            .model_missing()
+            .then_some(settings.tts_model_variant),
+        missing_voice: selected.voice_missing().then_some(settings.tts_voice),
+        load_error: local::preload_error(),
     })
 }
 
@@ -179,7 +195,7 @@ pub async fn delete_model_file(app: AppHandle, id: String) -> Result<(), String>
 #[tauri::command]
 #[specta::specta]
 pub async fn open_models_dir(app: AppHandle) -> Result<(), String> {
-    let dir = crate::tts::local::kokoro_dir(&models_dir(&app)?);
+    let dir = local::kokoro_dir(&models_dir(&app)?);
     fs::create_dir_all(&dir).map_err(|e| format!("Cannot create {}: {e}", dir.display()))?;
     app.opener()
         .open_path(dir.to_string_lossy(), None::<String>)
@@ -194,7 +210,7 @@ fn partial_len(dest: &Path) -> u64 {
     fs::metadata(download::part_path(dest)).map_or(0, |m| m.len())
 }
 
-fn files_changed(app: &AppHandle) {
+pub(crate) fn files_changed(app: &AppHandle) {
     if let Err(e) = app.emit("model-files-changed", ()) {
         warn!("Failed to report a model file change: {e}");
     }

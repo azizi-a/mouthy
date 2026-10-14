@@ -17,7 +17,7 @@ use ort::value::{Tensor, TensorRef};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -85,6 +85,9 @@ static ENVIRONMENT: OnceLock<Result<Environment, String>> = OnceLock::new();
 /// The loaded model. Speech holds it for a whole session; only the synth and
 /// preload threads lock it, never the main thread.
 static LOADED: Mutex<Option<LocalSynth>> = Mutex::new(None);
+/// Why the last preload failed, until the next one. Apart from `LOADED`, so
+/// the settings page can read it while a session holds the model.
+static PRELOAD_ERROR: Mutex<Option<String>> = Mutex::new(None);
 
 /// Which misaki lexicon a voice needs: `b*` voices are British English,
 /// every other voice is read as American English.
@@ -145,14 +148,25 @@ impl ModelFiles {
 
     /// The first file that is not there, described for the log.
     pub fn missing(&self) -> Option<String> {
-        if !self.model.is_file() {
-            return Some(self.model.display().to_string());
+        if self.model_missing() {
+            Some(self.model.display().to_string())
+        } else if self.voice_missing() {
+            Some(match &self.voice {
+                Some(path) => path.display().to_string(),
+                None => format!("a voice file for '{}'", self.voice_id),
+            })
+        } else {
+            None
         }
-        match &self.voice {
-            None => Some(format!("a voice file for '{}'", self.voice_id)),
-            Some(path) if !path.is_file() => Some(path.display().to_string()),
-            Some(_) => None,
-        }
+    }
+
+    pub fn model_missing(&self) -> bool {
+        !self.model.is_file()
+    }
+
+    /// Also true for a voice name that could not be a file name.
+    pub fn voice_missing(&self) -> bool {
+        !self.voice.as_deref().is_some_and(Path::is_file)
     }
 }
 
@@ -203,21 +217,31 @@ pub fn installed_voices(models_dir: &Path) -> Vec<String> {
     voices
 }
 
-/// Loads the files `target` names, or unloads the model when it names none,
-/// and says whether a model is loaded. `target` runs once the lock is held, so
-/// when several calls queue behind a session, each sees the settings as they
-/// are by then.
-pub fn preload(target: impl FnOnce() -> Option<ModelFiles>) -> Result<bool, String> {
+/// Loads the files `target` names, or unloads the model when it names none.
+/// `target` runs once the lock is held, so when several calls queue behind a
+/// session, each sees the settings as they are by then.
+pub fn preload(target: impl FnOnce() -> Option<ModelFiles>) -> Result<(), String> {
     let mut loaded = lock_loaded();
-    match target() {
-        Some(files) => ensure_loaded(&mut loaded, &files).map(|()| true),
+    let result = match target() {
+        Some(files) => ensure_loaded(&mut loaded, &files),
         None => {
             if loaded.take().is_some() {
                 info!("Unloaded the local voice");
             }
-            Ok(false)
+            Ok(())
         }
-    }
+    };
+    *lock_preload_error() = result.as_ref().err().cloned();
+    result
+}
+
+/// Why the last preload failed, if it did.
+pub fn preload_error() -> Option<String> {
+    lock_preload_error().clone()
+}
+
+fn lock_preload_error() -> MutexGuard<'static, Option<String>> {
+    PRELOAD_ERROR.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Takes the model for one speech session, loading or switching files first.
@@ -1132,17 +1156,32 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let files = ModelFiles::new(dir.path(), ModelVariant::Int8, "bm_lewis");
         assert!(files.missing().unwrap().ends_with("int8.onnx"));
+        assert!(files.model_missing() && files.voice_missing());
 
         let voices = voices_dir(dir.path());
         fs::create_dir_all(&voices).unwrap();
         fs::write(dir.path().join(KOKORO_DIR).join("int8.onnx"), b"model").unwrap();
         assert!(files.missing().unwrap().ends_with("bm_lewis.bin"));
+        assert!(!files.model_missing() && files.voice_missing());
 
         fs::write(voices.join("bm_lewis.bin"), b"voice").unwrap();
         assert_eq!(files.missing(), None);
-        assert!(ModelFiles::new(dir.path(), ModelVariant::Int8, "../x")
-            .missing()
-            .is_some());
+        assert!(!files.model_missing() && !files.voice_missing());
+        for voice in ["../x", "ef_dora", "af_bella+af_sky", "my favourite voice"] {
+            let files = ModelFiles::new(dir.path(), ModelVariant::Int8, voice);
+            assert!(files.voice_missing(), "{voice}");
+            assert!(files.missing().is_some(), "{voice}");
+        }
+    }
+
+    #[test]
+    fn a_failed_preload_is_kept_until_the_next_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let error = preload(|| Some(ModelFiles::new(dir.path(), ModelVariant::Int8, "bm_lewis")))
+            .unwrap_err();
+        assert_eq!(preload_error(), Some(error));
+        preload(|| None).unwrap();
+        assert_eq!(preload_error(), None);
     }
 
     #[test]

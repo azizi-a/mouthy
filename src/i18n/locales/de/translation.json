@@ -103,6 +103,7 @@
         "server": "Mouthy is using the HTTP server. These files are used when Speech Engine is Local (offline).",
         "useLocal": "Use Local (offline)",
         "missing": "To speak offline, Mouthy needs: {{files}}.",
+        "unlistedVoice": "Voice {{voice}} has no file here: pick one below, or type a listed voice in General.",
         "downloadMissing": "Download ({{size}})",
         "failed": "The offline voice did not load: {{error}}",
         "ready": "Ready to speak offline with the {{model}} model and the {{voice}} voice."
