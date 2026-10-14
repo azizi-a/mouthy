@@ -22,8 +22,9 @@ use std::time::{Duration, Instant, SystemTime};
 
 /// The folder under the models directory that one Kokoro release lives in.
 const KOKORO_DIR: &str = "kokoro-v1.0";
-/// Kokoro's context is 512 ids, two of which are the pads around the text.
-const MAX_TOKENS: usize = 510;
+/// The most ids one inference gets. Kokoro takes up to 510, but ONNX Runtime
+/// keeps the memory its longest run needed for as long as the model is loaded.
+const PIECE_TOKENS: usize = 150;
 const STYLE_DIM: usize = 256;
 /// How often a running inference checks whether its session was stopped.
 const STOP_POLL: Duration = Duration::from_millis(20);
@@ -383,7 +384,10 @@ impl LocalSynth {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
         let mut audio = Vec::new();
-        for piece in split_tokens(&ids).into_iter().filter(|p| has_phonemes(p)) {
+        for piece in split_tokens(&ids, PIECE_TOKENS)
+            .into_iter()
+            .filter(|p| has_phonemes(p))
+        {
             let waveform = run(
                 &mut self.session,
                 piece,
@@ -660,14 +664,14 @@ fn has_phonemes(ids: &[i64]) -> bool {
     ids.iter().any(|&id| id > SPACE_ID)
 }
 
-/// Cuts ids into runs Kokoro accepts: after the last pause that fits, else at
-/// the last space, else at the limit. Nothing is dropped but the spaces at a
+/// Cuts ids into runs of at most `max`: after the last pause that fits, else
+/// at the last space, else at `max`. Nothing is dropped but the spaces at a
 /// cut.
-fn split_tokens(ids: &[i64]) -> Vec<&[i64]> {
+fn split_tokens(ids: &[i64], max: usize) -> Vec<&[i64]> {
     let mut pieces = Vec::new();
     let mut rest = trim_spaces(ids);
-    while rest.len() > MAX_TOKENS {
-        let window = &rest[..MAX_TOKENS];
+    while rest.len() > max {
+        let window = &rest[..max];
         let cut_after = |found: Option<usize>| {
             found
                 .map(|i| i + 1)
@@ -675,7 +679,7 @@ fn split_tokens(ids: &[i64]) -> Vec<&[i64]> {
         };
         let cut = cut_after(window.iter().rposition(|id| PAUSE_IDS.contains(id)))
             .or_else(|| cut_after(window.iter().rposition(|&id| id == SPACE_ID)))
-            .unwrap_or(MAX_TOKENS);
+            .unwrap_or(max);
         let (piece, tail) = rest.split_at(cut);
         pieces.push(trim_spaces(piece));
         rest = trim_spaces(tail);
@@ -965,10 +969,10 @@ mod tests {
 
     #[test]
     fn short_input_is_one_piece() {
-        let ids = vec![43; MAX_TOKENS];
-        assert_eq!(split_tokens(&ids), vec![&ids[..]]);
-        assert!(split_tokens(&[]).is_empty());
-        assert!(split_tokens(&[SPACE_ID, SPACE_ID]).is_empty());
+        let ids = vec![43; PIECE_TOKENS];
+        assert_eq!(split_tokens(&ids, PIECE_TOKENS), vec![&ids[..]]);
+        assert!(split_tokens(&[], PIECE_TOKENS).is_empty());
+        assert!(split_tokens(&[SPACE_ID, SPACE_ID], PIECE_TOKENS).is_empty());
     }
 
     #[test]
@@ -976,10 +980,10 @@ mod tests {
         // "aaa, aaa, …" well past the limit.
         let phrase = [43, 43, 43, 3, SPACE_ID];
         let ids: Vec<i64> = phrase.iter().copied().cycle().take(1200).collect();
-        let pieces = split_tokens(&ids);
-        assert!(pieces.len() >= 3);
+        let pieces = split_tokens(&ids, PIECE_TOKENS);
+        assert!(pieces.len() >= 8);
         for piece in &pieces {
-            assert!(piece.len() <= MAX_TOKENS);
+            assert!(piece.len() <= PIECE_TOKENS);
             assert_ne!(piece.first(), Some(&SPACE_ID));
         }
         for piece in &pieces[..pieces.len() - 1] {
@@ -1002,16 +1006,18 @@ mod tests {
             .cycle()
             .take(600)
             .collect();
-        let pieces = split_tokens(&words);
-        assert_eq!(pieces.len(), 2);
-        assert_eq!(pieces[0].last(), Some(&43));
-        assert!(pieces[0].len() <= MAX_TOKENS);
+        let pieces = split_tokens(&words, PIECE_TOKENS);
+        assert_eq!(pieces.len(), 4);
+        for piece in &pieces {
+            assert!(piece.len() <= PIECE_TOKENS);
+            assert_eq!((piece.first(), piece.last()), (Some(&43), Some(&43)));
+        }
 
-        let solid = vec![43; 1100];
-        let pieces = split_tokens(&solid);
+        let solid = vec![43; 400];
+        let pieces = split_tokens(&solid, PIECE_TOKENS);
         assert_eq!(
             pieces.iter().map(|p| p.len()).collect::<Vec<_>>(),
-            vec![MAX_TOKENS, MAX_TOKENS, 80]
+            vec![PIECE_TOKENS, PIECE_TOKENS, 100]
         );
     }
 
@@ -1028,8 +1034,27 @@ mod tests {
         // send a piece with nothing to say.
         let mut ids = vec![3, SPACE_ID];
         ids.extend(std::iter::repeat_n(43, 600));
-        let pieces = split_tokens(&ids);
+        let pieces = split_tokens(&ids, PIECE_TOKENS);
         assert!(pieces.iter().all(|p| has_phonemes(p)), "{pieces:?}");
+    }
+
+    #[test]
+    fn the_longest_sentence_is_cut_at_its_clauses() {
+        let g2p = G2P::new(Language::EnglishGB);
+        // 300 characters, the most `split_sentences` puts in one chunk.
+        let text = "When the committee finally reconvened after the long summer recess, \
+                    it became clear that none of the proposals circulated in July had \
+                    survived contact with the treasury's revised forecasts, and the chair, \
+                    visibly tired, asked members for patience while officials redrafted them \
+                    over the coming month.";
+        assert_eq!(text.chars().count(), 300);
+        let (ids, _) = text_to_ids(&g2p, Dialect::British, text).unwrap();
+        let pieces = split_tokens(&ids, PIECE_TOKENS);
+        assert!(pieces.len() >= 2, "{} ids", ids.len());
+        for piece in &pieces[..pieces.len() - 1] {
+            assert!(piece.len() <= PIECE_TOKENS);
+            assert_eq!(piece.last(), Some(&3), "cut after a comma");
+        }
     }
 
     #[test]
