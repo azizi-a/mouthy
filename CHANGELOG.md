@@ -28,6 +28,7 @@ Mouthy starts as a fork of [Handy](https://github.com/cjpais/Handy) (CJ Pais, MI
 - Building downloads a prebuilt ONNX Runtime (about 10 MB, cached after the first build) for the offline voice. Intel and universal macOS builds no longer link.
 - A long first sentence starts playing after its first clause, so speech begins sooner.
 - Requires macOS 13.4 or later.
+- New installs use the offline voice by default; installs that used the HTTP server keep it.
 
 ### Removed
 
