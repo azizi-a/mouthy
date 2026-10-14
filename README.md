@@ -2,7 +2,17 @@
 
 Mouthy is a free, open-source text-to-speech app for macOS that works offline. Highlight text in any app, press a global hotkey, and hear it read aloud by the Kokoro neural voice running on your Mac; press the hotkey again to stop. Playback starts as soon as the first sentence is ready, and your clipboard is put back the way it was. A local OpenAI-compatible speech server can be used instead.
 
-**Status:** offline speech is done and awaiting its final hands-on check. There are no signed releases yet, so you build the app yourself. See [PLAN.md](PLAN.md) for progress. Windows and Linux builds compile but are untested.
+**Status:** 0.2.0 is the first release, for Apple Silicon Macs. See [PLAN.md](PLAN.md) for progress. Windows and Linux builds compile but are untested.
+
+## Install
+
+On an Apple Silicon Mac with macOS 13.4 or later, download `Mouthy_0.2.0_aarch64.dmg` from [GitHub Releases](https://github.com/azizi-a/mouthy/releases), open it and drag Mouthy to Applications. Mouthy is not signed with an Apple Developer ID or notarised, so macOS blocks the first launch: click Done, then open System Settings → Privacy & Security and click **Open Anyway** (on macOS 14 and earlier you can instead right-click Mouthy and choose Open). Or clear the download flag before launching:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Mouthy.app
+```
+
+Then grant Accessibility and download the voice as described in [First run](#first-run). To build it yourself instead, see [Build from source](#build-from-source).
 
 ## Requirements
 
@@ -10,7 +20,7 @@ Mouthy is a free, open-source text-to-speech app for macOS that works offline. H
 - About 93 MB of downloads from Hugging Face for the offline voice, once.
 - To build: [Rust](https://rustup.rs/) 1.92 or newer, [Bun](https://bun.sh/) and the Xcode Command Line Tools (`xcode-select --install`).
 
-## Setup
+## Build from source
 
 ```bash
 git clone https://github.com/azizi-a/mouthy.git
@@ -30,7 +40,7 @@ The built app is `src-tauri/target/release/bundle/macos/Mouthy.app`; copy it to 
 After that Mouthy needs no network. If the permission misbehaves:
 
 - Under `bun run tauri dev`, macOS charges the permission to your terminal, not to Mouthy. Test the hotkey with the built app.
-- Local builds are ad-hoc signed, so a rebuild can invalidate the grant even though Mouthy still shows as enabled. Reset it and grant again:
+- Mouthy is only ad-hoc signed, so an update or rebuild can invalidate the grant even though Mouthy still shows as enabled. Reset it and grant again:
 
   ```bash
   tccutil reset Accessibility com.azizi.mouthy

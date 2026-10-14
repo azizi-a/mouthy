@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 0.2.0 (unreleased)
+## 0.2.0 — 2026-10-14
 
 Offline speech: the Kokoro-82M voice runs inside Mouthy through ONNX Runtime, with the speech server kept as an alternative. The release app bundle is 62 MB on Apple Silicon (19.8 MB zipped), most of it ONNX Runtime and the offline voice's English lexicons.
 

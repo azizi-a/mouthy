@@ -1,6 +1,6 @@
 [package]
 name = "mouthy"
-version = "0.1.0"
+version = "0.2.0"
 description = "Mouthy"
 authors = ["Azizi Adeyemo", "cjpais"]
 edition = "2021"
