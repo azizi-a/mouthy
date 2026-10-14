@@ -648,6 +648,11 @@ fn plain_text(text: &str) -> String {
     for (i, c) in text.char_indices() {
         match c {
             '’' | '‘' | 'ʼ' => out.push('\''),
+            '“' | '”' | '„' => out.push('"'),
+            // Minus sign.
+            '\u{2212}' => out.push('-'),
+            // Accents typed as a separate mark after the letter ("e" + U+0301).
+            '\u{300}'..='\u{36f}' if out.ends_with(|c: char| c.is_ascii_alphabetic()) => {}
             // Soft hyphen, zero-width space, byte order mark.
             '\u{ad}' | '\u{200b}' | '\u{feff}' => {}
             '\u{a0}' => out.push(' '),
@@ -933,6 +938,41 @@ mod tests {
             assert!(!read.contains('❓'), "{typed} -> {read}");
         }
         assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
+    }
+
+    #[test]
+    fn decomposed_accents_read_as_plain_words() {
+        let (g2p, unknown) = recording_g2p(Language::EnglishGB);
+        for (typed, plain) in [("cafe\u{301}", "cafe"), ("re\u{301}sume\u{301}", "resume")] {
+            assert_eq!(plain_text(typed), plain);
+            let (read, _) = g2p.g2p(&plain_text(typed)).unwrap();
+            let (expected, _) = g2p.g2p(plain).unwrap();
+            assert_eq!(read, expected, "{typed}");
+        }
+        assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
+        // Not after a plain letter: left for misaki-rs.
+        assert_eq!(plain_text("日\u{301}"), "日\u{301}");
+    }
+
+    #[test]
+    fn a_minus_sign_reads_as_minus() {
+        let (g2p, _) = recording_g2p(Language::EnglishGB);
+        let ids = |text| text_to_ids(&g2p, Dialect::British, text).unwrap();
+        assert_eq!(ids("\u{2212}5 degrees"), ids("minus five degrees"));
+    }
+
+    #[test]
+    fn curly_double_quotes_read_as_straight_ones() {
+        let (g2p, _) = recording_g2p(Language::EnglishGB);
+        let ids = |text| text_to_ids(&g2p, Dialect::British, text).unwrap();
+        let (curly, dropped) = ids("She said “no” twice.");
+        assert_eq!(dropped, 0);
+        assert_eq!((curly.clone(), dropped), ids("She said \"no\" twice."));
+        assert!(
+            !curly.windows(2).any(|pair| pair == [SPACE_ID, SPACE_ID]),
+            "{curly:?}"
+        );
+        assert_eq!(plain_text("„no“"), "\"no\"");
     }
 
     #[test]
