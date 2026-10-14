@@ -378,11 +378,7 @@ impl LocalSynth {
     /// Speaks `text` as 24 kHz mono PCM. Text with nothing to pronounce gives
     /// no samples. Input longer than Kokoro's context is cut into phrases.
     fn synthesize(&mut self, text: &str, speed: f32) -> Result<Vec<i16>, String> {
-        let (raw, _) = self
-            .g2p
-            .g2p(&expand_numbers(text))
-            .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
-        let (ids, dropped) = token_ids(&to_kokoro_phonemes(&raw, self.dialect));
+        let (ids, dropped) = text_to_ids(&self.g2p, self.dialect, text)?;
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
@@ -539,6 +535,80 @@ fn style_row(rows: &[f32], tokens: usize) -> &[f32] {
     &rows[row * STYLE_DIM..(row + 1) * STYLE_DIM]
 }
 
+/// Kokoro ids for `text`, and how many symbols had no id.
+fn text_to_ids(g2p: &G2P, dialect: Dialect, text: &str) -> Result<(Vec<i64>, usize), String> {
+    let (raw, _) = g2p
+        .g2p(&expand_numbers(&plain_text(text)))
+        .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
+    Ok(token_ids(&to_kokoro_phonemes(&raw, dialect)))
+}
+
+/// Accented and ligature letters as the plain letters misaki-rs looks up;
+/// its lexicons hold ASCII words only.
+const FOLDS: &[(&str, &str)] = &[
+    ("àáâãäåāăą", "a"),
+    ("ÀÁÂÃÄÅĀĂĄ", "A"),
+    ("çćĉċč", "c"),
+    ("ÇĆĈĊČ", "C"),
+    ("ďđ", "d"),
+    ("ĎĐ", "D"),
+    ("èéêëēĕėęě", "e"),
+    ("ÈÉÊËĒĔĖĘĚ", "E"),
+    ("ĝğġģ", "g"),
+    ("ĜĞĠĢ", "G"),
+    ("ìíîïĩīĭįı", "i"),
+    ("ÌÍÎÏĨĪĬĮİ", "I"),
+    ("ĺļľŀł", "l"),
+    ("ĹĻĽĿŁ", "L"),
+    ("ñńņň", "n"),
+    ("ÑŃŅŇ", "N"),
+    ("òóôõöøōŏő", "o"),
+    ("ÒÓÔÕÖØŌŎŐ", "O"),
+    ("ŕŗř", "r"),
+    ("ŔŖŘ", "R"),
+    ("śŝşšș", "s"),
+    ("ŚŜŞŠȘ", "S"),
+    ("ţťŧț", "t"),
+    ("ŢŤŦȚ", "T"),
+    ("ùúûüũūŭůűų", "u"),
+    ("ÙÚÛÜŨŪŬŮŰŲ", "U"),
+    ("ýÿŷ", "y"),
+    ("ÝŸŶ", "Y"),
+    ("źżž", "z"),
+    ("ŹŻŽ", "Z"),
+    ("ß", "ss"),
+    ("æ", "ae"),
+    ("Æ", "AE"),
+    ("œ", "oe"),
+    ("Œ", "OE"),
+    ("ﬀ", "ff"),
+    ("ﬁ", "fi"),
+    ("ﬂ", "fl"),
+    ("ﬃ", "ffi"),
+    ("ﬄ", "ffl"),
+    ("ﬅﬆ", "st"),
+];
+
+/// Text as misaki-rs reads it best. It splits a word at a curly apostrophe
+/// ("don’t" → "don", "❓", "t") and spells an unknown word letter by letter.
+fn plain_text(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '’' | '‘' | 'ʼ' => out.push('\''),
+            // Soft hyphen, zero-width space, byte order mark.
+            '\u{ad}' | '\u{200b}' | '\u{feff}' => {}
+            '\u{a0}' => out.push(' '),
+            c if c.is_ascii() => out.push(c),
+            c => match FOLDS.iter().find(|(from, _)| from.contains(c)) {
+                Some((_, to)) => out.push_str(to),
+                None => out.push(c),
+            },
+        }
+    }
+    out
+}
+
 /// Turns misaki-rs output into the symbols Kokoro was trained on: tied
 /// diphthongs and affricates become single symbols, and spacing follows
 /// misaki's Python output.
@@ -629,7 +699,9 @@ fn trim_spaces(mut run: &[i64]) -> &[i64] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use misaki_rs::fallback::FallbackError;
     use misaki_rs::lexicon::PhonemeEntry;
+    use misaki_rs::Fallback;
     use std::collections::{BTreeSet, HashMap};
 
     fn kokoro(raw: &str, dialect: Dialect) -> String {
@@ -779,6 +851,65 @@ mod tests {
                 "{phonemes}"
             );
         }
+    }
+
+    /// Records the words misaki-rs has no entry for, which it would otherwise
+    /// spell letter by letter.
+    struct Unknown(Arc<Mutex<Vec<String>>>);
+
+    impl Fallback for Unknown {
+        fn phonemize(&self, word: &str) -> Result<String, FallbackError> {
+            self.0.lock().unwrap().push(word.to_string());
+            Ok(String::new())
+        }
+    }
+
+    fn recording_g2p(language: Language) -> (G2P, Arc<Mutex<Vec<String>>>) {
+        let unknown = Arc::new(Mutex::new(Vec::new()));
+        let g2p = G2P::with_fallback(language, Some(Box::new(Unknown(unknown.clone()))));
+        (g2p, unknown)
+    }
+
+    #[test]
+    fn curly_apostrophes_and_accents_read_as_plain_words() {
+        let (g2p, unknown) = recording_g2p(Language::EnglishGB);
+        for (typed, plain) in [
+            ("don’t", "don't"),
+            ("it’s", "it's"),
+            ("user’s", "user's"),
+            ("o’clock", "o'clock"),
+            ("café", "cafe"),
+            ("naïve", "naive"),
+            ("ﬁnal", "final"),
+            ("donʼt", "don't"),
+            ("‘Café’", "'Cafe'"),
+        ] {
+            let (read, _) = g2p.g2p(&plain_text(typed)).unwrap();
+            let (expected, _) = g2p.g2p(plain).unwrap();
+            assert_eq!(read, expected, "{typed}");
+            assert!(!read.contains('❓'), "{typed} -> {read}");
+        }
+        assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
+    }
+
+    #[test]
+    fn a_sentence_with_curly_apostrophes_loses_no_symbol() {
+        let (g2p, unknown) = recording_g2p(Language::EnglishGB);
+        let text = "I don’t think it’s the user’s fault that the naïve café shuts at nine o’clock.";
+        let (ids, dropped) = text_to_ids(&g2p, Dialect::British, text).unwrap();
+        assert_eq!(dropped, 0);
+        assert!(has_phonemes(&ids));
+        assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
+    }
+
+    #[test]
+    fn invisible_characters_go_and_no_break_spaces_become_spaces() {
+        assert_eq!(
+            plain_text("soft\u{ad}ware\u{200b} \u{feff}ten\u{a0}pounds"),
+            "software ten pounds"
+        );
+        assert_eq!(plain_text("Straße Œuvre ﬂoor"), "Strasse OEuvre floor");
+        assert_eq!(plain_text("日本 🎉"), "日本 🎉");
     }
 
     #[test]
