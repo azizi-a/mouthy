@@ -74,6 +74,8 @@ const settingUpdaters: {
   tts_backend: (value) => commands.changeTtsBackendSetting(value as string),
   tts_model_variant: (value) =>
     commands.changeTtsModelVariantSetting(value as string),
+  tts_espeak_fallback: (value) =>
+    commands.changeTtsEspeakFallbackSetting(value as boolean),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

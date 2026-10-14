@@ -72,6 +72,12 @@
         "description": "Voice name, such as bm_lewis. Type one, or pick from your downloaded voices (Local) or the server's list (HTTP).",
         "choose": "Choose a voice..."
       },
+      "espeak": {
+        "title": "Pronounce unknown words with espeak-ng",
+        "description": "Names and other words the built-in dictionary lacks are read by espeak-ng instead of spelled out letter by letter. espeak-ng is GPL-3 software you install yourself (brew install espeak-ng); Mouthy runs it as a separate program and does not bundle it. Each new unknown word can delay speech by up to half a second.",
+        "found": "Using espeak-ng at {{path}}",
+        "notFound": "espeak-ng is not installed. Install it with: brew install espeak-ng"
+      },
       "speed": {
         "title": "Speed",
         "description": "How fast the voice speaks, from 0.5× to 2×."

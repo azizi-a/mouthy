@@ -9,6 +9,7 @@ import { ShowOverlay } from "../ShowOverlay";
 import { BackendUrl } from "../BackendUrl";
 import { TtsBackendSelector } from "../TtsBackendSelector";
 import { VoiceSelector } from "../VoiceSelector";
+import { EspeakFallback } from "../EspeakFallback";
 import { SpeedSlider } from "../SpeedSlider";
 import { VolumeSlider } from "../VolumeSlider";
 import { useSettings } from "../../../hooks/useSettings";
@@ -29,6 +30,9 @@ export const GeneralSettings: React.FC = () => {
         <TtsBackendSelector descriptionMode="tooltip" grouped={true} />
         {usesServer && <BackendUrl descriptionMode="tooltip" grouped={true} />}
         <VoiceSelector descriptionMode="tooltip" grouped={true} />
+        {!usesServer && (
+          <EspeakFallback descriptionMode="tooltip" grouped={true} />
+        )}
         <SpeedSlider descriptionMode="tooltip" grouped={true} />
         <VolumeSlider descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>
