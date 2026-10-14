@@ -6,7 +6,7 @@ This file provides guidance to AI coding assistants working with code in this re
 
 **Prerequisites:**
 
-- [Rust](https://rustup.rs/) (latest stable)
+- [Rust](https://rustup.rs/) 1.92 or newer
 - [Bun](https://bun.sh/) package manager
 - An OpenAI-compatible TTS server for manual testing (e.g. Kokoro-FastAPI on `http://127.0.0.1:8880`)
 

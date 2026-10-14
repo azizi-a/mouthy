@@ -18,7 +18,7 @@ curl http://127.0.0.1:8880/v1/audio/voices
 
 ## Setup
 
-Install [Rust](https://rustup.rs/) (stable), [Bun](https://bun.sh/) and the Xcode Command Line Tools (`xcode-select --install`), then:
+Install [Rust](https://rustup.rs/) (1.92 or newer), [Bun](https://bun.sh/) and the Xcode Command Line Tools (`xcode-select --install`), then:
 
 ```bash
 git clone https://github.com/azizi-a/mouthy.git

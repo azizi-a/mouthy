@@ -6,7 +6,7 @@ Intel and universal macOS builds fail to link: ONNX Runtime's prebuilt archive e
 
 ## Prerequisites
 
-- [Rust](https://rustup.rs/) (latest stable)
+- [Rust](https://rustup.rs/) 1.92 or newer (ONNX Runtime's `ort` crate needs it)
 - [Bun](https://bun.sh/)
 - Xcode Command Line Tools: `xcode-select --install`
 - For other platforms, the [Tauri prerequisites](https://tauri.app/start/prerequisites/)
