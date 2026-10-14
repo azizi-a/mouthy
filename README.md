@@ -2,12 +2,13 @@
 
 Mouthy is a free, open-source desktop text-to-speech app for macOS. Highlight text in any app, press a global hotkey, and hear it read aloud by a neural voice; press the hotkey again to stop. Playback starts as soon as the first sentence is ready, and your clipboard is put back the way it was.
 
-**Status:** Phase 2 in progress. Mouthy speaks through a local OpenAI-compatible speech server, or offline with the Kokoro voice running inside the app once its model files are in place (see [Offline voice](#offline-voice-preview) and [PLAN.md](PLAN.md)). Windows and Linux builds compile but are untested.
+**Status:** Phase 2 in progress. Mouthy speaks offline with the Kokoro voice running inside the app, downloaded from Settings → Models (see [Offline voice](#offline-voice)), or through a local OpenAI-compatible speech server. See [PLAN.md](PLAN.md) for progress. Windows and Linux builds compile but are untested.
 
 ## Requirements
 
 - An Apple Silicon Mac with macOS 13.4 or later
-- For the default HTTP engine: a local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `bm_lewis` by default; both can be changed in Settings.
+- For the offline voice (the default): about 93 MB of downloads from Hugging Face, once
+- For the HTTP engine instead: a local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `bm_lewis` by default; both can be changed in Settings.
 
 Check the server is up:
 
@@ -42,7 +43,7 @@ Mouthy copies your selection by sending ⌘C, which needs the Accessibility perm
 
 ## Usage
 
-Select text in any app and press **⌥⎋** (Option+Escape). Mouthy reads it aloud and shows a small overlay while speaking. Press ⌥⎋ again, or click × on the overlay, to stop. If nothing is selected the overlay says so; if the server cannot be reached it shows the error with an Open Settings button.
+Select text in any app and press **⌥⎋** (Option+Escape). Mouthy reads it aloud and shows a small overlay while speaking. Press ⌥⎋ again, or click × on the overlay, to stop. If nothing is selected the overlay says so; if the offline voice's files are missing or the server cannot be reached, it says so with an Open Settings button.
 
 The tray menu has Speak Selection, Stop, Settings and Quit.
 
@@ -59,19 +60,21 @@ pkill -USR1 -x mouthy   # stop
 
 Call the binary directly: `open -a Mouthy --args …` drops the arguments. With no running instance, `--speak-selection` and `--stop` just launch the app. Launch flags: `--start-hidden` (no main window; tray icon only) and `--no-tray` (no tray icon; closing the window quits).
 
-## Offline voice (preview)
+## Offline voice
 
-Mouthy can run the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. It does not download the files yet, so put them in place by hand from that page, then choose **Local (offline)** under Settings → Speech → Speech Engine:
+Mouthy runs the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. A fresh install uses it, but the files are not bundled: open Settings → Models and click **Download** next to the status line, which fetches the int8 model (92 MB) and the `bm_lewis` voice (0.5 MB). Pressing ⌥⎋ before then shows "Offline voice files are missing", and its Open Settings button goes to the same page.
+
+On the Models page you can also download the fp16 (163 MB) or fp32 (326 MB) model and any of 28 English voices (0.5 MB each), choose which model and voice to use, and delete files. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256 before Mouthy uses it. The files live in:
 
 ```text
 ~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/
-├── int8.onnx            ← onnx/model_quantized.onnx (92 MB, used by default)
-├── fp16.onnx            ← onnx/model_fp16.onnx (optional)
-├── fp32.onnx            ← onnx/model.onnx (optional)
-└── voices/bm_lewis.bin  ← voices/bm_lewis.bin (one file per voice)
+├── int8.onnx            (fp16.onnx, fp32.onnx if downloaded)
+└── voices/bm_lewis.bin  (one file per voice)
 ```
 
-Settings cannot switch to fp16 or fp32 yet. The Voice setting picks a file from `voices/`. Voices starting with `b` get British pronunciations, all others American. If a file is missing, the overlay says so. The loaded voice uses about 300 MB of memory while Local is selected.
+Voices starting with `b` get British pronunciations, all others American. The loaded voice uses about 300 MB of memory while Local is selected. Kokoro-82M and its voices are released under the Apache License 2.0.
+
+To use a speech server instead, set Settings → General → Speech Engine to **HTTP server** (see [Requirements](#requirements)). Installs from before the offline voice existed keep using the server until you switch.
 
 ## Settings
 
@@ -80,10 +83,11 @@ Open Settings from the tray. The General page has three groups:
 - **General:** hotkey, launch at login, start hidden, overlay style and position
 - **Speech:** engine (Local or HTTP server), server URL (HTTP only), voice (a list when the server offers `/v1/audio/voices` or voice files are installed, otherwise free text), speed (0.5×–2×), volume
 - **Sound:** output device
+- **Models page:** offline voice downloads, model and voice choice
 - **Advanced page:** tray icon, experimental features (shortcut backend)
 - **About page:** language, theme, app data and log folders
 
-Mouthy sends the selected text to the server URL you set. Plain `http://` is unencrypted, so use `https://` for a server on another machine.
+With the HTTP engine, Mouthy sends the selected text to the server URL you set; plain `http://` is unencrypted, so use `https://` for a server on another machine. The Local engine sends nothing anywhere; only the Models page's downloads use the network.
 
 ## Known issues
 

@@ -45,7 +45,7 @@ For platform-specific build setup, see [BUILD.md](BUILD.md).
 
 Mouthy is an offline-first desktop text-to-speech app built with Tauri 2.x (Rust backend + React/TypeScript frontend). It is a fork of Handy with the I/O path inverted: highlight text in any app, press a global hotkey, hear it read aloud; press again to stop.
 
-Speech comes from an external OpenAI-compatible HTTP server (default `http://127.0.0.1:8880`, `POST /v1/audio/speech`, voice `bm_lewis`) or, with `tts_backend = local`, from Kokoro-82M running in-process (ONNX Runtime via `ort`, phonemes via `misaki-rs`) from model files in the app-data `models/` folder; default hotkey ⌥⎋. Bundle identifier: `com.azizi.mouthy`.
+Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the default for new installs: ONNX Runtime via `ort`, phonemes via `misaki-rs`) from model files downloaded into the app-data `models/` folder, or from an external OpenAI-compatible HTTP server (default `http://127.0.0.1:8880`, `POST /v1/audio/speech`, voice `bm_lewis`); default hotkey ⌥⎋. Bundle identifier: `com.azizi.mouthy`.
 
 ### Backend Structure (src-tauri/src/)
 
@@ -55,6 +55,7 @@ Speech comes from an external OpenAI-compatible HTTP server (default `http://127
 - `tts/text.rs` - `normalize` (URLs, markdown, whitespace), `split_sentences`, `split_first_clause`, and `expand_numbers` (local backend only)
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
 - `tts/local.rs` - in-process Kokoro: model files, the loaded model (kept between sessions, locked by one session at a time, never on the main thread), phoneme mapping, inference
+- `tts/catalog.rs` / `tts/download.rs` - the downloadable Kokoro files (URL pinned to one Hugging Face revision, size, sha256) and the resumable, checksum-verified downloader
 - `clipboard.rs` - `capture_selection`: snapshot pasteboard, send ⌘C, poll, read, restore
 - `input.rs` - Enigo state and layout-aware copy keystroke (main thread only on macOS)
 - `audio_out.rs` - Opens the selected output device for rodio playback
@@ -65,12 +66,12 @@ Speech comes from an external OpenAI-compatible HTTP server (default `http://127
 - `settings.rs` - Settings struct, defaults, persistence
 - `cli.rs` / `signal_handle.rs` - CLI flags and Unix signals
 - `autostart.rs` - Launch at login
-- `commands/` - Tauri command handlers
+- `commands/` - Tauri command handlers; `commands/models.rs` runs the Models page's downloads on the async runtime
 
 ### Frontend Structure (src/)
 
 - `App.tsx` - Main component with onboarding (Accessibility permission)
-- `components/settings/` - Settings UI: `general/`, `advanced/`, `debug/`, `about/`
+- `components/settings/` - Settings UI: `general/`, `models/`, `advanced/`, `debug/`, `about/`
 - `components/onboarding/`, `ui/`, `icons/`, `footer/`
 - `overlay/` - Overlay window entry point and `SpeakingOverlay` UI
 - `hooks/useSettings.ts`, `stores/settingsStore.ts` - Settings state (Zustand)
@@ -82,7 +83,7 @@ Speech comes from an external OpenAI-compatible HTTP server (default `http://127
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 
-**Settings pattern:** add the field with a serde default to `AppSettings` and `get_default_settings` in `settings.rs`, add a `change_*_setting` command, register it in `lib.rs`, regenerate bindings, and add a `settingUpdaters` entry in `settingsStore.ts`. Unknown stored keys are ignored, so there are no migrations.
+**Settings pattern:** add the field with a serde default to `AppSettings` and `get_default_settings` in `settings.rs`, add a `change_*_setting` command, register it in `lib.rs`, regenerate bindings, and add a `settingUpdaters` entry in `settingsStore.ts`. Unknown stored keys are ignored, so there are no migrations. One exception: a stored object without `tts_backend` predates the local backend and keeps `http` (`keep_server_backend_for_older_stores`); only a fresh store gets the `local` default.
 
 **Bindings:** `src/bindings.ts` is written by tauri-specta when the debug binary starts, not at `cargo build`. Run the debug binary from `src-tauri` (the output path is relative to the working directory) and commit the regenerated file with the change.
 
