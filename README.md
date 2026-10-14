@@ -72,7 +72,7 @@ On the Models page you can also download the fp16 (163 MB) or fp32 (326 MB) mode
 └── voices/bm_lewis.bin  (one file per voice)
 ```
 
-Voices starting with `b` get British pronunciations, all others American. The loaded voice uses about 300 MB of memory while Local is selected. Kokoro-82M and its voices are released under the Apache License 2.0.
+Voices starting with `b` get British pronunciations, all others American. With Local selected, Mouthy uses about 350 MB of memory once the voice has loaded and up to about 700 MB after reading long passages; it keeps that memory while it runs. Kokoro-82M and its voices are released under the Apache License 2.0.
 
 To use a speech server instead, set Settings → General → Speech Engine to **HTTP server** (see [Requirements](#requirements)). Installs from before the offline voice existed keep using the server until you switch.
 
