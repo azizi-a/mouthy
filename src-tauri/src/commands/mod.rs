@@ -26,6 +26,13 @@ pub async fn fetch_tts_voices(app: AppHandle) -> Result<Vec<String>, String> {
     }
 }
 
+/// Where the espeak-ng that would read unknown words is, if installed.
+#[tauri::command]
+#[specta::specta]
+pub fn find_espeak_ng() -> Option<String> {
+    crate::tts::espeak::find().map(|path| path.display().to_string())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn get_app_dir_path(app: AppHandle) -> Result<String, String> {

@@ -4,6 +4,7 @@
 //! export) and `voices/<voice>.bin`. The loaded model stays in memory between
 //! sessions; one session at a time holds it.
 
+use super::espeak;
 use super::text::{expand_numbers, joins_numbers};
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
@@ -55,7 +56,7 @@ const PAUSE_IDS: &[i64] = &[1, 2, 3, 4, 5, 6, 9, 10];
 
 /// misaki-rs 0.6 lexicons tie diphthongs and affricates with U+200D, eSpeak
 /// style; Kokoro was trained on misaki's single-symbol forms.
-const TIES_COMMON: &[(&str, &str)] = &[
+pub(super) const TIES_COMMON: &[(&str, &str)] = &[
     ("e\u{200d}ɪ", "A"),
     ("a\u{200d}ɪ", "I"),
     ("a\u{200d}ʊ", "W"),
@@ -88,7 +89,7 @@ static LOADED: Mutex<Option<LocalSynth>> = Mutex::new(None);
 /// Which misaki lexicon a voice needs: `b*` voices are British English,
 /// every other voice is read as American English.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Dialect {
+pub(super) enum Dialect {
     British,
     American,
 }
@@ -102,7 +103,7 @@ impl Dialect {
         }
     }
 
-    fn language(self) -> Language {
+    pub(super) fn language(self) -> Language {
         match self {
             Dialect::British => Language::EnglishGB,
             Dialect::American => Language::EnglishUS,
@@ -124,6 +125,8 @@ pub struct ModelFiles {
     voice_id: String,
     /// `None` when the voice name could not be a file name.
     voice: Option<PathBuf>,
+    /// The espeak-ng that reads words the lexicon lacks, if any.
+    espeak: Option<PathBuf>,
 }
 
 impl ModelFiles {
@@ -132,7 +135,12 @@ impl ModelFiles {
             model: model_path(models_dir, variant),
             voice_id: voice.to_string(),
             voice: voice_path(models_dir, voice),
+            espeak: None,
         }
+    }
+
+    pub fn with_espeak(self, espeak: Option<PathBuf>) -> Self {
+        Self { espeak, ..self }
     }
 
     /// The first file that is not there, described for the log.
@@ -299,14 +307,17 @@ fn ensure_loaded(loaded: &mut Option<LocalSynth>, files: &ModelFiles) -> Result<
         .as_deref()
         .ok_or_else(|| format!("'{}' is not a voice name", files.voice_id))?;
     let voice = FileStamp::of(voice_path, "voice file")?;
-    let dialect = Dialect::for_voice(&files.voice_id);
+    let reading = Reading {
+        dialect: Dialect::for_voice(&files.voice_id),
+        espeak: files.espeak.clone(),
+    };
 
     match loaded {
         // Each part is swapped only once its replacement has loaded, so a
         // failure leaves the stamps matching what is held.
-        Some(synth) => synth.refresh(model, voice, dialect),
+        Some(synth) => synth.refresh(model, voice, reading),
         None => {
-            *loaded = Some(LocalSynth::load(model, voice, dialect)?);
+            *loaded = Some(LocalSynth::load(model, voice, reading)?);
             Ok(())
         }
     }
@@ -332,25 +343,32 @@ impl FileStamp {
     }
 }
 
+/// How the G2P reads text: which lexicon, and what reads the words it lacks.
+#[derive(Debug, PartialEq, Eq)]
+struct Reading {
+    dialect: Dialect,
+    espeak: Option<PathBuf>,
+}
+
 struct LocalSynth {
     session: Session,
     model: FileStamp,
     voice: Voice,
     g2p: G2P,
-    dialect: Dialect,
+    reading: Reading,
 }
 
 impl LocalSynth {
-    fn load(model: FileStamp, voice: FileStamp, dialect: Dialect) -> Result<Self, String> {
+    fn load(model: FileStamp, voice: FileStamp, reading: Reading) -> Result<Self, String> {
         let session = load_session(&model.path)?;
         let voice = Voice::load(voice)?;
-        let g2p = build_g2p(dialect);
+        let g2p = build_g2p(&reading);
         Ok(Self {
             session,
             model,
             voice,
             g2p,
-            dialect,
+            reading,
         })
     }
 
@@ -358,7 +376,7 @@ impl LocalSynth {
         &mut self,
         model: FileStamp,
         voice: FileStamp,
-        dialect: Dialect,
+        reading: Reading,
     ) -> Result<(), String> {
         if self.model != model {
             self.session = load_session(&model.path)?;
@@ -367,9 +385,9 @@ impl LocalSynth {
         if self.voice.stamp != voice {
             self.voice = Voice::load(voice)?;
         }
-        if self.dialect != dialect {
-            self.g2p = build_g2p(dialect);
-            self.dialect = dialect;
+        if self.reading != reading {
+            self.g2p = build_g2p(&reading);
+            self.reading = reading;
         }
         Ok(())
     }
@@ -382,7 +400,7 @@ impl LocalSynth {
         speed: f32,
         run_options: &RunOptions,
     ) -> Result<Vec<i16>, String> {
-        let (ids, dropped) = text_to_ids(&self.g2p, self.dialect, text)?;
+        let (ids, dropped) = text_to_ids(&self.g2p, self.reading.dialect, text)?;
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
@@ -461,11 +479,15 @@ fn build_session(environment: &Environment, path: &Path) -> ort::Result<Session>
         .commit_from_file(path)
 }
 
-fn build_g2p(dialect: Dialect) -> G2P {
+fn build_g2p(reading: &Reading) -> G2P {
     let started = Instant::now();
-    let g2p = G2P::new(dialect.language());
+    let dialect = reading.dialect;
+    let (g2p, unknown_words) = match &reading.espeak {
+        Some(program) => (espeak::g2p(dialect, program.clone()), "espeak-ng"),
+        None => (G2P::new(dialect.language()), "spelling"),
+    };
     info!(
-        "Loaded the {dialect:?} English lexicon in {} ms",
+        "Loaded the {dialect:?} English lexicon ({unknown_words} for unknown words) in {} ms",
         started.elapsed().as_millis()
     );
     g2p
@@ -667,12 +689,23 @@ fn token_ids(phonemes: &str) -> (Vec<i64>, usize) {
     let mut ids = Vec::with_capacity(phonemes.len());
     let mut dropped = 0;
     for c in phonemes.chars() {
-        match VOCAB.iter().find(|(symbol, _)| *symbol == c) {
-            Some((_, id)) => ids.push(*id),
+        match vocab_id(c) {
+            Some(id) => ids.push(id),
             None => dropped += 1,
         }
     }
     (ids, dropped)
+}
+
+fn vocab_id(c: char) -> Option<i64> {
+    VOCAB
+        .iter()
+        .find(|(symbol, _)| *symbol == c)
+        .map(|(_, id)| *id)
+}
+
+pub(super) fn in_vocab(c: char) -> bool {
+    vocab_id(c).is_some()
 }
 
 /// Ids up to the space are punctuation, which alone says nothing.
@@ -1125,7 +1158,8 @@ mod tests {
         assert_eq!(installed_voices(dir.path()), vec!["af_heart", "bm_lewis"]);
     }
 
-    /// The P2.2 spike's corpus, for judging the lexicons by ear and eye:
+    /// The P2.2 spike's corpus, for judging the lexicons by ear and eye, and
+    /// espeak-ng's readings when it is installed:
     /// `cargo test -- --ignored corpus --nocapture`.
     #[test]
     #[ignore = "prints a report for a human"]
@@ -1154,12 +1188,34 @@ mod tests {
             "I can't believe it's already October; we haven't even booked the hotel.",
         ];
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
+        let espeak = espeak::find().map(|program| espeak::g2p(Dialect::British, program));
+        let plain = G2P::new(Language::EnglishGB);
+        let (mut oov, mut read_by_espeak) = (0, 0);
         for text in CORPUS {
             let (raw, _) = g2p.g2p(&expand_numbers(&plain_text(text))).unwrap();
             let phonemes = to_kokoro_phonemes(&raw, Dialect::British);
             let words = std::mem::take(&mut *unknown.lock().unwrap());
             println!("{text}\n  {phonemes}\n  not in the lexicon: {words:?}");
             assert_eq!(token_ids(&phonemes).1, 0, "{text}");
+            oov += words.len();
+            let Some(espeak) = &espeak else { continue };
+            let (ids, dropped) = text_to_ids(espeak, Dialect::British, text).unwrap();
+            assert_eq!(dropped, 0, "{text}");
+            assert!(has_phonemes(&ids));
+            for word in &words {
+                let (read, _) = espeak.g2p(word).unwrap();
+                let (spelled, _) = plain.g2p(word).unwrap();
+                println!("  espeak-ng: {word} -> {}", read.trim());
+                read_by_espeak += usize::from(read != spelled);
+            }
+        }
+        println!("{oov} words not in the lexicon, all spelled out without espeak-ng");
+        match espeak {
+            Some(_) => println!(
+                "with espeak-ng: {read_by_espeak} read, {} spelled out",
+                oov - read_by_espeak
+            ),
+            None => println!("espeak-ng is not installed"),
         }
     }
 
@@ -1211,5 +1267,23 @@ mod tests {
         // The next session gets a fresh, unstopped model.
         let mut loaded = open(&files, &Arc::new(AtomicBool::new(false))).unwrap();
         assert!(!loaded.synthesize("Still working.", 1.0).unwrap().is_empty());
+        drop(loaded);
+
+        // Turning espeak-ng on swaps the G2P; unknown words take less audio
+        // than their letter-by-letter spelling.
+        let Some(program) = espeak::find() else {
+            return;
+        };
+        let names = "Siobhan from Keighley runs Kubernetes.";
+        let stop = Arc::new(AtomicBool::new(false));
+        let spelled = open(&files, &stop).unwrap().synthesize(names, 1.0).unwrap();
+        let files = files.with_espeak(Some(program));
+        let read = open(&files, &stop).unwrap().synthesize(names, 1.0).unwrap();
+        println!(
+            "{} samples spelled, {} read by espeak-ng",
+            spelled.len(),
+            read.len()
+        );
+        assert!(!read.is_empty() && read.len() < spelled.len());
     }
 }

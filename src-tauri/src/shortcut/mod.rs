@@ -709,6 +709,16 @@ pub fn change_tts_model_variant_setting(app: AppHandle, variant: String) -> Resu
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_tts_espeak_fallback_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_espeak_fallback = enabled;
+    settings::write_settings(&app, settings);
+    crate::actions::preload_local_voice(&app);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_tts_speed_setting(app: AppHandle, speed: f32) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.tts_speed = speed.clamp(0.5, 2.0);

@@ -201,6 +201,9 @@ pub struct AppSettings {
     pub tts_backend: TtsBackend,
     #[serde(default = "default_tts_model_variant")]
     pub tts_model_variant: ModelVariant,
+    /// Read words the lexicon lacks with a separately installed espeak-ng.
+    #[serde(default)]
+    pub tts_espeak_fallback: bool,
 }
 
 fn default_start_hidden() -> bool {
@@ -314,6 +317,7 @@ pub fn get_default_settings() -> AppSettings {
         tts_volume: default_tts_volume(),
         tts_backend: default_tts_backend(),
         tts_model_variant: default_tts_model_variant(),
+        tts_espeak_fallback: false,
     }
 }
 
@@ -677,6 +681,7 @@ mod tests {
         let settings = get_default_settings();
         assert_eq!(settings.tts_backend, TtsBackend::Local);
         assert_eq!(settings.tts_model_variant, ModelVariant::Int8);
+        assert!(!settings.tts_espeak_fallback);
     }
 
     #[test]

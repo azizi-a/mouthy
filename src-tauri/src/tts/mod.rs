@@ -2,6 +2,7 @@
 
 pub mod catalog;
 pub mod download;
+pub mod espeak;
 pub mod http;
 pub mod local;
 pub mod text;

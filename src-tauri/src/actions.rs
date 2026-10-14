@@ -297,11 +297,10 @@ fn local_model_files(
     settings: &AppSettings,
 ) -> Result<tts::local::ModelFiles, String> {
     let models_dir = crate::commands::models_dir(app)?;
-    Ok(tts::local::ModelFiles::new(
-        &models_dir,
-        settings.tts_model_variant,
-        &settings.tts_voice,
-    ))
+    Ok(
+        tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, &settings.tts_voice)
+            .with_espeak(tts::espeak::find_if_enabled(settings.tts_espeak_fallback)),
+    )
 }
 
 /// Whether the local voice is in memory after a preload, sent to the settings

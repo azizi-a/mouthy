@@ -192,6 +192,14 @@ async changeTtsModelVariantSetting(variant: string) : Promise<Result<null, strin
     else return { status: "error", error: e  as any };
 }
 },
+async changeTtsEspeakFallbackSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_tts_espeak_fallback_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Start key recording mode
  */
@@ -247,6 +255,12 @@ async fetchTtsVoices() : Promise<Result<string[], string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Where the espeak-ng that would read unknown words is, if installed.
+ */
+async findEspeakNg() : Promise<string | null> {
+    return await TAURI_INVOKE("find_espeak_ng");
 },
 async getAppDirPath() : Promise<Result<string, string>> {
     try {
@@ -433,7 +447,11 @@ bindings?: Partial<{ [key in string]: ShortcutBinding }>; start_hidden?: boolean
 /**
  * Sent to the server; changing playback rate locally would shift pitch.
  */
-tts_speed?: number; tts_volume?: number; tts_backend?: TtsBackend; tts_model_variant?: ModelVariant }
+tts_speed?: number; tts_volume?: number; tts_backend?: TtsBackend; tts_model_variant?: ModelVariant; 
+/**
+ * Read words the lexicon lacks with a separately installed espeak-ng.
+ */
+tts_espeak_fallback?: boolean }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 /**
