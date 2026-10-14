@@ -6,9 +6,11 @@ This file provides guidance to AI coding assistants working with code in this re
 
 **Prerequisites:**
 
-- [Rust](https://rustup.rs/) 1.92 or newer
+- An Apple Silicon Mac on macOS 13.4 or later: ONNX Runtime's prebuilt archive is arm64 only, so Intel and universal builds fail to link
+- [Rust](https://rustup.rs/) 1.92 or newer (`ort` rc.14's `rust-version`)
 - [Bun](https://bun.sh/) package manager
-- An OpenAI-compatible TTS server for manual testing (e.g. Kokoro-FastAPI on `http://127.0.0.1:8880`)
+- Network for the first `cargo build`: `ort-sys` downloads ONNX Runtime (~10 MB) from `cdn.pyke.io` into `~/Library/Caches/ort.pyke.io`
+- Kokoro model files come from Settings → Models at run time and are never committed; an OpenAI-compatible TTS server (e.g. Kokoro-FastAPI on `http://127.0.0.1:8880`) is only needed to test the HTTP backend
 
 **Core Development:**
 
@@ -52,14 +54,15 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - `lib.rs` - Entry point, Tauri setup, plugin and command registration
 - `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction` is a thin wrapper); `speak_selection`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
 - `tts/mod.rs` - `Backend` (chosen per request from settings) and `Synth` (opened on the synth thread)
-- `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences`; for the local backend only, `split_first_clause` and `expand_numbers`
+- `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences`; for the local backend only, `split_first_clause` and `expand_numbers` (the HTTP path speaks `normalize` + `split_sentences` output)
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
-- `tts/local.rs` - in-process Kokoro: model files, the loaded model (kept between sessions, locked by one session at a time, never on the main thread), phoneme mapping, inference
+- `tts/local.rs` - in-process Kokoro: model files, the loaded model (`LOADED`), the last preload error (`PRELOAD_ERROR`), text clean-up (`plain_text`), phoneme mapping, inference in pieces of at most `PIECE_TOKENS` (150) ids
 - `tts/espeak.rs` - optional reading of words the lexicon lacks by a user-installed `espeak-ng` (GPL-3), run as a subprocess per word, never linked or bundled
 - `tts/catalog.rs` / `tts/download.rs` - the downloadable Kokoro files (URL pinned to one Hugging Face revision, size, sha256) and the resumable, checksum-verified downloader
 - `clipboard.rs` - `capture_selection`: snapshot pasteboard, send ⌘C, poll, read, restore
 - `input.rs` - Enigo state and layout-aware copy keystroke (main thread only on macOS)
 - `audio_out.rs` - Opens the selected output device for rodio playback
+- `audio_toolkit/` - Output device listing and the cpal host
 - `shortcut/` - Global hotkeys. Two backends: `handy_keys.rs` (default on macOS and Windows; supports fn and modifier-only keys) and `tauri_impl.rs` (fallback, default on Linux); `handler.rs` routes events to `ACTION_MAP`
 - `secure_input.rs` - Detects macOS Secure Input, which blocks the handy-keys event tap
 - `overlay.rs` - Overlay window (label `overlay`): `speaking`, `nothing-selected`, `error` and `model-missing` states
@@ -67,7 +70,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - `settings.rs` - Settings struct, defaults, persistence
 - `cli.rs` / `signal_handle.rs` - CLI flags and Unix signals
 - `autostart.rs` - Launch at login
-- `commands/` - Tauri command handlers; `commands/models.rs` runs the Models page's downloads on the async runtime
+- `commands/` - Tauri command handlers; `commands/models.rs` lists, downloads, cancels and deletes model files for the Models page
 
 ### Frontend Structure (src/)
 
@@ -84,13 +87,22 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 
-**Settings pattern:** add the field with a serde default to `AppSettings` and `get_default_settings` in `settings.rs`, add a `change_*_setting` command, register it in `lib.rs`, regenerate bindings, and add a `settingUpdaters` entry in `settingsStore.ts`. Unknown stored keys are ignored, so there are no migrations. One exception: a stored object without `tts_backend` predates the local backend and keeps `http` (`keep_server_backend_for_older_stores`); only a fresh store gets the `local` default.
+**Settings pattern:** add the field with a serde default to `AppSettings` and `get_default_settings` in `settings.rs`, add a `change_*_setting` command, register it in `lib.rs`, regenerate bindings, and add a `settingUpdaters` entry in `settingsStore.ts`. Unknown stored keys are ignored, so there are no migrations. One exception: a stored object whose `tts_backend` is missing (it predates the local backend) or unreadable gets `http` (`keep_server_backend_for_older_stores`); only a fresh store gets the `local` default.
 
 **Bindings:** `src/bindings.ts` is written by tauri-specta when the debug binary starts, not at `cargo build`. Run the debug binary from `src-tauri` (the output path is relative to the working directory) and commit the regenerated file with the change.
 
 **`block_on`:** only on the synth thread. It panics on a Tauri runtime worker, where commands and the single-instance callback run.
 
-**Local backend:** only one ONNX Runtime environment may exist per process (`tts::local` builds it once). The loaded model is locked only by the synth and preload threads; a stop interrupts the running inference.
+**Local backend:**
+
+- One ONNX Runtime `Environment` per process (`tts::local::ENVIRONMENT`, a `OnceLock`, never dropped); a second `ort::init().build()` errors.
+- `tts::local::LOADED` is locked only by the synth and preload threads, never the main thread; a session holds it until its synth thread ends, and a stop interrupts the running inference.
+- A preload records its outcome in `tts::local::PRELOAD_ERROR`, a separate lock, so the async `list_model_files` can read it while a session holds `LOADED`; then it sends `model-files-changed`. Missing files unload the model.
+- One inference gets at most `PIECE_TOKENS` (150) ids: ONNX Runtime keeps the memory of its longest run.
+- Sessions use `AutoDevicePolicy::PreferCPU`; rc.14's default routes to CoreML, which is slower here.
+- Release builds link ONNX Runtime only because `build.rs` passes `-fapple-link-rtlib` (LTO drops std's weak `___isPlatformVersionAtLeast`).
+
+**Model downloads:** each is a task on the async runtime wrapped in a `futures_util` `Abortable`, writing `<file>.part` until size and sha256 match, then renaming into place. `commands::models::ModelDownloads` is locked briefly, never across an `await`. Catalog URLs are pinned to one Hugging Face revision so the hard-coded hashes stay true.
 
 ### Single Instance Architecture
 
@@ -158,4 +170,4 @@ Access debug features: `Cmd+Shift+D` (macOS) or `Ctrl+Shift+D` (Windows/Linux)
 
 ## Commits
 
-Use conventional commit prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`). Focus the message on _why_, not _what_. Add a line to `CHANGELOG.md` under `[Unreleased]` for user-visible changes.
+Use conventional commit prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`). Focus the message on _why_, not _what_. Add a line to `CHANGELOG.md` under the top, unreleased version for user-visible changes.
