@@ -54,9 +54,9 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - `lib.rs` - Entry point, Tauri setup, plugin and command registration
 - `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction` is a thin wrapper); `speak_selection`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
 - `tts/mod.rs` - `Backend` (chosen per request from settings) and `Synth` (opened on the synth thread)
-- `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences`; for the local backend only, `split_first_clause` and `expand_numbers` (the HTTP path speaks `normalize` + `split_sentences` output)
+- `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences` (cuts a sentence longer than `Backend::max_chunk_chars`: 300 for HTTP, 450 for Local); for the local backend only, `split_first_clause` and `expand_numbers` (the HTTP path speaks `normalize` + `split_sentences` output)
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
-- `tts/local.rs` - in-process Kokoro: model files, the loaded model (`LOADED`), the last preload error (`PRELOAD_ERROR`), text clean-up (`plain_text`), phoneme mapping, inference in pieces of at most `PIECE_TOKENS` (150) ids
+- `tts/local.rs` - in-process Kokoro: model files, the loaded model (`LOADED`), the last preload error (`PRELOAD_ERROR`), text clean-up (`plain_text`), phoneme mapping, one inference per chunk of up to `PIECE_TOKENS` (510, Kokoro's limit) ids
 - `tts/espeak.rs` - optional reading of words the lexicon lacks by a user-installed `espeak-ng` (GPL-3), run as a subprocess per word, never linked or bundled
 - `tts/catalog.rs` / `tts/download.rs` - the downloadable Kokoro files (URL pinned to one Hugging Face revision, size, sha256) and the resumable, checksum-verified downloader
 - `clipboard.rs` - `capture_selection`: snapshot pasteboard, send ⌘C, poll, read, restore
@@ -98,7 +98,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - One ONNX Runtime `Environment` per process (`tts::local::ENVIRONMENT`, a `OnceLock`, never dropped); a second `ort::init().build()` errors.
 - `tts::local::LOADED` is locked only by the synth and preload threads, never the main thread; a session holds it until its synth thread ends, and a stop interrupts the running inference.
 - A preload records its outcome in `tts::local::PRELOAD_ERROR`, a separate lock, so the async `list_model_files` can read it while a session holds `LOADED`; then it sends `model-files-changed`. Missing files unload the model.
-- One inference gets at most `PIECE_TOKENS` (150) ids: ONNX Runtime keeps the memory of its longest run.
+- A chunk is one inference of up to `PIECE_TOKENS` (510) ids, so its intonation spans the sentence; splitting it gives each piece sentence-final intonation. ONNX Runtime keeps the memory of its longest run (~1 GB at 510 ids), and sessions turn its memory pattern off, without which the arena grows ~40% past that. `tts::local::MAX_CHUNK_CHARS` (450) keeps a chunk of prose within 510 ids; `split_tokens` cuts the rare longer one.
 - Sessions use `AutoDevicePolicy::PreferCPU`; rc.14's default routes to CoreML, which is slower here.
 - Release builds link ONNX Runtime only because `build.rs` passes `-fapple-link-rtlib` (LTO drops std's weak `___isPlatformVersionAtLeast`).
 

@@ -67,7 +67,7 @@ On the Models page you can also download the fp32 model (326 MB; about twice as 
 └── voices/bm_lewis.bin  (one file per voice)
 ```
 
-Voices starting with `b` get British pronunciations, all others American. With Local selected, Mouthy uses about 350 MB of memory once the voice has loaded and up to about 700 MB after reading long passages; it keeps that memory while it runs. Kokoro-82M and its voices are released under the Apache License 2.0.
+Voices starting with `b` get British pronunciations, all others American. With Local selected, Mouthy uses about 350 MB of memory once the voice has loaded, 600–850 MB after reading long passages and up to about 1.1 GB after a sentence of 400 characters or more; it keeps that memory while it runs. Kokoro-82M and its voices are released under the Apache License 2.0.
 
 ### Better pronunciation of unknown words
 
