@@ -438,7 +438,7 @@ Commits `c64d39b`, `b66db85`, `91b5e01`, `d31567a`, `51452a7` (all signed).
 
 ### P2.6 Implementation Notes (close-out, 2026-10-14)
 
-Commits `d70eef3` (DoD checklist), `4d6c485` (README, CHANGELOG, AGENTS.md), then docs. All signed.
+Commits `d70eef3` (DoD checklist), `4d6c485` (README, CHANGELOG, AGENTS.md), `88e272e` (these notes), `e55faf9` (CONTRIBUTING's CHANGELOG pointer). All signed.
 
 - **DoD checklist (`docs/dod-checklist.md`):** 22 steps on the built app, starting from a fresh install (app data moved aside, since a Phase 1 store keeps `http`): model-missing notice → Models page → download with one cancel/resume → Wi-Fi off for steps 4–17 (Safari, VS Code, tray, held hotkey on both backends, nothing selected, a 329-character sentence with no comma to listen for 150-token seams, curly quotes/accents/numbers, overlay, memory in Activity Monitor, relaunch preload, Bluetooth) → Wi-Fi on (second voice, espeak-ng, HTTP and back, delete while speaking, login item). Footer lists what to report, including the first-audio log lines and the H9/H10/H11 answers.
 - **README:** offline-first description and status, requirements (Apple Silicon, macOS 13.4, Rust 1.92, 93 MB download), first run = Accessibility then the in-app download, a separate "Using a speech server instead" section, ORT archive cache note. No fp16 mention remained.
