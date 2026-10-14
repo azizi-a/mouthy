@@ -286,9 +286,15 @@ pub struct Loaded {
 }
 
 impl Loaded {
-    pub fn synthesize(&mut self, text: &str, speed: f32) -> Result<Vec<i16>, String> {
+    /// `ends_sentence` is false where the text was cut only for its length.
+    pub fn synthesize(
+        &mut self,
+        text: &str,
+        speed: f32,
+        ends_sentence: bool,
+    ) -> Result<Vec<i16>, String> {
         match self.synth.as_mut() {
-            Some(synth) => synth.synthesize(text, speed, &self.run_options),
+            Some(synth) => synth.synthesize(text, speed, ends_sentence, &self.run_options),
             None => Err("The local voice is not loaded".into()),
         }
     }
@@ -435,6 +441,7 @@ impl LocalSynth {
         &mut self,
         text: &str,
         speed: f32,
+        ends_sentence: bool,
         run_options: &RunOptions,
     ) -> Result<Vec<i16>, String> {
         let (ids, dropped) = text_to_ids(&self.g2p, self.reading.dialect, text)?;
@@ -456,8 +463,8 @@ impl LocalSynth {
                 run_options,
             )
             .map_err(|e| format!("Local synthesis failed: {e}"))?;
-            let ends_text = i + 1 == pieces.len();
-            let pause = keep(pause_after_ms(piece, ends_text));
+            let ends_sentence = ends_sentence && i + 1 == pieces.len();
+            let pause = keep(pause_after_ms(piece, ends_sentence));
             let speech = trim_silence(&waveform, keep(LEAD_MS), pause);
             audio.extend(speech.iter().copied().map(to_pcm));
         }
@@ -577,11 +584,11 @@ fn trim_silence(waveform: &[f32], lead: usize, trail: usize) -> &[f32] {
     &waveform[first.saturating_sub(lead)..end]
 }
 
-/// The pause to leave after a piece. The end of the text gets a full pause
+/// The pause to leave after a piece. A sentence end gets a full pause
 /// whatever its punctuation: misaki drops some marks, and a line break ends a
 /// sentence without any.
-fn pause_after_ms(piece: &[i64], ends_text: bool) -> f32 {
-    if ends_text || piece.last().is_some_and(|id| PAUSE_IDS.contains(id)) {
+fn pause_after_ms(piece: &[i64], ends_sentence: bool) -> f32 {
+    if ends_sentence || piece.last().is_some_and(|id| PAUSE_IDS.contains(id)) {
         PAUSE_END_MS
     } else {
         PHRASE_END_MS
@@ -1245,7 +1252,7 @@ mod tests {
     }
 
     #[test]
-    fn the_end_of_the_text_pauses_without_punctuation() {
+    fn a_sentence_end_pauses_without_punctuation() {
         assert_eq!(pause_after_ms(&token_ids("ab").0, true), PAUSE_END_MS);
         assert_eq!(pause_after_ms(&token_ids("ab.").0, true), PAUSE_END_MS);
     }
@@ -1404,7 +1411,11 @@ mod tests {
         let mut loaded = open(&files, &stop).unwrap();
         let started = Instant::now();
         let samples = loaded
-            .synthesize("Hello from Mouthy, this is a short test sentence.", 1.0)
+            .synthesize(
+                "Hello from Mouthy, this is a short test sentence.",
+                1.0,
+                true,
+            )
             .unwrap();
         let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
         println!("{seconds:.2} s of audio in {:?}", started.elapsed());
@@ -1416,7 +1427,7 @@ mod tests {
             sound < SAMPLE_RATE as usize / 10,
             "{sound} samples before the sound"
         );
-        assert!(loaded.synthesize("...", 1.0).unwrap().is_empty());
+        assert!(loaded.synthesize("...", 1.0, true).unwrap().is_empty());
 
         // A long input, stopped mid-way, ends within a poll or two.
         let long = "The committee met again after the recess, and nobody spoke. ".repeat(8);
@@ -1428,7 +1439,7 @@ mod tests {
                 Instant::now()
             })
         };
-        let result = loaded.synthesize(&long, 1.0);
+        let result = loaded.synthesize(&long, 1.0, true);
         let stopped_at = stopper.join().unwrap();
         println!("stopped after {:?}", stopped_at.elapsed());
         assert!(result.is_err(), "a stopped inference must not finish");
@@ -1437,7 +1448,10 @@ mod tests {
 
         // The next session gets a fresh, unstopped model.
         let mut loaded = open(&files, &Arc::new(AtomicBool::new(false))).unwrap();
-        assert!(!loaded.synthesize("Still working.", 1.0).unwrap().is_empty());
+        assert!(!loaded
+            .synthesize("Still working.", 1.0, true)
+            .unwrap()
+            .is_empty());
         drop(loaded);
 
         // Turning espeak-ng on swaps the G2P; unknown words take less audio
@@ -1447,9 +1461,15 @@ mod tests {
         };
         let names = "Siobhan from Keighley runs Kubernetes.";
         let stop = Arc::new(AtomicBool::new(false));
-        let spelled = open(&files, &stop).unwrap().synthesize(names, 1.0).unwrap();
+        let spelled = open(&files, &stop)
+            .unwrap()
+            .synthesize(names, 1.0, true)
+            .unwrap();
         let files = files.with_espeak(Some(program));
-        let read = open(&files, &stop).unwrap().synthesize(names, 1.0).unwrap();
+        let read = open(&files, &stop)
+            .unwrap()
+            .synthesize(names, 1.0, true)
+            .unwrap();
         println!(
             "{} samples spelled, {} read by espeak-ng",
             spelled.len(),

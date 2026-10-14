@@ -339,7 +339,7 @@ pub fn preload_local_voice(app: &AppHandle) {
 
 /// What a session speaks and how.
 struct Speech {
-    sentences: Vec<String>,
+    sentences: Vec<tts::text::Chunk>,
     backend: tts::Backend,
     /// When the selection was ready, for the first-audio timing.
     captured_at: Instant,
@@ -376,7 +376,7 @@ fn start_speech(
 
 /// Synth thread: one sentence at a time, handed to playback in order.
 fn synthesize(
-    sentences: Vec<String>,
+    sentences: Vec<tts::text::Chunk>,
     backend: tts::Backend,
     speed: f32,
     stop: Arc<AtomicBool>,
@@ -404,15 +404,21 @@ fn synthesize(
                 base_url,
                 voice,
             } => tauri::async_runtime::block_on(tts::http::synthesize(
-                client, base_url, voice, speed, sentence,
+                client,
+                base_url,
+                voice,
+                speed,
+                &sentence.text,
             )),
-            tts::Synth::Local(local) => local.synthesize(sentence, speed),
+            tts::Synth::Local(local) => {
+                local.synthesize(&sentence.text, speed, sentence.ends_sentence)
+            }
         };
         // Stopping cuts a local inference short; that is not a failure.
         if stop.load(Ordering::SeqCst) {
             break;
         }
-        let chars = sentence.chars().count();
+        let chars = sentence.text.chars().count();
         let unspeakable = match &chunk {
             Ok(samples) => samples.is_empty(),
             Err(e) => tts::http::is_unspeakable(e),

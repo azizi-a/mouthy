@@ -164,18 +164,27 @@ const FIRST_CHUNK_WORDS: usize = 8;
 /// not one inside a range such as "1914–1918") when it is longer than
 /// `FIRST_CHUNK_WORDS`. Both parts keep at least `MIN_SENTENCE_CHARS`; without
 /// such a break it stays whole.
-pub fn split_first_clause(mut sentences: Vec<String>) -> Vec<String> {
-    let Some(first) = sentences.first() else {
-        return sentences;
+pub fn split_first_clause(mut chunks: Vec<Chunk>) -> Vec<Chunk> {
+    let Some(first) = chunks.first() else {
+        return chunks;
     };
-    if first.split_whitespace().count() <= FIRST_CHUNK_WORDS {
-        return sentences;
+    if first.text.split_whitespace().count() <= FIRST_CHUNK_WORDS {
+        return chunks;
     }
-    if let Some((head, tail)) = first_clause_break(first) {
-        let parts = [head.to_string(), tail.to_string()];
-        sentences.splice(0..1, parts);
+    if let Some((head, tail)) = first_clause_break(&first.text) {
+        let parts = [
+            Chunk {
+                text: head.to_string(),
+                ends_sentence: true,
+            },
+            Chunk {
+                text: tail.to_string(),
+                ends_sentence: first.ends_sentence,
+            },
+        ];
+        chunks.splice(0..1, parts);
     }
-    sentences
+    chunks
 }
 
 fn first_clause_break(sentence: &str) -> Option<(&str, &str)> {
@@ -216,16 +225,32 @@ pub(super) fn joins_numbers(before: &str, after: &str) -> bool {
     has_digit(before.split_whitespace().next_back()) && has_digit(after.split_whitespace().next())
 }
 
+/// Text synthesised in one request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Chunk {
+    pub text: String,
+    /// False where a sentence was cut only for its length, so the local voice
+    /// does not pause there as if the author had.
+    pub ends_sentence: bool,
+}
+
 /// Splits normalized text into chunks to synthesise one request at a time.
 /// Every line break ends a sentence, so headings and bullets need no punctuation.
-pub fn split_sentences(text: &str) -> Vec<String> {
+pub fn split_sentences(text: &str) -> Vec<Chunk> {
     let sentences = text
         .lines()
         .flat_map(raw_sentences)
         .map(collapse_whitespace);
     merge_short(sentences)
         .iter()
-        .flat_map(|sentence| merge_short(split_long(sentence)))
+        .flat_map(|sentence| {
+            let parts = merge_short(split_long(sentence));
+            let last = parts.len().saturating_sub(1);
+            parts.into_iter().enumerate().map(move |(i, text)| Chunk {
+                text,
+                ends_sentence: i == last,
+            })
+        })
         .collect()
 }
 
@@ -959,6 +984,14 @@ mod tests {
     use super::*;
     use std::time::{Duration, Instant};
 
+    fn texts(chunks: Vec<Chunk>) -> Vec<String> {
+        chunks.into_iter().map(|chunk| chunk.text).collect()
+    }
+
+    fn sentences(text: &str) -> Vec<String> {
+        texts(split_sentences(text))
+    }
+
     #[test]
     fn normalize_replaces_urls_with_link() {
         assert_eq!(
@@ -1091,7 +1124,7 @@ mod tests {
     #[test]
     fn split_on_terminal_punctuation() {
         assert_eq!(
-            split_sentences(
+            sentences(
                 "This is the first sentence. Is this the second one? Yes, this is the third!"
             ),
             vec![
@@ -1105,7 +1138,7 @@ mod tests {
     #[test]
     fn split_on_line_breaks_first() {
         assert_eq!(
-            split_sentences(
+            sentences(
                 "Installing the application\nDownload the latest build\nOpen it twice to confirm"
             ),
             vec![
@@ -1115,7 +1148,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            split_sentences(
+            sentences(
                 "A sentence that is wrapped\nacross two lines of text. And\tanother   one here."
             ),
             vec![
@@ -1129,7 +1162,7 @@ mod tests {
     #[test]
     fn split_keeps_closing_quotes_and_brackets() {
         assert_eq!(
-            split_sentences("She said \"this is it.\" Then she left the room (quietly.) The end came soon after."),
+            sentences("She said \"this is it.\" Then she left the room (quietly.) The end came soon after."),
             vec![
                 "She said \"this is it.\"",
                 "Then she left the room (quietly.)",
@@ -1141,7 +1174,7 @@ mod tests {
     #[test]
     fn split_ignores_punctuation_inside_words() {
         assert_eq!(
-            split_sentences("Pi is roughly 3.14159 and version 1.2.3 shipped today…"),
+            sentences("Pi is roughly 3.14159 and version 1.2.3 shipped today…"),
             vec!["Pi is roughly 3.14159 and version 1.2.3 shipped today…"]
         );
     }
@@ -1149,7 +1182,7 @@ mod tests {
     #[test]
     fn split_does_not_end_sentences_at_abbreviations() {
         assert_eq!(
-            split_sentences(
+            sentences(
                 "Dr. Smith wrote to the U.S. Department of Energy. We met at 9 a.m. on Jan. 5, i.e. early."
             ),
             vec![
@@ -1158,9 +1191,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            split_sentences(
-                "Bring tools (e.g. hammers) and more. Mrs. Jones vs. Mr. Brown is next."
-            ),
+            sentences("Bring tools (e.g. hammers) and more. Mrs. Jones vs. Mr. Brown is next."),
             vec![
                 "Bring tools (e.g. hammers) and more.",
                 "Mrs. Jones vs. Mr. Brown is next.",
@@ -1171,14 +1202,14 @@ mod tests {
     #[test]
     fn split_merges_short_fragments() {
         assert_eq!(
-            split_sentences("We need tools like hammers and saws. Yes. That is all for today."),
+            sentences("We need tools like hammers and saws. Yes. That is all for today."),
             vec![
                 "We need tools like hammers and saws. Yes.",
                 "That is all for today."
             ]
         );
         assert_eq!(
-            split_sentences("Hi. This sentence is long enough to stand alone."),
+            sentences("Hi. This sentence is long enough to stand alone."),
             vec!["Hi. This sentence is long enough to stand alone."]
         );
     }
@@ -1187,7 +1218,7 @@ mod tests {
     fn split_long_sentence_at_clause_breaks() {
         let clause = "word ".repeat(40); // 200 chars
         let text = format!("{}, {}, {}.", clause.trim(), clause.trim(), clause.trim());
-        let parts = split_sentences(&text);
+        let parts = sentences(&text);
         assert_eq!(parts.len(), 3);
         assert!(parts[0].ends_with(','));
         assert!(parts
@@ -1203,7 +1234,7 @@ mod tests {
             "word ".repeat(50).trim(),
             "word ".repeat(20).trim()
         );
-        let parts = split_sentences(&text);
+        let parts = sentences(&text);
         assert_eq!(parts.len(), 2);
         assert!(parts[0].contains("$1,500 at 10:30"), "{:?}", parts[0]);
         assert_eq!(parts.join(" "), text);
@@ -1213,15 +1244,42 @@ mod tests {
     fn split_long_sentence_remerges_short_pieces() {
         // The only clause break is near the start, and the cut leaves a short tail.
         let text = format!("Well, {}", "word ".repeat(60).trim());
-        let parts = split_sentences(&text);
+        let parts = sentences(&text);
         assert_eq!(parts.len(), 1);
         assert_eq!(parts[0], text);
     }
 
     #[test]
+    fn only_a_length_cut_does_not_end_a_sentence() {
+        let long = "word ".repeat(70);
+        let text = format!(
+            "A heading long enough to stand alone\n{}\nThe last line, which has a full stop.",
+            long.trim()
+        );
+        let ends: Vec<bool> = split_sentences(&text)
+            .iter()
+            .map(|chunk| chunk.ends_sentence)
+            .collect();
+        assert_eq!(ends, vec![true, false, true, true]);
+    }
+
+    #[test]
+    fn a_first_clause_cut_ends_a_chunk_and_keeps_the_sentence_end() {
+        let first = Chunk {
+            text: "When the committee reconvened after the recess, it became clear that none had survived".into(),
+            ends_sentence: false,
+        };
+        let ends: Vec<bool> = split_first_clause(vec![first])
+            .iter()
+            .map(|chunk| chunk.ends_sentence)
+            .collect();
+        assert_eq!(ends, vec![true, false]);
+    }
+
+    #[test]
     fn split_long_sentence_without_breaks() {
         let words = "word ".repeat(100);
-        let parts = split_sentences(words.trim());
+        let parts = sentences(words.trim());
         assert!(parts.len() > 1);
         assert!(parts
             .iter()
@@ -1231,7 +1289,7 @@ mod tests {
             .all(|p| p.starts_with("word") && p.ends_with("word")));
 
         let blob = "x".repeat(650);
-        let parts = split_sentences(&blob);
+        let parts = sentences(&blob);
         assert_eq!(
             parts.iter().map(|p| p.len()).collect::<Vec<_>>(),
             vec![300, 300, 50]
@@ -1241,22 +1299,20 @@ mod tests {
     #[test]
     fn split_is_utf8_safe() {
         let accented = "é".repeat(350);
-        let parts = split_sentences(&accented);
+        let parts = sentences(&accented);
         assert_eq!(parts.len(), 2);
         assert_eq!(parts[0].chars().count(), 300);
         assert_eq!(parts[1], "é".repeat(50));
 
         let emoji = "🎉".repeat(650);
-        let parts = split_sentences(&emoji);
+        let parts = sentences(&emoji);
         assert_eq!(parts.concat(), emoji);
         assert!(parts
             .iter()
             .all(|p| p.chars().count() <= MAX_SENTENCE_CHARS));
 
         assert_eq!(
-            split_sentences(
-                "Ça marche très bien aujourd’hui. Où est la bibliothèque, s’il vous plaît ?"
-            ),
+            sentences("Ça marche très bien aujourd’hui. Où est la bibliothèque, s’il vous plaît ?"),
             vec![
                 "Ça marche très bien aujourd’hui.",
                 "Où est la bibliothèque, s’il vous plaît ?",
@@ -1266,9 +1322,9 @@ mod tests {
 
     #[test]
     fn split_never_returns_empty_strings() {
-        assert!(split_sentences("").is_empty());
-        assert!(split_sentences("   \n\n  ").is_empty());
-        assert_eq!(split_sentences("..."), vec!["..."]);
+        assert!(sentences("").is_empty());
+        assert!(sentences("   \n\n  ").is_empty());
+        assert_eq!(sentences("..."), vec!["..."]);
     }
 
     #[test]
@@ -1277,7 +1333,7 @@ mod tests {
                          running through the field until it reaches the river. Then\n\
                          it rests for a while, drinks some water, and goes home\n\
                          before the sun goes down.";
-        let parts = split_sentences(&normalize(paragraph));
+        let parts = sentences(&normalize(paragraph));
         assert_eq!(
             parts.join(" ").split_whitespace().collect::<Vec<_>>(),
             paragraph.split_whitespace().collect::<Vec<_>>(),
@@ -1295,7 +1351,7 @@ mod tests {
     fn abbreviations_survive_the_normalize_then_split_pipeline() {
         let text = normalize("Dr. Smith wrote to the U.S. Department of Energy about $1,500. At 10:30, we all leave together.");
         assert_eq!(
-            split_sentences(&text),
+            sentences(&text),
             vec![
                 "Dr. Smith wrote to the U.S. Department of Energy about $1,500.",
                 "At 10:30, we all leave together.",
@@ -1307,7 +1363,7 @@ mod tests {
     fn splitting_a_large_json_blob_is_fast_and_lossless() {
         let blob = r#"{"ids": [1, 2, 3], "tags": ["a", "b"]}, "#.repeat(1_000);
         let started = Instant::now();
-        let parts = split_sentences(&normalize(&blob));
+        let parts = sentences(&normalize(&blob));
         assert!(
             started.elapsed() < Duration::from_millis(500),
             "took {:?}",
@@ -1319,7 +1375,7 @@ mod tests {
     }
 
     fn first_chunks(text: &str) -> Vec<String> {
-        split_first_clause(split_sentences(text))
+        texts(split_first_clause(split_sentences(text)))
     }
 
     #[test]
