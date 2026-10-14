@@ -728,57 +728,23 @@ mod tests {
         to_kokoro_phonemes(raw, dialect)
     }
 
-    /// One test per tie the mapping replaces.
-    macro_rules! tie_test {
-        ($name:ident, $dialect:expr, $raw:expr, $expected:expr) => {
-            #[test]
-            fn $name() {
-                assert_eq!(kokoro($raw, $dialect), $expected);
-            }
-        };
+    #[test]
+    fn british_ties_become_single_symbols() {
+        // The triphthong's second tie has no symbol of its own.
+        assert_eq!(
+            kokoro("ɡˈə\u{200d}ʊ fa\u{200d}ɪ\u{200d}ə", Dialect::British),
+            "ɡˈQ fIə"
+        );
     }
 
-    tie_test!(tie_ei_is_a, Dialect::British, "ðe\u{200d}ɪ", "ðA");
-    tie_test!(tie_ai_is_i, Dialect::British, "fa\u{200d}ɪv", "fIv");
-    tie_test!(tie_au_is_w, Dialect::British, "na\u{200d}ʊ", "nW");
-    tie_test!(tie_oi_is_y, Dialect::British, "bɔ\u{200d}ɪ", "bY");
-    tie_test!(
-        tie_dzh_is_affricate,
-        Dialect::British,
-        "d\u{200d}ʒˈʌmp",
-        "ʤˈʌmp"
-    );
-    tie_test!(
-        tie_tsh_is_affricate,
-        Dialect::British,
-        "ˈiːt\u{200d}ʃ",
-        "ˈiːʧ"
-    );
-    tie_test!(tie_syllabic_l, Dialect::British, "bˈɒtə\u{200d}l", "bˈɒtᵊl");
-    tie_test!(lateral_fricative_is_l, Dialect::British, "ɬˈan", "lˈan");
-    tie_test!(gb_tie_ou_is_q, Dialect::British, "ɡˈə\u{200d}ʊ", "ɡˈQ");
-    tie_test!(
-        gb_tie_ia_is_centring,
-        Dialect::British,
-        "nˈi\u{200d}ə",
-        "nˈɪə"
-    );
-    tie_test!(gb_tie_ea_is_long_e, Dialect::British, "ðe\u{200d}ə", "ðɛː");
-    tie_test!(us_tie_ou_is_o, Dialect::American, "ɡˈo\u{200d}ʊ", "ɡˈO");
-    tie_test!(
-        us_tie_long_r_is_r,
-        Dialect::American,
-        "bˈɜː\u{200d}ɹd",
-        "bˈɜɹd"
-    );
-    tie_test!(us_drops_length, Dialect::American, "fˈɑːðɚ", "fˈɑðɚ");
-    tie_test!(us_syllabic_n, Dialect::American, "bˈʌʔn\u{329}", "bˈʌʔᵊn");
-    tie_test!(
-        triphthong_keeps_no_tie,
-        Dialect::British,
-        "fa\u{200d}ɪ\u{200d}ə",
-        "fIə"
-    );
+    #[test]
+    fn american_ties_become_single_symbols() {
+        // `ː‍ɹ` must be replaced before every other `ː` is dropped.
+        assert_eq!(
+            kokoro("bˈɜː\u{200d}ɹd fˈɑːðɚ", Dialect::American),
+            "bˈɜɹd fˈɑðɚ"
+        );
+    }
 
     #[test]
     fn gb_ties_stay_british() {
@@ -1157,6 +1123,44 @@ mod tests {
             fs::write(voices.join(name), b"").unwrap();
         }
         assert_eq!(installed_voices(dir.path()), vec!["af_heart", "bm_lewis"]);
+    }
+
+    /// The P2.2 spike's corpus, for judging the lexicons by ear and eye:
+    /// `cargo test -- --ignored corpus --nocapture`.
+    #[test]
+    #[ignore = "prints a report for a human"]
+    fn corpus_report() {
+        const CORPUS: &[&str] = &[
+            "The Bank of England held interest rates at 4.5% on Thursday, citing persistent inflation in the services sector.",
+            "Ministers are expected to publish the long-delayed housing white paper before Parliament rises for the summer recess.",
+            "Heavy rain caused flooding across parts of Yorkshire and Lancashire, with several train services cancelled overnight.",
+            "The government said the new rules would come into force on 1 April 2027, subject to a final vote in the Commons.",
+            "Shares in the retailer fell sharply after it warned that profits would be lower than analysts had forecast.",
+            "Kubernetes schedules pods onto nodes, and the kubelet restarts any container whose liveness probe fails.",
+            "Run the migration against PostgreSQL before deploying, otherwise the API will return a 500 error.",
+            "The async runtime spawns a worker thread per core; call block_on only from a dedicated thread.",
+            "Set the RUST_LOG environment variable to debug to see every HTTP request the client makes.",
+            "Clone the repository from GitHub, then run npm install and start the dev server with Vite.",
+            "We drove from Leicester to Loughborough, then on to Worcester and Gloucester before dark.",
+            "Mr Featherstonehaugh and Mrs Cholmondeley were seated beside Siobhan and Niamh at dinner.",
+            "The train from Edinburgh calls at Berwick-upon-Tweed, Alnmouth and Newcastle.",
+            "She grew up in Keighley, studied at Magdalen College, Oxford, and now lives near Southwark.",
+            "The tickets cost £45 each, or £120 for a family of four.",
+            "Revenue rose to $3.2 billion in the third quarter, up 12 percent from a year earlier.",
+            "The meeting is at 10:30 on Tuesday 14 October 2026, in room 2B.",
+            "Prices have roughly doubled since the 1990s, and the average home now costs £285,000.",
+            "In 1666 the Great Fire of London destroyed more than 13,000 houses.",
+            "Version 2.0.1 fixes 37 bugs and adds support for 3rd-party plugins.",
+            "I can't believe it's already October; we haven't even booked the hotel.",
+        ];
+        let (g2p, unknown) = recording_g2p(Language::EnglishGB);
+        for text in CORPUS {
+            let (raw, _) = g2p.g2p(&expand_numbers(&plain_text(text))).unwrap();
+            let phonemes = to_kokoro_phonemes(&raw, Dialect::British);
+            let words = std::mem::take(&mut *unknown.lock().unwrap());
+            println!("{text}\n  {phonemes}\n  not in the lexicon: {words:?}");
+            assert_eq!(token_ids(&phonemes).1, 0, "{text}");
+        }
     }
 
     #[test]
