@@ -20,13 +20,6 @@ const MODELS: &[(&str, ModelVariant, &str, u64, &str)] = &[
         "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478",
     ),
     (
-        "fp16",
-        ModelVariant::Fp16,
-        "onnx/model_fp16.onnx",
-        163_234_740,
-        "ba4527a874b42b21e35f468c10d326fdff3c7fc8cac1f85e9eb6c0dfc35c334a",
-    ),
-    (
         "fp32",
         ModelVariant::Fp32,
         "onnx/model.onnx",
@@ -148,7 +141,6 @@ mod tests {
         let models = Path::new("/models");
         for (variant, path) in [
             (ModelVariant::Int8, "/models/kokoro-v1.0/int8.onnx"),
-            (ModelVariant::Fp16, "/models/kokoro-v1.0/fp16.onnx"),
             (ModelVariant::Fp32, "/models/kokoro-v1.0/fp32.onnx"),
         ] {
             let id = MODELS.iter().find(|m| m.1 == variant).unwrap().0;

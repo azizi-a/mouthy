@@ -505,7 +505,7 @@ load_error: string | null }
  * Which Kokoro export the local backend loads. int8 is about twice as fast
  * as fp32 on the CPU.
  */
-export type ModelVariant = "int8" | "fp16" | "fp32"
+export type ModelVariant = "int8" | "fp32"
 export type OverlayPosition = "top" | "bottom"
 /**
  * Which overlay to display: `Minimal` is the compact pill, `None` hides it.

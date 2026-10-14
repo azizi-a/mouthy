@@ -178,7 +178,6 @@ pub fn kokoro_dir(models_dir: &Path) -> PathBuf {
 pub fn model_path(models_dir: &Path, variant: ModelVariant) -> PathBuf {
     let file_name = match variant {
         ModelVariant::Int8 => "int8.onnx",
-        ModelVariant::Fp16 => "fp16.onnx",
         ModelVariant::Fp32 => "fp32.onnx",
     };
     kokoro_dir(models_dir).join(file_name)
@@ -1168,10 +1167,6 @@ mod tests {
         assert_eq!(
             files.voice.as_deref(),
             Some(Path::new("/models/kokoro-v1.0/voices/bm_lewis.bin"))
-        );
-        assert_eq!(
-            ModelFiles::new(models, ModelVariant::Fp16, "x").model,
-            Path::new("/models/kokoro-v1.0/fp16.onnx")
         );
         assert_eq!(
             ModelFiles::new(models, ModelVariant::Fp32, "x").model,

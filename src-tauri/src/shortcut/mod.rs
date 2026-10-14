@@ -695,7 +695,6 @@ pub fn change_tts_model_variant_setting(app: AppHandle, variant: String) -> Resu
     let mut settings = settings::get_settings(&app);
     settings.tts_model_variant = match variant.as_str() {
         "int8" => ModelVariant::Int8,
-        "fp16" => ModelVariant::Fp16,
         "fp32" => ModelVariant::Fp32,
         other => {
             warn!("Invalid model variant '{}', defaulting to int8", other);

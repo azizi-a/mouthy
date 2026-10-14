@@ -145,7 +145,6 @@ pub enum TtsBackend {
 #[serde(rename_all = "lowercase")]
 pub enum ModelVariant {
     Int8,
-    Fp16,
     Fp32,
 }
 
@@ -722,20 +721,27 @@ mod tests {
     fn speech_backend_settings_store_as_lowercase_names() {
         let mut settings = get_default_settings();
         settings.tts_backend = TtsBackend::Local;
-        settings.tts_model_variant = ModelVariant::Fp16;
+        settings.tts_model_variant = ModelVariant::Fp32;
         let stored = serde_json::to_value(&settings).unwrap();
         assert_eq!(stored["tts_backend"], "local");
-        assert_eq!(stored["tts_model_variant"], "fp16");
-        for (name, variant) in [
-            ("int8", ModelVariant::Int8),
-            ("fp16", ModelVariant::Fp16),
-            ("fp32", ModelVariant::Fp32),
-        ] {
+        assert_eq!(stored["tts_model_variant"], "fp32");
+        for (name, variant) in [("int8", ModelVariant::Int8), ("fp32", ModelVariant::Fp32)] {
             assert_eq!(
                 serde_json::from_value::<ModelVariant>(name.into()).unwrap(),
                 variant
             );
         }
+    }
+
+    #[test]
+    fn a_stored_fp16_model_becomes_int8() {
+        let mut stored = default_settings_json();
+        stored["tts_model_variant"] = serde_json::json!("fp16");
+        stored["tts_voice"] = serde_json::json!("bf_emma");
+        let (settings, updated) = parse_stored_settings(stored);
+        assert_eq!(settings.tts_model_variant, ModelVariant::Int8);
+        assert_eq!(settings.tts_voice, "bf_emma");
+        assert!(updated, "written back as int8");
     }
 
     #[test]

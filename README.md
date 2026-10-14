@@ -64,11 +64,11 @@ Call the binary directly: `open -a Mouthy --args …` drops the arguments. With 
 
 Mouthy runs the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. A fresh install uses it, but the files are not bundled: open Settings → Models and click **Download** next to the status line, which fetches the int8 model (92 MB) and the `bm_lewis` voice (0.5 MB). Pressing ⌥⎋ before then shows "Offline voice files are missing", and its Open Settings button goes to the same page.
 
-On the Models page you can also download the fp16 (163 MB) or fp32 (326 MB) model and any of 28 English voices (0.5 MB each), choose which model and voice to use, and delete files. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256 before Mouthy uses it. The files live in:
+On the Models page you can also download the fp32 model (326 MB; about twice as slow as int8) and any of 28 English voices (0.5 MB each), choose which model and voice to use, and delete files. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256 before Mouthy uses it. The files live in:
 
 ```text
 ~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/
-├── int8.onnx            (fp16.onnx, fp32.onnx if downloaded)
+├── int8.onnx            (fp32.onnx if downloaded)
 └── voices/bm_lewis.bin  (one file per voice)
 ```
 

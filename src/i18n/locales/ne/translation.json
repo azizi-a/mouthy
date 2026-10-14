@@ -112,8 +112,7 @@
         "title": "Model",
         "description": "Mouthy uses one model at a time. int8 is the smallest and fastest; fp32 is the original, full-precision model.",
         "int8": "Recommended: smallest and fastest",
-        "fp16": "Half precision",
-        "fp32": "Full precision: slowest, uses the most memory"
+        "fp32": "Full precision: about twice as slow as int8, uses the most memory"
       },
       "voices": {
         "title": "Voices",
