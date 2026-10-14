@@ -37,11 +37,10 @@ const STOP_POLL: Duration = Duration::from_millis(20);
 const SILENCE: f32 = 0.003;
 /// Silence kept before the speech, enough for the softest onset.
 const LEAD_MS: f32 = 50.0;
-/// Silence kept after a piece, by how it ends. With `LEAD_MS`, a seam matches
-/// Kokoro's own pause inside one inference: ~470 ms at a full stop, ~380 ms at
-/// a comma (at 1×; pauses scale with the speed).
-const SENTENCE_END_MS: f32 = 420.0;
-const CLAUSE_END_MS: f32 = 330.0;
+/// Silence kept after a sentence, or a piece cut at a pause. With `LEAD_MS`
+/// it matches Kokoro's own pause inside one inference: ~380 ms at a comma,
+/// ~470 ms at a full stop (at 1×; pauses scale with the speed).
+const PAUSE_END_MS: f32 = 400.0;
 /// After a piece cut mid-phrase: a breath, not a stop.
 const PHRASE_END_MS: f32 = 100.0;
 
@@ -68,8 +67,6 @@ const VOCAB: &[(char, i64)] = &[
 const SPACE_ID: i64 = 16;
 /// `;:,.!?—…`: where a long input can be cut without breaking a phrase.
 const PAUSE_IDS: &[i64] = &[1, 2, 3, 4, 5, 6, 9, 10];
-/// `.!?`
-const SENTENCE_END_IDS: &[i64] = &[4, 5, 6];
 
 /// misaki-rs 0.6 lexicons tie diphthongs and affricates with U+200D, eSpeak
 /// style; Kokoro was trained on misaki's single-symbol forms.
@@ -444,11 +441,13 @@ impl LocalSynth {
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
-        let mut audio = Vec::new();
-        for piece in split_tokens(&ids, PIECE_TOKENS)
+        let pieces: Vec<_> = split_tokens(&ids, PIECE_TOKENS)
             .into_iter()
             .filter(|p| has_phonemes(p))
-        {
+            .collect();
+        let keep = |ms: f32| (ms / speed * SAMPLE_RATE as f32 / 1000.0) as usize;
+        let mut audio = Vec::new();
+        for (i, piece) in pieces.iter().enumerate() {
             let waveform = run(
                 &mut self.session,
                 piece,
@@ -457,8 +456,9 @@ impl LocalSynth {
                 run_options,
             )
             .map_err(|e| format!("Local synthesis failed: {e}"))?;
-            let keep = |ms: f32| (ms / speed * SAMPLE_RATE as f32 / 1000.0) as usize;
-            let speech = trim_silence(&waveform, keep(LEAD_MS), keep(pause_after_ms(piece)));
+            let ends_text = i + 1 == pieces.len();
+            let pause = keep(pause_after_ms(piece, ends_text));
+            let speech = trim_silence(&waveform, keep(LEAD_MS), pause);
             audio.extend(speech.iter().copied().map(to_pcm));
         }
         Ok(audio)
@@ -577,13 +577,12 @@ fn trim_silence(waveform: &[f32], lead: usize, trail: usize) -> &[f32] {
     &waveform[first.saturating_sub(lead)..end]
 }
 
-/// The pause to leave after a piece, from the punctuation it ends with.
-fn pause_after_ms(piece: &[i64]) -> f32 {
-    let ending = || piece.iter().rev().take_while(|&&id| id <= SPACE_ID);
-    if ending().any(|id| SENTENCE_END_IDS.contains(id)) {
-        SENTENCE_END_MS
-    } else if ending().any(|id| PAUSE_IDS.contains(id)) {
-        CLAUSE_END_MS
+/// The pause to leave after a piece. The end of the text gets a full pause
+/// whatever its punctuation: misaki drops some marks, and a line break ends a
+/// sentence without any.
+fn pause_after_ms(piece: &[i64], ends_text: bool) -> f32 {
+    if ends_text || piece.last().is_some_and(|id| PAUSE_IDS.contains(id)) {
+        PAUSE_END_MS
     } else {
         PHRASE_END_MS
     }
@@ -1222,15 +1221,11 @@ mod tests {
     }
 
     #[test]
-    fn short_silence_is_kept_whole() {
-        let waveform = padded(3, 10);
-        assert_eq!(trim_silence(&waveform, 5, 20), &waveform[..]);
-    }
-
-    #[test]
-    fn sound_without_silence_is_unchanged() {
-        let waveform = padded(0, 10);
-        assert_eq!(trim_silence(&waveform, 5, 20), &waveform[..]);
+    fn silence_within_the_caps_is_kept_whole() {
+        for silent in [0, 3] {
+            let waveform = padded(silent, 10);
+            assert_eq!(trim_silence(&waveform, 5, 20), &waveform[..]);
+        }
     }
 
     #[test]
@@ -1241,14 +1236,18 @@ mod tests {
     }
 
     #[test]
-    fn the_pause_after_a_piece_follows_its_punctuation() {
-        let pause = |phonemes: &str| pause_after_ms(&token_ids(phonemes).0);
-        assert_eq!(pause("ab."), SENTENCE_END_MS);
-        assert_eq!(pause("ab?\""), SENTENCE_END_MS);
-        assert_eq!(pause("ab,"), CLAUSE_END_MS);
-        assert_eq!(pause("ab —"), CLAUSE_END_MS);
+    fn a_piece_cut_at_a_pause_keeps_it() {
+        let pause = |phonemes: &str| pause_after_ms(&token_ids(phonemes).0, false);
+        assert_eq!(pause("ab."), PAUSE_END_MS);
+        assert_eq!(pause("ab,"), PAUSE_END_MS);
         assert_eq!(pause("ab"), PHRASE_END_MS);
         assert_eq!(pause("a. b"), PHRASE_END_MS);
+    }
+
+    #[test]
+    fn the_end_of_the_text_pauses_without_punctuation() {
+        assert_eq!(pause_after_ms(&token_ids("ab").0, true), PAUSE_END_MS);
+        assert_eq!(pause_after_ms(&token_ids("ab.").0, true), PAUSE_END_MS);
     }
 
     #[test]
