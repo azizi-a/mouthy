@@ -20,7 +20,7 @@ cd src-tauri && cargo test
 
 - Keep changes small and focused; one logical change per commit.
 - Use conventional commit prefixes (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
-- Add a line to `CHANGELOG.md` under `[Unreleased]` for user-visible changes.
+- Add a line to `CHANGELOG.md` under the top, unreleased version for user-visible changes.
 - Ask in an issue before adding a new dependency.
 - All user-facing strings go through i18next; see [CONTRIBUTING_TRANSLATIONS.md](CONTRIBUTING_TRANSLATIONS.md).
 
