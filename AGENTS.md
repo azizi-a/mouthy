@@ -55,6 +55,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences`; for the local backend only, `split_first_clause` and `expand_numbers`
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
 - `tts/local.rs` - in-process Kokoro: model files, the loaded model (kept between sessions, locked by one session at a time, never on the main thread), phoneme mapping, inference
+- `tts/espeak.rs` - optional reading of words the lexicon lacks by a user-installed `espeak-ng` (GPL-3), run as a subprocess per word, never linked or bundled
 - `tts/catalog.rs` / `tts/download.rs` - the downloadable Kokoro files (URL pinned to one Hugging Face revision, size, sha256) and the resumable, checksum-verified downloader
 - `clipboard.rs` - `capture_selection`: snapshot pasteboard, send ⌘C, poll, read, restore
 - `input.rs` - Enigo state and layout-aware copy keystroke (main thread only on macOS)

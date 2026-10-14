@@ -74,6 +74,10 @@ On the Models page you can also download the fp16 (163 MB) or fp32 (326 MB) mode
 
 Voices starting with `b` get British pronunciations, all others American. With Local selected, Mouthy uses about 350 MB of memory once the voice has loaded and up to about 700 MB after reading long passages; it keeps that memory while it runs. Kokoro-82M and its voices are released under the Apache License 2.0.
 
+### Better pronunciation of unknown words
+
+Words the offline voice's dictionary lacks, such as many names and product terms, are spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say them instead. Each new unknown word delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
+
 To use a speech server instead, set Settings → General → Speech Engine to **HTTP server** (see [Requirements](#requirements)). Installs from before the offline voice existed keep using the server until you switch.
 
 ## Settings
@@ -81,7 +85,7 @@ To use a speech server instead, set Settings → General → Speech Engine to **
 Open Settings from the tray. The General page has three groups:
 
 - **General:** hotkey, launch at login, start hidden, overlay style and position
-- **Speech:** engine (Local or HTTP server), server URL (HTTP only), voice (a list when the server offers `/v1/audio/voices` or voice files are installed, otherwise free text), speed (0.5×–2×), volume
+- **Speech:** engine (Local or HTTP server), server URL (HTTP only), voice (a list when the server offers `/v1/audio/voices` or voice files are installed, otherwise free text), espeak-ng for unknown words (Local only), speed (0.5×–2×), volume
 - **Sound:** output device
 - **Models page:** offline voice downloads, model and voice choice
 - **Advanced page:** tray icon, experimental features (shortcut backend)
