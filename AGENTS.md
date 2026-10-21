@@ -54,7 +54,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - `lib.rs` - Entry point, Tauri setup, plugin and command registration
 - `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction` is a thin wrapper); `speak_selection`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
 - `tts/mod.rs` - `Backend` (chosen per request from settings) and `Synth` (opened on the synth thread)
-- `tts/text.rs` - `normalize` (URLs, markdown, whitespace) and `split_sentences` (cuts a sentence longer than `Backend::max_chunk_chars`: 300 for HTTP, 450 for Local); for the local backend only, `split_first_clause` and `expand_numbers` (the HTTP path speaks `normalize` + `split_sentences` output)
+- `tts/text.rs` - `normalize` (`reflow` of hard-wrapped lines, then URLs, markdown, whitespace) and `split_sentences` (cuts a sentence longer than `Backend::max_chunk_chars`: 300 for HTTP, 450 for Local); for the local backend only, `split_first_clause` and `expand_numbers` (the HTTP path speaks `normalize` + `split_sentences` output)
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
 - `tts/local.rs` - in-process Kokoro: model files, the loaded model (`LOADED`), the last preload error (`PRELOAD_ERROR`), text clean-up (`plain_text`), phoneme mapping, one inference per chunk of up to `PIECE_TOKENS` (510, Kokoro's limit) ids
 - `tts/espeak.rs` - optional reading of words the lexicon lacks by a user-installed `espeak-ng` (GPL-3), run as a subprocess per word, never linked or bundled

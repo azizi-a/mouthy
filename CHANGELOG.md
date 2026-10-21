@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+### Added
+
+- Text wrapped onto several lines, as terminals, man pages, email and PDFs deliver it, is joined again before reading, so a sentence is no longer cut at every line end. A line is joined to the next only when the next line's first word would not have fitted on it. Headings, list items, quotes, tables, chat lines, fenced code, code that opens a block with `{` or `:`, and lines ending in punctuation keep their breaks.
+
 ### Changed
 
 - New installs default to the American English voice `af_alloy` instead of `bm_lewis`; existing installs keep the voice they use.
