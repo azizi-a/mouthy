@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in Mouthy does not work as expected
+labels: [bug]
+body:
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "15.1"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Mouthy version
+      description: Shown on Settings → About.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Speech Engine
+      description: Settings → General.
+      options:
+        - Local (offline)
+        - HTTP server
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select text in …
+        2. Press ⌥⎋
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines
+      description: From `mouthy.log` in the log folder (Settings → About). Remove anything private.
+      render: text
