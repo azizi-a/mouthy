@@ -121,7 +121,7 @@ While a password field has focus, or an app such as Terminal has Secure Keyboard
 
 ## Attribution
 
-Mouthy is derived from [Handy](https://github.com/cjpais/Handy) by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project.
+Mouthy is derived from [Handy](https://github.com/cjpais/Handy) by CJ Pais (MIT). It is not affiliated with or endorsed by the Handy project. Handy's copyright notice is in [NOTICE](NOTICE).
 
 ## License
 
