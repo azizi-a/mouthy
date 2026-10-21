@@ -4,7 +4,7 @@ Run on the built app (`bun run tauri build --bundles app`), not `tauri dev`: und
 
 **Before you start**
 
-- Quit any running Mouthy. To start as a fresh install, move its data aside (settings and any downloaded voice files): `mv ~/Library/Application\ Support/com.azizi.mouthy ~/mouthy-data-backup`. An existing settings file from a Phase 1 build keeps the HTTP server, so this matters.
+- Quit any running Mouthy. To start as a fresh install, move its data aside (settings and any downloaded voice files): `mv ~/Library/Application\ Support/com.azizi.mouthy ~/mouthy-data-backup`.
 - If an older build was granted Accessibility: `tccutil reset Accessibility com.azizi.mouthy`.
 - No speech server is running: `curl -m 3 http://127.0.0.1:8880/v1/audio/voices` must fail. Stop Kokoro-FastAPI if it answers.
 - System Settings → Accessibility → Spoken Content → Speak selection is off (it also uses ⌥⎋).

@@ -340,9 +340,8 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
         .store(SETTINGS_STORE_PATH)
         .expect("Failed to initialize store");
 
-    // Settings reads also persist salvage, the backend of older stores and
-    // binding sync. All are idempotent, so this converges after the first read
-    // of an older store.
+    // Settings reads also persist salvage and binding sync. Both are
+    // idempotent, so this converges after the first read of an older store.
     if let Some(settings_value) = store.get("settings") {
         let (mut settings, mut updated) = parse_stored_settings(settings_value);
 
@@ -364,32 +363,13 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
 
 /// Reads a stored settings object, salvaging what it can. Also says whether
 /// the store needs writing back.
-fn parse_stored_settings(mut stored: serde_json::Value) -> (AppSettings, bool) {
-    let filled = keep_server_backend_for_older_stores(&mut stored);
+fn parse_stored_settings(stored: serde_json::Value) -> (AppSettings, bool) {
     match serde_json::from_value::<AppSettings>(stored.clone()) {
-        Ok(settings) => (settings, filled),
+        Ok(settings) => (settings, false),
         Err(e) => {
             warn!("Failed to parse stored settings ({e}); salvaging valid fields");
             (salvage_settings(&stored), true)
         }
-    }
-}
-
-/// A store without `tts_backend` predates the local backend and spoke through
-/// the server, so it keeps doing so; only fresh installs default to local. An
-/// unreadable value gets the server too, which needs no downloaded files.
-/// Returns whether the key was written.
-fn keep_server_backend_for_older_stores(stored: &mut serde_json::Value) -> bool {
-    match stored.as_object_mut() {
-        Some(map)
-            if !map
-                .get("tts_backend")
-                .is_some_and(|value| TtsBackend::deserialize(value).is_ok()) =>
-        {
-            map.insert("tts_backend".into(), serde_json::json!(TtsBackend::Http));
-            true
-        }
-        _ => false,
     }
 }
 
@@ -690,31 +670,19 @@ mod tests {
     }
 
     #[test]
-    fn an_older_store_without_a_backend_keeps_the_server() {
-        // A Phase 1 store: settings it knew, no `tts_backend`.
-        let stored = serde_json::json!({
-            "tts_base_url": "http://127.0.0.1:8880",
-            "tts_voice": "bm_lewis",
-            "app_language": "en-GB",
-            "paste_method": "ctrl_v",
-        });
+    fn a_missing_or_unreadable_backend_loads_as_local_and_http_is_kept() {
+        let stored = serde_json::json!({ "tts_voice": "bm_lewis" });
         let (settings, updated) = parse_stored_settings(stored);
-        assert_eq!(settings.tts_backend, TtsBackend::Http);
-        assert!(updated, "written back so the choice is explicit");
+        assert_eq!(settings.tts_backend, TtsBackend::Local);
         assert_eq!(settings.tts_voice, "bm_lewis");
-        assert_eq!(settings.app_language, "en-GB");
-    }
+        assert!(!updated);
 
-    #[test]
-    fn an_older_store_that_needs_salvage_keeps_the_server() {
-        let stored = serde_json::json!({ "theme": "sepia" });
+        let mut stored = default_settings_json();
+        stored["tts_backend"] = serde_json::json!("http");
         let (settings, updated) = parse_stored_settings(stored);
         assert_eq!(settings.tts_backend, TtsBackend::Http);
-        assert!(updated);
-    }
+        assert!(!updated);
 
-    #[test]
-    fn an_unreadable_backend_becomes_the_server() {
         for junk in [
             serde_json::json!("cloud"),
             serde_json::json!(3),
@@ -723,21 +691,9 @@ mod tests {
             let mut stored = default_settings_json();
             stored["tts_backend"] = junk.clone();
             stored["tts_voice"] = serde_json::json!("bf_emma");
-            let (settings, updated) = parse_stored_settings(stored);
-            assert_eq!(settings.tts_backend, TtsBackend::Http, "{junk}");
+            let (settings, _) = parse_stored_settings(stored);
+            assert_eq!(settings.tts_backend, TtsBackend::Local, "{junk}");
             assert_eq!(settings.tts_voice, "bf_emma");
-            assert!(updated);
-        }
-    }
-
-    #[test]
-    fn a_stored_backend_is_kept_as_is() {
-        for (name, backend) in [("local", TtsBackend::Local), ("http", TtsBackend::Http)] {
-            let mut stored = default_settings_json();
-            stored["tts_backend"] = serde_json::json!(name);
-            let (settings, updated) = parse_stored_settings(stored);
-            assert_eq!(settings.tts_backend, backend);
-            assert!(!updated);
         }
     }
 

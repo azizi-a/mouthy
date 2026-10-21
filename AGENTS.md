@@ -47,7 +47,7 @@ For platform-specific build setup, see [BUILD.md](BUILD.md).
 
 Mouthy is an offline-first desktop text-to-speech app built with Tauri 2.x (Rust backend + React/TypeScript frontend). It is a fork of Handy with the I/O path inverted: highlight text in any app, press a global hotkey, hear it read aloud; press again to stop.
 
-Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the default for new installs: ONNX Runtime via `ort`, phonemes via `misaki-rs`) from model files downloaded into the app-data `models/` folder, or from an external OpenAI-compatible HTTP server (default `http://127.0.0.1:8880`, `POST /v1/audio/speech`, voice `af_alloy`); default hotkey ⌥⎋. Bundle identifier: `com.azizi.mouthy`.
+Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the default: ONNX Runtime via `ort`, phonemes via `misaki-rs`) from model files downloaded into the app-data `models/` folder, or from an external OpenAI-compatible HTTP server (default `http://127.0.0.1:8880`, `POST /v1/audio/speech`, voice `af_alloy`); default hotkey ⌥⎋. Bundle identifier: `com.azizi.mouthy`.
 
 ### Backend Structure (src-tauri/src/)
 
@@ -87,7 +87,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 
-**Settings pattern:** add the field with a serde default to `AppSettings` and `get_default_settings` in `settings.rs`, add a `change_*_setting` command, register it in `lib.rs`, regenerate bindings, and add a `settingUpdaters` entry in `settingsStore.ts`. Unknown stored keys are ignored, so there are no migrations. One exception: a stored object whose `tts_backend` is missing (it predates the local backend) or unreadable gets `http` (`keep_server_backend_for_older_stores`); only a fresh store gets the `local` default.
+**Settings pattern:** add the field with a serde default to `AppSettings` and `get_default_settings` in `settings.rs`, add a `change_*_setting` command, register it in `lib.rs`, regenerate bindings, and add a `settingUpdaters` entry in `settingsStore.ts`. Unknown stored keys are ignored and a missing or unreadable field takes its serde default, so there are no migrations.
 
 **Bindings:** `src/bindings.ts` is written by tauri-specta when the debug binary starts, not at `cargo build`. Run the debug binary from `src-tauri` (the output path is relative to the working directory) and commit the regenerated file with the change.
 
