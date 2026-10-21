@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - New installs default to the American English voice `af_alloy` instead of `bm_lewis`; existing installs keep the voice they use.
+- Settings with no speech engine saved, or an unreadable one, now use the offline voice instead of the HTTP server; installs that chose the HTTP server keep it.
 
 ## 0.2.0 — 2026-10-14
 
