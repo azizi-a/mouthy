@@ -1,5 +1,7 @@
 //! Text preparation for speech: markdown/URL cleanup and sentence chunking.
 
+use std::ops::Range;
+
 /// Fragments shorter than this are merged with a neighbour so the voice keeps
 /// natural prosody across one-word sentences and clause cuts.
 const MIN_SENTENCE_CHARS: usize = 20;
@@ -15,11 +17,13 @@ const ABBREVIATIONS: &[&str] = &[
     "nov.", "dec.",
 ];
 
-/// Turns selected text into something worth reading aloud: URLs become "link",
-/// markdown syntax is dropped and whitespace collapses within each line. Line
-/// breaks survive for `split_sentences`; text with nothing to pronounce becomes "".
+/// Turns selected text into something worth reading aloud: hard-wrapped lines
+/// are joined, URLs become "link", markdown syntax is dropped and whitespace
+/// collapses within each line. The remaining line breaks survive for
+/// `split_sentences`; text with nothing to pronounce becomes "".
 pub fn normalize(input: &str) -> String {
-    let lines: Vec<&str> = input.lines().map(strip_line_markers).collect();
+    let reflowed = reflow(input);
+    let lines: Vec<&str> = reflowed.lines().map(strip_line_markers).collect();
     let text = strip_inline_markers(&replace_urls(&strip_links(&lines.join("\n"))));
     if !text.chars().any(char::is_alphanumeric) {
         return String::new();
@@ -152,6 +156,429 @@ fn strip_inline_markers(text: &str) -> String {
         }
     }
     out
+}
+
+/// A paragraph whose widest line is narrower than this keeps its line breaks:
+/// at that width they belong to a list, code or verse rather than to wrapping.
+const MIN_WRAP_CHARS: usize = 40;
+/// Gutters drawn by terminal programs and email quoting, stripped where two or
+/// more consecutive lines share one.
+const GUTTERS: &[char] = &['│', '┃', '╎', '>'];
+/// Claude Code marks a block's first line with one of these and indents the
+/// rest to match.
+const LEAD_MARKS: &[char] = &['⏺', '⎿'];
+const BULLETS: &[char] = &['-', '*', '•'];
+const TAB_STOP: usize = 8;
+
+/// Joins lines that were hard-wrapped to a width, as terminals, man pages,
+/// email and PDFs deliver them, so a wrapped sentence reads as one. A line
+/// joins the next only when the next line's first word would not have fitted
+/// on it. A break stays after sentence punctuation (`.!?…:;`) or a markdown
+/// hard break, around headings, list items, quotes, prompts, tables, code,
+/// chat transcripts and changes of indent, and wherever the lines are too
+/// short to have been wrapped. Outside fenced code, the lines it keeps lose
+/// their indent and are separated by a blank line, so reflowing the result
+/// changes nothing.
+pub fn reflow(text: &str) -> String {
+    let text = text.replace("\r\n", "\n").replace('\r', "\n");
+    let mut out = Vec::new();
+    // A stack rather than recursion: each level of `> > >` is one more pass.
+    let mut pieces = vec![Piece::Block(text.split('\n').collect(), true)];
+    while let Some(piece) = pieces.pop() {
+        match piece {
+            Piece::Block(lines, starts_text) => {
+                pieces.extend(split_block(&lines, starts_text).into_iter().rev());
+            }
+            Piece::Paragraph(lines, starts_text) => reflow_lines(&lines, starts_text, &mut out),
+            Piece::Code(lines) => {
+                push_unit(&mut out, line_body(lines[0]).trim_end().to_string());
+                out.extend(lines[1..].iter().map(|line| line.trim_end().to_string()));
+                // A fence left open in a quote must not run on past it on a second pass.
+                let marker = fence_marker(lines[0]);
+                if lines.len() == 1 || lines.last().and_then(|line| fence_marker(line)) != marker {
+                    out.extend(marker.map(str::to_string));
+                }
+            }
+        }
+    }
+    out.join("\n")
+}
+
+enum Piece<'a> {
+    /// Lines that may hold blank lines, fenced code and shared gutters.
+    Block(Vec<&'a str>, bool),
+    /// Lines with none of those, and whether they start the text.
+    Paragraph(Vec<&'a str>, bool),
+    /// Fenced code, from its opening fence to its closing one or the end.
+    Code(Vec<&'a str>),
+}
+
+/// Splits lines at blank lines and fenced code, and each paragraph between
+/// them at runs of lines sharing a gutter, which lose it and are split again.
+fn split_block<'a>(lines: &[&'a str], starts_text: bool) -> Vec<Piece<'a>> {
+    let mut pieces = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        if is_blank(lines[i]) {
+            i += 1;
+            continue;
+        }
+        if let Some(marker) = fence_marker(lines[i]) {
+            let end = lines[i + 1..]
+                .iter()
+                .position(|line| fence_marker(line) == Some(marker))
+                .map_or(lines.len(), |at| i + at + 2);
+            pieces.push(Piece::Code(lines[i..end].to_vec()));
+            i = end;
+            continue;
+        }
+        let end = lines[i..]
+            .iter()
+            .position(|line| is_blank(line) || fence_marker(line).is_some())
+            .map_or(lines.len(), |at| i + at);
+        let paragraph = &lines[i..end];
+        for (range, shared) in gutter_runs(paragraph) {
+            let run = &paragraph[range.clone()];
+            pieces.push(match shared {
+                Some(shared) => Piece::Block(
+                    run.iter().map(|line| strip_gutter(line, shared)).collect(),
+                    false,
+                ),
+                None => Piece::Paragraph(run.to_vec(), starts_text && i + range.start == 0),
+            });
+        }
+        i = end;
+    }
+    pieces
+}
+
+fn push_unit(out: &mut Vec<String>, unit: String) {
+    if out.last().is_some_and(|line| !line.is_empty()) {
+        out.push(String::new());
+    }
+    out.push(unit);
+}
+
+fn is_box_drawing(c: char) -> bool {
+    ('\u{2500}'..='\u{257f}').contains(&c)
+}
+
+/// The line without its indent, a byte order mark or the `LEAD_MARKS` before
+/// its text.
+fn line_body(line: &str) -> &str {
+    fn skip_space(text: &str) -> &str {
+        text.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}')
+    }
+    let mut body = skip_space(line);
+    while let Some(after) = body
+        .strip_prefix(LEAD_MARKS)
+        .filter(|after| after.is_empty() || after.starts_with(' '))
+    {
+        body = skip_space(after);
+    }
+    body
+}
+
+fn is_blank(line: &str) -> bool {
+    line_body(line)
+        .chars()
+        .all(|c| c.is_whitespace() || is_box_drawing(c))
+}
+
+fn fence_marker(line: &str) -> Option<&'static str> {
+    let body = line_body(line);
+    ["```", "~~~"]
+        .into_iter()
+        .find(|marker| body.starts_with(marker))
+}
+
+/// The gutter a line starts with; `>>>` is a Python prompt, not three quotes.
+fn gutter(line: &str) -> Option<char> {
+    let body = line.trim_start();
+    if body.starts_with(">>>") {
+        return None;
+    }
+    body.chars().next().filter(|c| GUTTERS.contains(c))
+}
+
+fn strip_gutter(line: &str, gutter: char) -> &str {
+    let rest = &line.trim_start()[gutter.len_utf8()..];
+    rest.strip_prefix(' ').unwrap_or(rest)
+}
+
+/// Splits lines into runs of two or more that share a gutter (`Some`) and the
+/// lines between them (`None`).
+fn gutter_runs(lines: &[&str]) -> Vec<(Range<usize>, Option<char>)> {
+    let mut runs = Vec::new();
+    let (mut plain_from, mut i) = (0, 0);
+    while i < lines.len() {
+        let shared = gutter(lines[i]);
+        let len = lines[i..]
+            .iter()
+            .take_while(|line| shared.is_some() && gutter(line) == shared)
+            .count();
+        if len < 2 {
+            i += 1;
+            continue;
+        }
+        if plain_from < i {
+            runs.push((plain_from..i, None));
+        }
+        runs.push((i..i + len, shared));
+        i += len;
+        plain_from = i;
+    }
+    if plain_from < lines.len() {
+        runs.push((plain_from..lines.len(), None));
+    }
+    runs
+}
+
+fn reflow_lines(lines: &[&str], starts_text: bool, out: &mut Vec<String>) {
+    let lines: Vec<Line> = lines.iter().map(|line| Line::parse(line)).collect();
+    let Some(head) = lines.first() else {
+        return;
+    };
+    let widest = lines.iter().map(|line| line.width).max().unwrap_or(0);
+    let speakers = lines.iter().filter(|line| is_speaker(line.body)).count();
+    let keep_all = is_code(&lines) || speakers >= 2;
+    let mut unit = head.body.to_string();
+    for (i, b) in lines.iter().enumerate().skip(1) {
+        let a = &lines[i - 1];
+        let decision = if keep_all {
+            Join::Keep
+        } else {
+            join(a, b, lines.get(i + 1), starts_text && i == 1, widest)
+        };
+        match decision {
+            Join::Keep => {
+                push_unit(out, std::mem::take(&mut unit));
+                unit.push_str(b.body);
+            }
+            Join::Space => {
+                unit.push(' ');
+                unit.push_str(b.body);
+            }
+            Join::Hyphen => unit.push_str(b.body),
+        }
+    }
+    push_unit(out, unit);
+}
+
+/// How a line starts, which decides whether it can join its neighbours.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Start {
+    Text,
+    /// A list item or quote; lines indented to its text continue it.
+    Marker,
+    /// A heading, prompt, table or box row, or code fence: never joined.
+    Fixed,
+}
+
+struct Line<'a> {
+    /// The line without its indent, `LEAD_MARKS` or trailing whitespace.
+    body: &'a str,
+    /// In columns, a tab reaching the next multiple of `TAB_STOP`.
+    indent: usize,
+    width: usize,
+    start: Start,
+    /// The column a wrapped continuation of this line is indented to: after a
+    /// list or quote marker, or after a wide gap as in `-A      Include …`.
+    hang: Option<usize>,
+    /// Two trailing spaces, markdown's line break.
+    hard_break: bool,
+}
+
+impl<'a> Line<'a> {
+    fn parse(line: &'a str) -> Self {
+        let trimmed = line.trim_end_matches(|c: char| c.is_whitespace() || is_box_drawing(c));
+        let body = line_body(trimmed);
+        let indent = columns(0, &trimmed[..trimmed.len() - body.len()]);
+        let (start, marker_len) = classify(body);
+        let hang = match start {
+            Start::Marker => Some(marker_len),
+            Start::Text => definition_column(body),
+            Start::Fixed => None,
+        };
+        Line {
+            body,
+            indent,
+            width: columns(indent, body),
+            start,
+            hang: hang.map(|at| columns(indent, &body[..at])),
+            hard_break: line.ends_with("  "),
+        }
+    }
+}
+
+fn columns(from: usize, text: &str) -> usize {
+    text.chars().fold(from, |column, c| match c {
+        '\t' => (column / TAB_STOP + 1) * TAB_STOP,
+        _ => column + 1,
+    })
+}
+
+/// The kind of start and, for a marker, its byte length with the spaces after it.
+fn classify(body: &str) -> (Start, usize) {
+    let unhashed = body.trim_start_matches('#');
+    let heading = unhashed.len() < body.len() && (unhashed.is_empty() || unhashed.starts_with(' '));
+    // Columns of a table: a tab, or a cell edge between words.
+    let table = body.contains('\t') || body.contains(" │ ") || body.contains(" | ");
+    if heading
+        || table
+        || ["$ ", ">>>", "... ", "|"]
+            .iter()
+            .any(|prefix| body.starts_with(prefix))
+        || body.starts_with(is_box_drawing)
+        || fence_marker(body).is_some()
+    {
+        return (Start::Fixed, 0);
+    }
+    if let Some(rest) = body.strip_prefix('>') {
+        return (
+            Start::Marker,
+            body.len() - rest.trim_start_matches(' ').len(),
+        );
+    }
+    match list_marker(body) {
+        Some(len) => (Start::Marker, len),
+        None => (Start::Text, 0),
+    }
+}
+
+/// `- `, `* `, `• `, `1. ` or `2) `, as a byte length including the spaces.
+fn list_marker(body: &str) -> Option<usize> {
+    let first = body.chars().next()?;
+    let marker = if BULLETS.contains(&first) {
+        first.len_utf8()
+    } else {
+        let digits = body.len() - body.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+        if !(1..=3).contains(&digits) || !body[digits..].starts_with(['.', ')']) {
+            return None;
+        }
+        digits + 1
+    };
+    let rest = &body[marker..];
+    let spaces = rest.len() - rest.trim_start_matches(' ').len();
+    (spaces > 0).then_some(marker + spaces)
+}
+
+/// The byte offset of the first word after a gap of two or more spaces or a
+/// tab, where man pages and `--help` output indent an option's wrapped text.
+fn definition_column(body: &str) -> Option<usize> {
+    let mut gap = None;
+    for (i, c) in body.char_indices() {
+        if c == ' ' || c == '\t' {
+            gap.get_or_insert(i);
+        } else if let Some(from) = gap.take() {
+            if i - from >= 2 || body[from..i].contains('\t') {
+                return Some(i);
+            }
+        }
+    }
+    None
+}
+
+/// Code opens a block with a line ending in `{` or `:` and indents the next
+/// one; its lines are statements, so none of them are joined.
+fn is_code(lines: &[Line]) -> bool {
+    lines.windows(2).any(|pair| {
+        let [a, b] = pair else { return false };
+        a.body.ends_with(['{', ':'])
+            && b.start == Start::Text
+            && b.indent > a.indent + 1
+            && a.hang != Some(b.indent)
+    })
+}
+
+/// A chat line: `alice: hi`, `Q: …`, or Discord's `azizi — Today at 10:42`.
+fn is_speaker(body: &str) -> bool {
+    let name = |word: &str| {
+        !word.is_empty()
+            && word
+                .chars()
+                .all(|c| c.is_alphanumeric() || matches!(c, '_' | '.' | '-'))
+    };
+    let mut words = body.split_whitespace();
+    let Some(first) = words.next() else {
+        return false;
+    };
+    first.strip_suffix(':').is_some_and(name) || (name(first) && words.next() == Some("—"))
+}
+
+enum Join {
+    Keep,
+    Space,
+    Hyphen,
+}
+
+/// Greedy wrapping moves a word to the next line only when it does not fit,
+/// and fills every line but a paragraph's last, so a break that left room for
+/// the next word, or before a line that itself left room, was made by hand.
+fn join(a: &Line, b: &Line, c: Option<&Line>, first_pair: bool, widest: usize) -> Join {
+    // The text's first line may be the tail of a line the selection began in,
+    // so neither its indent nor its width is known.
+    let cut = first_pair && a.indent == 0 && b.indent > 0;
+    if breaks(a, b, cut, widest) {
+        return Join::Keep;
+    }
+    let lowercase = starts_lowercase(b.body);
+    let by_hand =
+        fits(a, b, widest) || c.is_some_and(|c| !breaks(b, c, false, widest) && fits(b, c, widest));
+    if by_hand && !(cut && lowercase) {
+        return Join::Keep;
+    }
+    if wrapped_hyphen(a.body) {
+        return if lowercase { Join::Hyphen } else { Join::Keep };
+    }
+    // A capital mid-sentence (a name, "I", a number) only next to lower-case prose,
+    // so a list or a heading over a short line stays apart.
+    let prose = lowercase
+        || starts_lowercase(a.body)
+        || c.is_some_and(|c| c.start == Start::Text && starts_lowercase(c.body));
+    if prose {
+        Join::Space
+    } else {
+        Join::Keep
+    }
+}
+
+/// Breaks that stay whatever the widths.
+fn breaks(a: &Line, b: &Line, cut: bool, widest: usize) -> bool {
+    let continues = cut
+        || (a.start == Start::Text && a.indent.abs_diff(b.indent) <= 1)
+        || a.hang == Some(b.indent);
+    !continues
+        || b.start != Start::Text
+        || a.start == Start::Fixed
+        || a.hard_break
+        || widest < MIN_WRAP_CHARS
+        || ends_sentence(a.body)
+}
+
+/// Whether `b`'s first word would have fitted on `a`.
+fn fits(a: &Line, b: &Line, widest: usize) -> bool {
+    let word = b.body.split_whitespace().next().unwrap_or_default();
+    a.width + 1 + word.chars().count() <= widest
+}
+
+/// A lower-case word, as wrapped prose continues; "a1b2c3d" and "x86" are not.
+fn starts_lowercase(body: &str) -> bool {
+    let word = body.split_whitespace().next().unwrap_or_default();
+    word.starts_with(char::is_lowercase) && !word.contains(|c: char| c.is_ascii_digit())
+}
+
+fn ends_sentence(body: &str) -> bool {
+    let end = body.trim_end_matches(|c: char| CLOSERS.contains(&c) || matches!(c, '*' | '_' | '`'));
+    end.ends_with(|c: char| TERMINATORS.contains(&c) || c == ':' || c == ';')
+        && !ends_with_abbreviation(end)
+}
+
+/// A word broken at a hyphen; the hyphen stays, since it may belong to a
+/// compound such as "well-known".
+fn wrapped_hyphen(body: &str) -> bool {
+    let mut end = body.chars().rev();
+    end.next() == Some('-') && end.next().is_some_and(char::is_alphabetic)
 }
 
 /// A first sentence longer than this many words is cut at a clause break, so
@@ -1120,6 +1547,573 @@ mod tests {
             normalize(input),
             "Release notes\nNote: see the guide.\nFaster startup\nFixed crash on link"
         );
+    }
+
+    /// The lines `reflow` keeps, without their indent or the blank lines between them.
+    fn reflowed(text: &str) -> Vec<String> {
+        reflow(text)
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(|line| line.trim_start().to_string())
+            .collect()
+    }
+
+    fn lines(lines: &[&str]) -> String {
+        lines.join("\n")
+    }
+
+    /// Short real-world selections and the lines each should be read as.
+    fn corpus() -> Vec<(&'static str, String, Vec<&'static str>)> {
+        vec![
+            (
+                "Claude Code reply, 60 columns",
+                lines(&[
+                    "> can you check why the speak hotkey reads every wrapped",
+                    "  line of my terminal selection as its own sentence",
+                    "",
+                    "⏺ The splitter treats every line break as the end of a",
+                    "  sentence, so each wrapped line of a terminal selection",
+                    "  gets its own pause and its own falling intonation. That",
+                    "  rule exists so headings and bullets without punctuation",
+                    "  still read as sentences.",
+                    "",
+                    "  Here is what I changed:",
+                    "",
+                    "  - Added reflow in src-tauri/src/tts/text.rs, which joins",
+                    "    lines that were wrapped by the terminal",
+                    "  - Kept the splitter as it was",
+                    "  - Added tests for each rule and a small corpus of samples",
+                    "    taken from Claude Code, man pages, Git and email",
+                    "",
+                    "  1. Run the tests with cargo test",
+                    "  2. Select this reply in the terminal and press the hotkey;",
+                    "     it should read as whole sentences",
+                    "",
+                    "⏺ Bash(cd src-tauri && cargo test tts::text)",
+                    "  ⎿  running 48 tests",
+                    "     test result: ok. 48 passed; 0 failed",
+                ]),
+                vec![
+                    "> can you check why the speak hotkey reads every wrapped line of my terminal selection as its own sentence",
+                    "The splitter treats every line break as the end of a sentence, so each wrapped line of a terminal selection gets its own pause and its own falling intonation. That rule exists so headings and bullets without punctuation still read as sentences.",
+                    "Here is what I changed:",
+                    "- Added reflow in src-tauri/src/tts/text.rs, which joins lines that were wrapped by the terminal",
+                    "- Kept the splitter as it was",
+                    "- Added tests for each rule and a small corpus of samples taken from Claude Code, man pages, Git and email",
+                    "1. Run the tests with cargo test",
+                    // A wrap right after `;` keeps its break.
+                    "2. Select this reply in the terminal and press the hotkey;",
+                    "it should read as whole sentences",
+                    "Bash(cd src-tauri && cargo test tts::text)",
+                    "running 48 tests",
+                    "test result: ok. 48 passed; 0 failed",
+                ],
+            ),
+            (
+                "man ls",
+                lines(&[
+                    "DESCRIPTION",
+                    "     For each operand that names a file of a type other than directory, ls",
+                    "     displays its name as well as any requested, associated information.  For",
+                    "     each operand that names a file of type directory, ls displays the names of",
+                    "     files contained within that directory.",
+                    "",
+                    "     -A      Include directory entries whose names begin with a dot (‘.’) except",
+                    "\t     for . and ...  Automatically set for the super-user unless -I is",
+                    "\t     specified.",
+                    "",
+                    "     -D format",
+                    "\t     When printing in the long (-l) format, use format to format the",
+                    "\t     date and time output.",
+                ]),
+                vec![
+                    "DESCRIPTION",
+                    "For each operand that names a file of a type other than directory, ls displays its name as well as any requested, associated information.  For each operand that names a file of type directory, ls displays the names of files contained within that directory.",
+                    "-A      Include directory entries whose names begin with a dot (‘.’) except for . and ...  Automatically set for the super-user unless -I is specified.",
+                    "-D format",
+                    "When printing in the long (-l) format, use format to format the date and time output.",
+                ],
+            ),
+            (
+                "Git commit body",
+                lines(&[
+                    "fix: show that the model is loading",
+                    "",
+                    "Recording starts while the model loads in the background. On a cold start",
+                    "(first use, or after the idle unload) the user can finish speaking before",
+                    "the load does, and the overlay then showed \"Transcribing...\" for the whole",
+                    "load. With a slow disk or a large model that looks like the app has hung,",
+                    "and people cancel and retry.",
+                    "",
+                    "Refs #2093",
+                ]),
+                vec![
+                    "fix: show that the model is loading",
+                    "Recording starts while the model loads in the background. On a cold start (first use, or after the idle unload) the user can finish speaking before the load does, and the overlay then showed \"Transcribing...\" for the whole load. With a slow disk or a large model that looks like the app has hung, and people cancel and retry.",
+                    "Refs #2093",
+                ],
+            ),
+            (
+                "wrapped email",
+                lines(&[
+                    "Hi Sam,",
+                    "",
+                    "Thanks for sending the draft over. I read it on the train this morning and",
+                    "I think the structure works, but the second section repeats a lot of what",
+                    "the introduction already says.",
+                    "",
+                    "On Tue, 20 Oct 2026 at 09:12, Sam Lee <sam@example.com> wrote:",
+                    "> Here is the draft of the proposal we talked about last week. It is still",
+                    "> rough in places, so any comments are welcome.",
+                    ">",
+                    "> Sam",
+                    "",
+                    "Best,",
+                    "Azizi",
+                ]),
+                vec![
+                    "Hi Sam,",
+                    "Thanks for sending the draft over. I read it on the train this morning and I think the structure works, but the second section repeats a lot of what the introduction already says.",
+                    "On Tue, 20 Oct 2026 at 09:12, Sam Lee <sam@example.com> wrote:",
+                    "Here is the draft of the proposal we talked about last week. It is still rough in places, so any comments are welcome.",
+                    "Sam",
+                    "Best,",
+                    "Azizi",
+                ],
+            ),
+            (
+                "markdown document",
+                lines(&[
+                    "# Mouthy",
+                    "",
+                    "Mouthy reads the text you select in any app aloud. Press the hotkey once to",
+                    "start and again to stop.",
+                    "",
+                    "## Install",
+                    "- Download the latest build from the releases page",
+                    "- Open it twice to confirm the Gatekeeper prompt, which macOS shows for apps",
+                    "  that are not notarised",
+                    "- Grant Accessibility when asked",
+                    "",
+                    "```sh",
+                    "bun install",
+                    "bun run tauri dev",
+                    "```",
+                ]),
+                vec![
+                    "# Mouthy",
+                    "Mouthy reads the text you select in any app aloud. Press the hotkey once to start and again to stop.",
+                    "## Install",
+                    "- Download the latest build from the releases page",
+                    "- Open it twice to confirm the Gatekeeper prompt, which macOS shows for apps that are not notarised",
+                    "- Grant Accessibility when asked",
+                    "```sh",
+                    "bun install",
+                    "bun run tauri dev",
+                    "```",
+                ],
+            ),
+            (
+                "Safari paragraph",
+                "Mouthy reads the text you select in any app aloud with an offline voice that runs on your Mac. Press the hotkey once to start and again to stop.".to_string(),
+                vec!["Mouthy reads the text you select in any app aloud with an offline voice that runs on your Mac. Press the hotkey once to start and again to stop."],
+            ),
+            (
+                "bullets of short lines",
+                lines(&["- one", "- two", "* three", "• four"]),
+                vec!["- one", "- two", "* three", "• four"],
+            ),
+            (
+                "code without a fence",
+                lines(&[
+                    "function reflow(text) {",
+                    "  const lines = text.split(\"\\n\")",
+                    "  const joined = lines.map((line) => line.trimEnd()).filter(Boolean).join(\" \")",
+                    "  return joined",
+                    "}",
+                ]),
+                vec![
+                    "function reflow(text) {",
+                    "const lines = text.split(\"\\n\")",
+                    "const joined = lines.map((line) => line.trimEnd()).filter(Boolean).join(\" \")",
+                    "return joined",
+                    "}",
+                ],
+            ),
+        ]
+    }
+
+    #[test]
+    fn reflow_reads_each_sample_as_intended() {
+        for (name, text, expected) in corpus() {
+            assert_eq!(reflowed(&text), expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn reflow_is_idempotent() {
+        let extra = [
+            "> ```\n> code in a quote\n> ```\nafter it",
+            "A long first line of wrapped prose that is followed by a short\nlast line.\nThen a capitalised line",
+            "- item one that wraps onto a second line because it is long\n  enough\n  and then\n- item two",
+            "\t│ a boxed line\n╰──╯\n  ⎿  ⏺ two marks before a line;",
+            "⏺ ```sh\nls\n```\nafter the fence, some text that goes on",
+            "  ⎿  ```\n     code\n     ```\ntext",
+            "> ```sh\n> cd src-tauri\n> ```\nafter it",
+            "> > ```\n> > left open in a quote\n```macOS\ntext after",
+        ];
+        let texts = corpus()
+            .into_iter()
+            .map(|(_, text, _)| text)
+            .chain(extra.iter().map(|text| text.to_string()));
+        for text in texts {
+            let once = reflow(&text);
+            assert_eq!(reflow(&once), once, "{text}");
+        }
+    }
+
+    #[test]
+    fn reflow_leaves_single_lines_alone() {
+        for text in [
+            "",
+            "Hello.",
+            "Issue #42 - fixed",
+            "Mouthy reads the text you select in any app aloud. Press the hotkey to stop.",
+        ] {
+            assert_eq!(reflow(text), text);
+        }
+        assert_eq!(reflow("  An indented line   "), "An indented line");
+        assert_eq!(reflow("⏺ Done."), "Done.");
+        assert_eq!(reflow("│ ⏺ Boxed\n│ ⏺ marks"), "Boxed\n\nmarks");
+    }
+
+    #[test]
+    fn reflow_keeps_breaks_after_sentence_punctuation() {
+        let next = "and a lower-case next line";
+        for end in [".", "!", "?", "…", ":", ";", ".\"", "?)", ".**"] {
+            let text =
+                format!("A line long enough to have been wrapped by the terminal{end}\n{next}");
+            assert_eq!(reflowed(&text).len(), 2, "{text}");
+        }
+        let comma = format!("A line long enough to have been wrapped by the terminal,\n{next}");
+        assert_eq!(reflowed(&comma).len(), 1);
+        let abbreviation = "Bring the tools you need for the job, such as hammers, e.g.\nthe ones from the shed by the door";
+        assert_eq!(reflowed(abbreviation).len(), 1);
+    }
+
+    #[test]
+    fn reflow_keeps_headings_lists_quotes_prompts_and_tables() {
+        let text = lines(&[
+            "## A heading that is long enough to look like a wrapped line of text",
+            "- a bullet that is long enough to look like a wrapped line of text too",
+            "1. a numbered step long enough to look like it was wrapped as well",
+            "> a quoted line",
+            "$ cargo test --lib tts::text",
+            "| a table row | with cells |",
+            "│ a box row",
+            "├── a tree branch",
+            "a plain line after them all, which is long enough to have been wrapped",
+        ]);
+        assert_eq!(reflowed(&text).len(), 9);
+        // A list item takes only the lines indented under its text.
+        let lazy = "- a bullet that is long enough to look like a wrapped line\nthe next line, at the bullet's own indent";
+        assert_eq!(reflowed(lazy).len(), 2);
+    }
+
+    #[test]
+    fn reflow_joins_a_hanging_indent_to_its_marker() {
+        let list = lines(&[
+            "  - Added reflow in src-tauri/src/tts/text.rs, which joins lines that were",
+            "    wrapped by the terminal and keeps real breaks",
+            "  - Kept the splitter as it was",
+            "  10. A numbered step that is long enough to wrap onto the line under it",
+            "      and is indented to its text",
+        ]);
+        assert_eq!(
+            reflowed(&list),
+            vec![
+                "- Added reflow in src-tauri/src/tts/text.rs, which joins lines that were wrapped by the terminal and keeps real breaks",
+                "- Kept the splitter as it was",
+                "10. A numbered step that is long enough to wrap onto the line under it and is indented to its text",
+            ]
+        );
+        let prompt = "> can you check why the speak hotkey reads every wrapped line\n  of my terminal selection as its own sentence";
+        assert_eq!(reflowed(prompt).len(), 1);
+        let help = lines(&[
+            "  -c, --config <FILE>    Sets a custom config file that is quite long and",
+            "                         wraps under its description",
+            "  -v, --verbose          Turns on verbose output",
+        ]);
+        assert_eq!(reflowed(&help).len(), 2);
+    }
+
+    #[test]
+    fn reflow_keeps_changes_of_indent() {
+        let text = lines(&[
+            "Settings come from the store on disk.",
+            "Every option is read at startup, and the ones that matter here are these",
+            "    max_chunk_chars sets the longest piece of text sent in one request",
+            "and the paragraph then carries on in lower case at its own indent",
+        ]);
+        assert_eq!(reflowed(&text).len(), 4);
+    }
+
+    #[test]
+    fn reflow_keeps_code() {
+        let fenced = lines(&[
+            "Run these, then read on below",
+            "```sh",
+            "bun install",
+            "bun run tauri dev -- and enough arguments to make this line long",
+            "",
+            "bun run lint",
+            "```",
+            "and the text after the block carries on in lower case like this",
+        ]);
+        assert_eq!(
+            reflow(&fenced),
+            lines(&[
+                "Run these, then read on below",
+                "",
+                "```sh",
+                "bun install",
+                "bun run tauri dev -- and enough arguments to make this line long",
+                "",
+                "bun run lint",
+                "```",
+                "",
+                "and the text after the block carries on in lower case like this",
+            ])
+        );
+        let python = lines(&[
+            "def reflow(text):",
+            "    lines = text.splitlines()",
+            "    joined = \" \".join(line.strip() for line in lines if line.strip())",
+            "    return joined",
+        ]);
+        assert_eq!(reflowed(&python).len(), 4);
+    }
+
+    #[test]
+    fn reflow_leaves_lines_too_short_to_be_wrapped() {
+        for text in [
+            "Installing the application\nDownload the latest build\nOpen it twice to confirm",
+            "Roses are red\nviolets are blue",
+            "src-tauri/src/tts\n├── mod.rs\n└── text.rs",
+        ] {
+            assert_eq!(reflowed(text), text.lines().collect::<Vec<_>>());
+        }
+    }
+
+    #[test]
+    fn reflow_joins_capitalised_lines_only_in_wrapped_prose() {
+        let list = "Download the latest build from the releases page\nOpen it twice to confirm the Gatekeeper prompt\nGrant Accessibility when asked";
+        assert_eq!(reflowed(list).len(), 3);
+        let web = "Mouthy reads selected text aloud with an offline voice on your Mac\nInstall";
+        assert_eq!(reflowed(web).len(), 2);
+        let output = "$ cargo test\nrunning 48 tests\ntest result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out";
+        assert_eq!(reflowed(output).len(), 3);
+    }
+
+    #[test]
+    fn reflow_joins_a_word_broken_at_a_hyphen() {
+        assert_eq!(
+            reflowed("The fox runs off into the neighbouring field, where the well-\nknown farmer keeps his sheep."),
+            vec!["The fox runs off into the neighbouring field, where the well-known farmer keeps his sheep."]
+        );
+        let capital = "The fox runs off into the neighbouring field, where the Anglo-\nSaxon farmer keeps his sheep.";
+        assert_eq!(reflowed(capital).len(), 2);
+    }
+
+    #[test]
+    fn reflow_strips_terminal_chrome() {
+        let boxed = lines(&[
+            "╭──────────────────────────────────────────────────────────────╮",
+            "│ The splitter treats every line break as the end of a         │",
+            "│ sentence, so each wrapped line gets its own pause.           │",
+            "╰──────────────────────────────────────────────────────────────╯",
+            "────────────────────────────────────────────────────────────────",
+            "│ A second box. It is not joined to the first one, even though │",
+            "│ it starts in lower case.                                     │",
+        ]);
+        assert_eq!(
+            reflowed(&boxed),
+            vec![
+                "The splitter treats every line break as the end of a sentence, so each wrapped line gets its own pause.",
+                "A second box. It is not joined to the first one, even though it starts in lower case.",
+            ]
+        );
+        let nested = lines(&[
+            "> > Can you send the final numbers by Friday so that I can put them into",
+            "> > the board pack?",
+            "> Yes, I will have them ready by Thursday afternoon at the latest, and I",
+            "> will copy Priya in as well.",
+        ]);
+        assert_eq!(
+            reflowed(&nested),
+            vec![
+                "Can you send the final numbers by Friday so that I can put them into the board pack?",
+                "Yes, I will have them ready by Thursday afternoon at the latest, and I will copy Priya in as well.",
+            ]
+        );
+        // One quoted line in prose is a quote: it is neither stripped nor joined.
+        let quote = "The reply said, in so many words, that the plan would not work\n> because the budget is too small\nand that we should try again next year with more money";
+        assert_eq!(
+            reflowed(quote),
+            vec![
+                "The reply said, in so many words, that the plan would not work",
+                "> because the budget is too small",
+                "and that we should try again next year with more money",
+            ]
+        );
+    }
+
+    #[test]
+    fn reflow_allows_for_a_selection_that_starts_mid_line() {
+        // The margin before the first word is not copied...
+        let paragraph = lines(&[
+            "The splitter treats every line break as the end of a sentence, so each wrapped",
+            "  line of a terminal selection gets its own pause and its own falling",
+            "  intonation.",
+        ]);
+        assert_eq!(reflowed(&paragraph).len(), 1);
+        // ...nor is the start of the first line.
+        let fragment = lines(&[
+            "its own pause and its own falling",
+            "  intonation. That rule exists so headings and bullets without punctuation still",
+            "  read as sentences.",
+        ]);
+        assert_eq!(reflowed(&fragment).len(), 1);
+    }
+
+    #[test]
+    fn reflow_reads_crlf_and_cr_as_line_breaks() {
+        let text = "A line from a Windows file that was wrapped at seventy characters and\r\n\
+                    then continues on the next line.\r\n\r\nSecond paragraph.\r\n";
+        let expected = "A line from a Windows file that was wrapped at seventy characters and \
+                        then continues on the next line.\n\nSecond paragraph.";
+        assert_eq!(reflow(text), expected);
+        assert_eq!(reflow(&text.replace("\r\n", "\r")), expected);
+    }
+
+    #[test]
+    fn reflow_keeps_tables_and_chat_apart() {
+        let cases = [
+            "Task\tOwner\tStatus\tDue date\nwrite the reflow tests\tazizi\tdone\t2026-10-21\nupdate the changelog\tazizi\tin progress\t2026-10-22",
+            "Setting | Default | Description\n------- | ------- | -----------\nvoice | af_alloy | the voice used for speech\nspeed | 1.0 | how fast the voice reads text aloud",
+            "alice: hey, can you look at the reflow branch when you get a chance\nbob: sure, I am looking at it now and will reply in a minute or two\nalice: thanks, the tests are in text.rs near the bottom",
+            "azizi — Today at 10:42\nhey, can you look at the reflow branch when you get a chance\nsam — Today at 10:43\nsure, looking at it now",
+            "a1b2c3d fix: reflow wrapped lines before sentence splitting\n9f8e7d6 feat: default voice alloy for fresh installs\ne4f5a6b chore: bump version to 0.2.0 for the release",
+            ">>> import mouthy.text as text_module_with_a_long_name_for_wrapping\n>>> text_module_with_a_long_name_for_wrapping.reflow(\"a\\nb\")",
+        ];
+        for text in cases {
+            assert_eq!(reflowed(text).len(), text.lines().count(), "{text}");
+        }
+        let boxed = lines(&[
+            "┌──────────────┬────────────────────────────────────────┐",
+            "│ Setting      │ Description                            │",
+            "├──────────────┼────────────────────────────────────────┤",
+            "│ voice        │ the voice used for speech              │",
+            "│ speed        │ how fast the voice reads text aloud    │",
+            "└──────────────┴────────────────────────────────────────┘",
+        ]);
+        assert_eq!(
+            reflowed(&boxed),
+            vec![
+                "│ Setting      │ Description",
+                "voice        │ the voice used for speech",
+                "speed        │ how fast the voice reads text aloud",
+            ]
+        );
+    }
+
+    #[test]
+    fn reflow_keeps_program_output_apart() {
+        let tests = lines(&[
+            "⏺ Bash(cd src-tauri && cargo test tts::text)",
+            "  ⎿  running 4 tests",
+            "     test tts::text::tests::reflow_keeps_code ... ok",
+            "     test tts::text::tests::reflow_is_idempotent ... ok",
+            "     test tts::text::tests::normalize_reads_wrapped_lines_as_whole_sentences ... ok",
+        ]);
+        assert_eq!(reflowed(&tests).len(), 5);
+        let log = lines(&[
+            "⏺ Bash(git log --oneline -3)",
+            "  ⎿  a1b2c3d fix: reflow wrapped lines before sentence splitting",
+            "     9f8e7d6 feat: default voice alloy for fresh installs",
+            "     e4f5a6b chore: bump version to 0.2.0 for the release",
+        ]);
+        assert_eq!(reflowed(&log).len(), 4);
+    }
+
+    #[test]
+    fn reflow_keeps_a_short_line_that_left_room_for_the_next_word() {
+        let headings = lines(&[
+            "  Changes to the reflow rules in the text module",
+            "  Second heading about the tests that were added",
+            "  The splitter treats every line break as the end of a",
+            "  sentence, so each wrapped line gets its own pause.",
+        ]);
+        assert_eq!(
+            reflowed(&headings),
+            vec![
+                "Changes to the reflow rules in the text module",
+                "Second heading about the tests that were added",
+                "The splitter treats every line break as the end of a sentence, so each wrapped line gets its own pause.",
+            ]
+        );
+        let order = "Thank you for your order, it will ship within two business days\nOrder number: 4821-7734\nestimated delivery is Thursday between 9am and 5pm";
+        assert_eq!(reflowed(order).len(), 3);
+    }
+
+    #[test]
+    fn reflow_keeps_markdown_hard_breaks_and_drops_a_byte_order_mark() {
+        let address = "Mouthy Ltd, Suite 4, The Old Brewery, 12 High Street  \nCambridge CB1 2AB, United Kingdom  \nregistered in England and Wales, company no. 01234567";
+        assert_eq!(reflowed(address).len(), 3);
+        let wrapped =
+            "A line that is long enough to have been wrapped by a terminal  \nand a next line";
+        assert_eq!(reflowed(wrapped).len(), 2);
+        assert_eq!(
+            reflowed("\u{feff}# Release notes for the version shipped this week\nfixes a crash when the clipboard holds an image and nothing is selected"),
+            vec![
+                "# Release notes for the version shipped this week",
+                "fixes a crash when the clipboard holds an image and nothing is selected",
+            ]
+        );
+    }
+
+    #[test]
+    fn reflow_handles_long_and_deeply_quoted_text() {
+        let wrapped =
+            "a line of wrapped prose that goes on for quite a while before it ends\n".repeat(5_000);
+        assert_eq!(reflowed(&wrapped).len(), 1);
+        let deep = format!("{0}x\n{0}y", "> ".repeat(5_000));
+        assert_eq!(reflowed(&deep), vec!["x", "y"]);
+    }
+
+    #[test]
+    fn normalize_reads_wrapped_lines_as_whole_sentences() {
+        let reply = lines(&[
+            "⏺ The splitter treats every line break as the end of a",
+            "  sentence, so each wrapped line of a terminal selection",
+            "  gets its own pause. That rule exists so headings and",
+            "  bullets without punctuation still read as sentences.",
+            "",
+            "  ## What changed in the splitter",
+            "  - Kept the splitter as it was",
+        ]);
+        assert_eq!(
+            sentences(&normalize(&reply)),
+            vec![
+                "The splitter treats every line break as the end of a sentence, so each wrapped line of a terminal selection gets its own pause.",
+                "That rule exists so headings and bullets without punctuation still read as sentences.",
+                "What changed in the splitter",
+                "Kept the splitter as it was",
+            ]
+        );
+        let headings =
+            "Installing the application\nDownload the latest build\nOpen it twice to confirm";
+        assert_eq!(normalize(headings), headings);
     }
 
     #[test]
