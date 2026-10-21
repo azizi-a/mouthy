@@ -255,7 +255,7 @@ fn default_tts_base_url() -> String {
 }
 
 fn default_tts_voice() -> String {
-    "bm_lewis".to_string()
+    "af_alloy".to_string()
 }
 
 fn default_tts_speed() -> f32 {
@@ -685,6 +685,7 @@ mod tests {
         let settings = get_default_settings();
         assert_eq!(settings.tts_backend, TtsBackend::Local);
         assert_eq!(settings.tts_model_variant, ModelVariant::Int8);
+        assert_eq!(settings.tts_voice, "af_alloy");
         assert!(!settings.tts_espeak_fallback);
     }
 
@@ -700,6 +701,7 @@ mod tests {
         let (settings, updated) = parse_stored_settings(stored);
         assert_eq!(settings.tts_backend, TtsBackend::Http);
         assert!(updated, "written back so the choice is explicit");
+        assert_eq!(settings.tts_voice, "bm_lewis");
         assert_eq!(settings.app_language, "en-GB");
     }
 

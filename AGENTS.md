@@ -47,7 +47,7 @@ For platform-specific build setup, see [BUILD.md](BUILD.md).
 
 Mouthy is an offline-first desktop text-to-speech app built with Tauri 2.x (Rust backend + React/TypeScript frontend). It is a fork of Handy with the I/O path inverted: highlight text in any app, press a global hotkey, hear it read aloud; press again to stop.
 
-Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the default for new installs: ONNX Runtime via `ort`, phonemes via `misaki-rs`) from model files downloaded into the app-data `models/` folder, or from an external OpenAI-compatible HTTP server (default `http://127.0.0.1:8880`, `POST /v1/audio/speech`, voice `bm_lewis`); default hotkey ⌥⎋. Bundle identifier: `com.azizi.mouthy`.
+Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the default for new installs: ONNX Runtime via `ort`, phonemes via `misaki-rs`) from model files downloaded into the app-data `models/` folder, or from an external OpenAI-compatible HTTP server (default `http://127.0.0.1:8880`, `POST /v1/audio/speech`, voice `af_alloy`); default hotkey ⌥⎋. Bundle identifier: `com.azizi.mouthy`.
 
 ### Backend Structure (src-tauri/src/)
 

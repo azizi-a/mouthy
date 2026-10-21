@@ -69,7 +69,7 @@
       },
       "voice": {
         "title": "Voice",
-        "description": "Voice name, such as bm_lewis. Type one, or pick from your downloaded voices (Local) or the server's list (HTTP).",
+        "description": "Voice name, such as af_alloy. Type one, or pick from your downloaded voices (Local) or the server's list (HTTP).",
         "choose": "Choose a voice..."
       },
       "espeak": {
@@ -271,7 +271,7 @@
         "kokoro": {
           "title": "Kokoro",
           "description": "Open-weight text-to-speech model",
-          "details": "Mouthy's default voice, bm_lewis, comes from Kokoro-82M by hexgrad (Apache-2.0), which runs inside Mouthy or through Kokoro-FastAPI."
+          "details": "Mouthy's default voice, af_alloy, comes from Kokoro-82M by hexgrad (Apache-2.0), which runs inside Mouthy or through Kokoro-FastAPI."
         },
         "rodio": {
           "title": "rodio",

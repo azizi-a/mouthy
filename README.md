@@ -35,7 +35,7 @@ The built app is `src-tauri/target/release/bundle/macos/Mouthy.app`; copy it to 
 ## First run
 
 1. **Grant Accessibility.** Mouthy copies your selection by sending ⌘C, which needs the Accessibility permission. On first launch it asks for it; enable Mouthy in System Settings → Privacy & Security → Accessibility.
-2. **Download the voice.** Open Settings → Models and click **Download** next to the status line. It fetches the int8 model (92 MB) and the `bm_lewis` voice (0.5 MB). Pressing ⌥⎋ before then shows "Offline voice files are missing", and its Open Settings button goes to the same page.
+2. **Download the voice.** Open Settings → Models and click **Download** next to the status line. It fetches the int8 model (92 MB) and the `af_alloy` voice (0.5 MB). Pressing ⌥⎋ before then shows "Offline voice files are missing", and its Open Settings button goes to the same page.
 
 After that Mouthy needs no network. If the permission misbehaves:
 
@@ -74,7 +74,7 @@ On the Models page you can also download the fp32 model (326 MB; about twice as 
 ```text
 ~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/
 ├── int8.onnx            (fp32.onnx if downloaded)
-└── voices/bm_lewis.bin  (one file per voice)
+└── voices/af_alloy.bin  (one file per voice)
 ```
 
 Voices starting with `b` get British pronunciations, all others American. With Local selected, Mouthy uses about 350 MB of memory once the voice has loaded, 600–850 MB after reading long passages and up to about 1.1 GB after a sentence of 400 characters or more; it keeps that memory while it runs. Kokoro-82M and its voices are released under the Apache License 2.0.
@@ -85,7 +85,7 @@ Words the offline voice's dictionary lacks, such as many names and product terms
 
 ## Using a speech server instead
 
-Set Settings → General → Speech Engine to **HTTP server** to send the text to a local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `bm_lewis` by default; both can be changed in Settings. Check the server is up:
+Set Settings → General → Speech Engine to **HTTP server** to send the text to a local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `af_alloy` by default; both can be changed in Settings. Check the server is up:
 
 ```bash
 curl http://127.0.0.1:8880/v1/audio/voices
