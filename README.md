@@ -111,6 +111,7 @@ With the HTTP engine, Mouthy sends the selected text to the server URL you set; 
 - **⌥⎋ clashes with macOS "Speak selection",** which uses the same key by default. If it is on in System Settings → Accessibility → Spoken Content, turn it off or change either hotkey.
 - **Kokoro-FastAPI can hang.** Some input, such as Chinese text with an English voice, leaves the server listening but never replying, so speech fails with a timeout. Restart the server.
 - **VS Code copies the current line when nothing is selected,** so ⌥⎋ with no selection reads that line.
+- **Nothing is selected after a drag in Claude Code, nvim and other terminal programs** that turn on mouse reporting, which takes the drag from the terminal. Hold Option while dragging in iTerm2, or Shift in Zed and most other terminals. Lines the program wrapped are joined again before reading, so a sentence is not cut at each line end.
 - **The offline voice spells unknown words letter by letter** unless [espeak-ng is on](#better-pronunciation-of-unknown-words), which affects many names, brands and technical terms. Its first words take longer when the first sentence has no early comma.
 - **Clipboard:** rich content (images, files, formatted text) is restored after each copy. A clipboard larger than 16 MB is not restored; it keeps the copied selection instead.
 - **Windows and Linux are untested,** and `Alt+Escape` may already be taken by the window manager there.
