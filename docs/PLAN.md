@@ -600,6 +600,7 @@ From the Intent: voice picker with per-voice preview, voice blending (Kokoro-Fas
 - Models page: "In use" badge while on HTTP; Download button showing the remaining size; `sync_all` on the full-size-partial path; Time Machine exclusion for `models/`; App Nap during hidden downloads (unverified).
 - Pre-existing: when handy-keys cannot start (no Accessibility), `init_shortcuts` reports success and the hotkey is silently dead instead of falling back to Tauri.
 - H4: an in-app warning about the ⌥⎋ clash with Spoken Content, if wanted.
+- **"Speak clipboard" binding:** a second hotkey that reads the clipboard without touching the selection, default ⌥⇧⎋ (user, 2026-10-21). Programs that turn on terminal mouse reporting (Claude Code, nvim, htop) never produce a terminal selection, so speak-selection finds nothing; the user copies inside the program (nvim yank to `+`) and presses this instead. It also reads "what I just copied". A separate binding, not a silent fallback, so a mis-selection never reads stale clipboard text. Reuse the bindings model (`shortcut/mod.rs` default bindings, both backends, `check:translations` for new labels). At implementation, confirm ⌥⇧⎋ is not a macOS system shortcut (⌥⌘⎋ is Force Quit, ⌥⎋ is Spoken Content) and that terminals pass it through harmlessly.
 
 ## Risks & Assumptions
 
@@ -668,6 +669,7 @@ Open Phase 3 items from this list are collected under Phase 3.
 - 2026-10-12 — Removal chain R1–R5 correctness review: 90%, no must-fix. Two items forwarded to T2 (default-binding↔ACTION_MAP test; SIGUSR1 macOS-only), one to T3 (above).
 - P2.7 (DoD step 17): if Bluetooth output clips the first syllable, append ~250 ms of silence to the player when the device opens, while the first chunk synthesises.
 - Phase 3 (licences, P2.3b item 8): bundle ONNX Runtime's third-party notices (Eigen MPL-2.0 with a source pointer, protobuf, abseil), misaki/misaki-rs and Snowball notices; credit ONNX Runtime and misaki on About.
+- 2026-10-21 — Empty selection in terminal programs: root cause is terminal mouse reporting, which swallows the drag. In iTerm2, Option-drag bypasses it. README troubleshooting note not yet written.
 
 ### Stage T1b — fix-ups from the adversary review of R1–R5 + T1 (runs after T2 commits) `[fix]`
 
