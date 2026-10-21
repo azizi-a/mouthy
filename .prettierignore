@@ -18,7 +18,3 @@ src/bindings.ts
 # Misc
 .DS_Store
 *.log
-
-# Planning scratch
-docs/.scout-report.md
-docs/.plan-review-round1.md
