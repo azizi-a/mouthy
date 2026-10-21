@@ -5,6 +5,7 @@ description = "Mouthy"
 authors = ["Azizi Adeyemo", "cjpais"]
 edition = "2021"
 license = "MIT"
+repository = "https://github.com/azizi-a/mouthy"
 default-run = "mouthy"
 
 [profile.dev]

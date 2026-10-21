@@ -2,6 +2,12 @@
   "name": "mouthy-app",
   "private": true,
   "version": "0.2.0",
+  "license": "MIT",
+  "author": "Azizi Adeyemo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azizi-a/mouthy"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
