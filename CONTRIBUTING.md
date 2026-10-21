@@ -5,7 +5,7 @@ Mouthy is in early development. Issues and pull requests are welcome at [azizi-a
 ## Getting started
 
 1. Set up the toolchain and build as described in [BUILD.md](BUILD.md).
-2. Read [AGENTS.md](AGENTS.md) for the architecture and conventions, and [PLAN.md](PLAN.md) for what is in progress.
+2. Read [AGENTS.md](AGENTS.md) for the architecture and conventions, and [docs/PLAN.md](docs/PLAN.md) for what is in progress.
 
 ## Before opening a pull request
 

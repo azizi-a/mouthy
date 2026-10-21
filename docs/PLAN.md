@@ -1,5 +1,7 @@
 # Plan: Fork Handy into Mouthy (Phase 1 — app shell + HTTP backend; Phase 2 — offline Kokoro)
 
+This is the project's living engineering log, kept as the plan of record while the app was built. "Human Asks" are decisions the maintainer made.
+
 Created: 2026-10-12 · Status: confirmed 2026-10-12 (H1 yes, H8 keep handy-keys) · Phase 2 signed off 2026-10-14 (H12) · Complexity: high · Confidence: 82%
 Design lane: not applicable · Intent-critical: yes
 

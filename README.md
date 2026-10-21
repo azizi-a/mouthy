@@ -2,7 +2,7 @@
 
 Mouthy is a free, open-source text-to-speech app for macOS that works offline. Highlight text in any app, press a global hotkey, and hear it read aloud by the Kokoro neural voice running on your Mac; press the hotkey again to stop. Playback starts as soon as the first sentence is ready, and your clipboard is put back the way it was. A local OpenAI-compatible speech server can be used instead.
 
-**Status:** 0.2.0 is the first release, for Apple Silicon Macs. See [PLAN.md](PLAN.md) for progress. Windows and Linux builds compile but are untested.
+**Status:** 0.2.0 is the first release, for Apple Silicon Macs. See [docs/PLAN.md](docs/PLAN.md) for progress. Windows and Linux builds compile but are untested.
 
 ## Install
 
