@@ -9,17 +9,17 @@ Design lane: not applicable · Intent-critical: yes
 
 <!-- Fresh agents read this first. Keep it current. -->
 
-- **v0.3.0 release in progress (2026-10-24):** version bump PR from `chore/release-0.3.0`; build, tag and draft release follow after merge. See Release R2.
-- **v0.2.0 released as a draft (2026-10-14):** unsigned dmg on a draft GitHub release, tag `v0.2.0` pushed; the user publishes it. See Release R1.
+- **v0.3.0 released as a draft (2026-10-24):** unsigned dmg on a draft GitHub release, signed tag `v0.3.0` on `9fc3135` pushed; the user publishes it. See Release R2.
+- **v0.2.0 published (2026-10-15):** unsigned dmg, tag `v0.2.0`. See Release R1.
 - **Phase 2 signed off (2026-10-14).** The user ran `docs/dod-checklist.md` on a second Mac: all steps passed after P2.7 (seam trim, overlay ×) and P2.8 (whole-sentence inference). Final re-test: step 11 sounds like one sentence, memory about 650 MB. Phase 3 starts only after the user says so; candidates are listed under Phase 3.
 - **Default voice `af_alloy` (2026-10-21, PR from `chore/default-voice-alloy`):** fresh stores get `af_alloy` (American English); stored voices are never migrated. The dev app-data holds only `bm_lewis.bin`, and the dev store keeps its stored voice.
 - **Reflow of wrapped lines (P3.0, 2026-10-21, PR from `feat/reflow-wrapped-lines`):** `text::reflow` is the first step of `normalize`, so both engines and the HTTP path get it; it joins hard-wrapped lines and keeps structural breaks. `split_sentences` is unchanged. Nobody has listened to it yet. See Stage P3.0.
 - **Initialisms, capital-start wraps, dotted names (P3.1, 2026-10-24, PR from `fix/initialisms-and-dotted-names`):** the local voice spells initialisms through misaki phoneme overrides, splits camel case and reads a stop inside a name as "dot" (`text::spell_out`, Local only); a wrapped line starting with a capitalised word joins on the fit test alone (both engines). Adversary review fixes are in; titles and common abbreviations ("Dr.", "Mr.", "etc.") are said in full without a stop (`text::expand_abbreviations`, follow-up in Stage P3.1). Nobody has listened yet. See Stage P3.1.
-- **Completed stages:** 0, S1a, S1b, R1, R2, R-snd, R3, R4, R5, T1, T2, T1b, T2b, R6, T3, T3b, T3c, T4, T5 (R-keys skipped, H8); Phase 2: P2.1, P2.2, P2.3, P2.4, P2.3b, P2.5, P2.4b, P2.6, P2.7, P2.8; Release R1; Phase 3: P3.0, P3.1. Details live in each stage's Implementation Notes.
+- **Completed stages:** 0, S1a, S1b, R1, R2, R-snd, R3, R4, R5, T1, T2, T1b, T2b, R6, T3, T3b, T3c, T4, T5 (R-keys skipped, H8); Phase 2: P2.1, P2.2, P2.3, P2.4, P2.3b, P2.5, P2.4b, P2.6, P2.7, P2.8; Release R1; Phase 3: P3.0, P3.1; Release R2. Details live in each stage's Implementation Notes.
 - **Phase 1 complete (2026-10-13):** the user ran the Phase 1 checklist on the built app on a second MacBook Pro; every step behaved as expected (H7 resolved).
 - **Local engine for every store (2026-10-21, PR from `fix/local-engine-default-everywhere`):** `keep_server_backend_for_older_stores` is gone; a store with no or an unreadable `tts_backend` loads as `local`, and a stored `http` is kept. A Phase 1 store now opens on the local engine.
 - **Verified at P2.6** (fresh clone, own `target/`): lint, translations, format, frontend build, `cargo build` (0 compiler warnings), clippy, `cargo test` 194 pass / 4 ignored, `tauri build --bundles app` all green. Baseline before Phase 2: Handy 0.9.8 fork, debug binary 152 MB.
-- **Built app:** `bun run tauri build --bundles app` → `src-tauri/target/release/bundle/macos/Mouthy.app`: 63,336 KB at P2.6, P2.7 and P2.8 (9.6 MB at T5, before ORT and misaki-rs), binary 64,722,960 B, zipped 19.8 MB; version 0.2.0 since Release R1, executable `mouthy`, arm64 only, `LSMinimumSystemVersion` 13.4. Built, never launched by an agent. Quit it before `tauri dev`.
+- **Built app:** `bun run tauri build --bundles app` → `src-tauri/target/release/bundle/macos/Mouthy.app`: 63,336 KB at P2.6, P2.7 and P2.8 (9.6 MB at T5, before ORT and misaki-rs), binary 64,722,960 B, zipped 19.8 MB; version 0.3.0 since Release R2 (63,368 KB, binary 64,754,240 B), executable `mouthy`, arm64 only, `LSMinimumSystemVersion` 13.4. Built, never launched by an agent. Quit it before `tauri dev`.
 - **Environment traps:** a release Handy.app (`com.pais.handy`) is installed; it no longer collides with dev launches. Quit any running release Mouthy.app before `tauri dev`. macOS Spoken Content's hotkey is off on this machine. The agent shell's process tree is not Accessibility-trusted, so handy-keys registers nothing and ⌘C capture fails there (Tauri-backend registration and CLI/signal paths work). The default output was the MacBook Pro speakers at P2.3. App log times are UTC. Kokoro-FastAPI at 127.0.0.1:8880 hung during T2, T3b, T4 and T5 and was slow at P2.3 (1.6–8.2 s for a first sentence); agents never restart or signal it. The dev app-data `models/kokoro-v1.0/` holds `int8.onnx` and `voices/bm_lewis.bin` (sha256 checked). The dev settings store holds `"tts_backend": "http"` (sha256 `aebcebcb…`); stages that set Local for a live run restore it byte for byte. The ORT archive is cached in `~/Library/Caches/ort.pyke.io`.
 - **Bindings export:** `cd src-tauri && perl -e 'alarm 20; exec @ARGV' ./target/debug/mouthy --start-hidden` (exit 142 expected; a full hidden launch with a tray icon for 20 s).
 - **Active constraints:** Phase 2 approved deps only: `ort` (`=2.0.0-rc.14`, upgrade to 2.0 final when released), `misaki-rs` (default-features off), `sha2`, `futures-util`; anything else needs asking; one commit per logical change; every stage passes the per-stage check list; macOS first; delete, don't disable; never commit model files.
@@ -594,11 +594,13 @@ The app process adds ~50–85 MB (P2.3b: 348 MB after the load against ~265 MB h
 
 **Part 1:** one SSH-signed commit `chore(release): v0.3.0` on `chore/release-0.3.0`, opened as a PR to main: version 0.3.0 in `package.json`, `tauri.conf.json`, `Cargo.toml` and `Cargo.lock` (`cargo update -p mouthy --offline`); the changelog's Unreleased block becomes `0.3.0 — 2026-10-24` with an intro line; the README names `Mouthy_0.3.0_aarch64.dmg`. `bun.lock` holds no app version. `docs/listening-test.md` keeps its `0.2.0` line (sample terminal output). Nothing built or tagged.
 
-**Built:** part 2, after the merge.
+**Built:** from main at `9fc3135` (PR #6), `CI=true bun run tauri build` as in R1. `Mouthy.app` 63,368 KB, binary 64,754,240 B, arm64, 0.3.0, `LSMinimumSystemVersion` 13.4; `Mouthy_0.3.0_aarch64.dmg` 19,709,353 B (`hdiutil verify` valid; mounted read-only: `Mouthy.app` identical to the bundle plus an `Applications` link), sha256 `50abffed…186024`. Not launched.
 
-**Signature:** part 2.
+**Signature:** as R1: ad-hoc (`flags=0x10002(adhoc,runtime)`, `TeamIdentifier=not set`); `spctl` rejects the app and the dmg (`no usable signature`).
 
-**Published:** part 2.
+**Published:** signed annotated tag `v0.3.0` on `9fc3135` (the 0.3.0 changelog block) pushed by name; a local Handy `v0.3.0` (`fa41560`, never on origin) was deleted first. Draft release "Mouthy 0.3.0" with the dmg and `SHA256SUMS`, R1's install notes (voice `af_alloy`, the hash written out): https://github.com/azizi-a/mouthy/releases/tag/untagged-165fbf8c6bd2e7dce6bc (the URL changes on publish). Uploaded digests match. Not published.
+
+**Not verified:** installing from the dmg and launching on a clean Mac.
 
 ## Phase 3 (only after the user says so)
 
