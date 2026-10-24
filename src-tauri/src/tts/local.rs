@@ -1078,6 +1078,7 @@ mod tests {
         // Spaced letters would get the article's "ɐ" for this "A".
         assert_eq!(read_gb("I use API keys"), "ˌI jˈuːs ˌApˌiːˈI kˈiːz");
         assert_eq!(read_gb("IDs"), "ˌIdˈiːz");
+        assert_eq!(read_gb("The U.S.'s debt"), "ði jˌuːˈɛsɪz dˈɛt");
         assert_eq!(read_gb("the US government"), "ði jˌuːˈɛs ɡˈʌvənmənt");
         assert_eq!(read_gb("at 7 a.m."), "at sˈɛvən ˌAˈɛm.");
         let us = G2P::new(Language::EnglishUS);

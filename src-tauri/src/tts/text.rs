@@ -1575,6 +1575,17 @@ fn spell_word(word: &str, shouted: bool, last: bool, lexicon: &impl Lexicon, out
         }
         let starts_word = !before.is_some_and(|b| b.is_ascii_alphanumeric() || b == '.');
         if let Some((letters, len)) = starts_word.then(|| dotted_initials(&word[i..])).flatten() {
+            let suffix = apostrophe_after(&word[i + len..]);
+            if suffix == Apostrophe::Other {
+                out.push_str(&word[i..i + len]);
+                i += len;
+                continue;
+            }
+            if suffix == Apostrophe::S {
+                out.push_str(&lexicon.spell(&letters, true));
+                i += len + 2;
+                continue;
+            }
             out.push_str(&lexicon.spell(&letters, false));
             // Only at the very end is the last stop a sentence's.
             if last && !word[i + len..].contains(|c: char| c.is_alphanumeric()) {
@@ -1589,10 +1600,13 @@ fn spell_word(word: &str, shouted: bool, last: bool, lexicon: &impl Lexicon, out
             continue;
         }
         let letters = leading_letters(&word[i..]);
-        let after = &word[i + letters.len()..];
-        // "ID's": the apostrophe and s belong to the initialism.
-        let possessive = ["'s", "'S"].iter().any(|s| after.starts_with(s))
-            && !after[2..].starts_with(|c: char| c.is_ascii_alphanumeric());
+        let suffix = apostrophe_after(&word[i + letters.len()..]);
+        if suffix == Apostrophe::Other {
+            out.push_str(letters);
+            i += letters.len();
+            continue;
+        }
+        let possessive = suffix == Apostrophe::S;
         let suffix_len = if possessive { 2 } else { 0 };
         match say_letters(letters, possessive, shouted, lexicon) {
             Some(said) => {
@@ -1604,6 +1618,24 @@ fn spell_word(word: &str, shouted: bool, last: bool, lexicon: &impl Lexicon, out
                 i += letters.len();
             }
         }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+enum Apostrophe {
+    None,
+    /// "ID's", which joins the initialism.
+    S,
+    /// "ID'd": misaki-rs would read it as one token with the override's
+    /// letters, which voids the override, so the word stays as written.
+    Other,
+}
+
+fn apostrophe_after(text: &str) -> Apostrophe {
+    match text.strip_prefix('\'').map(leading_letters) {
+        Some("s" | "S") => Apostrophe::S,
+        Some(letters) if !letters.is_empty() => Apostrophe::Other,
+        _ => Apostrophe::None,
     }
 }
 
@@ -3202,6 +3234,9 @@ mod tests {
         assert_eq!(spelled("IDs and URLs"), "<I D>s and <U R L>s");
         assert_eq!(spelled("the API's docs"), "the <A P I>s docs");
         assert_eq!(spelled("CPUs, GPUs."), "<C P U>s, <G P U>s.");
+        assert_eq!(spelled("The U.S.'s debt"), "The <U S>s debt");
+        // Any other ending would void the override, so the word stays.
+        assert_eq!(spelled("ID'd and U.S.'d"), "ID'd and U.S.'d");
     }
 
     #[test]
