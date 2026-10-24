@@ -10,11 +10,69 @@ const TERMINATORS: &[char] = &['.', '!', '?', '…'];
 const CLOSERS: &[char] = &['"', '\'', '”', '’', ')', ']', '»'];
 const CLAUSE_BREAKS: &[char] = &[',', ';', ':'];
 const URL_PREFIXES: &[&str] = &["https://", "http://", "www."];
-/// Words whose final "." does not end a sentence; compared case-insensitively.
-const ABBREVIATIONS: &[&str] = &[
-    "dr.", "mr.", "mrs.", "ms.", "st.", "vs.", "e.g.", "i.e.", "etc.", "u.s.", "u.k.", "a.m.",
-    "p.m.", "jan.", "feb.", "mar.", "apr.", "jun.", "jul.", "aug.", "sep.", "sept.", "oct.",
-    "nov.", "dec.",
+/// Besides `ABBREVIATIONS`, words whose final "." does not end a sentence;
+/// compared case-insensitively.
+const INITIALS_AND_MONTHS: &[&str] = &[
+    "e.g.", "i.e.", "u.s.", "u.k.", "a.m.", "p.m.", "jan.", "feb.", "mar.", "apr.", "jun.", "jul.",
+    "aug.", "sep.", "sept.", "oct.", "nov.", "dec.",
+];
+
+/// An abbreviation whose "." does not end a sentence, and which the local
+/// voice says in full: misaki-rs reads every "." as a full stop.
+struct Abbreviation {
+    /// Without the stop; matched case-sensitively when expanding.
+    written: &'static str,
+    said: &'static str,
+    place: Place,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Place {
+    /// Before a capitalised name, with or without the stop ("Dr. Smith", "Dr Who").
+    Title,
+    /// Before a capitalised name, with the stop only ("Gen Z" is no general).
+    DottedTitle,
+    /// May end a sentence ("etc.", "Baker St.", "Smith Jr.").
+    Closing,
+    /// Inside a phrase ("cats vs. dogs").
+    Inline,
+    /// Before a number, with the stop only ("No. 5").
+    Number,
+}
+
+const fn abbreviation(written: &'static str, said: &'static str, place: Place) -> Abbreviation {
+    Abbreviation {
+        written,
+        said,
+        place,
+    }
+}
+
+/// The first entry whose place fits wins, so "St." before a name is "Saint".
+const ABBREVIATIONS: &[Abbreviation] = &[
+    abbreviation("Mr", "Mister", Place::Title),
+    abbreviation("Mrs", "Missus", Place::Title),
+    // misaki spells both "Ms" and "Miz".
+    abbreviation("Ms", "[Ms](/mˈɪz/)", Place::Title),
+    abbreviation("Dr", "Doctor", Place::Title),
+    abbreviation("Prof", "Professor", Place::Title),
+    abbreviation("St", "Saint", Place::Title),
+    abbreviation("Mt", "Mount", Place::Title),
+    abbreviation("Sgt", "Sergeant", Place::Title),
+    abbreviation("Lt", "Lieutenant", Place::Title),
+    abbreviation("Col", "Colonel", Place::Title),
+    abbreviation("Revd", "Reverend", Place::Title),
+    abbreviation("Capt", "Captain", Place::DottedTitle),
+    abbreviation("Gen", "General", Place::DottedTitle),
+    abbreviation("Rev", "Reverend", Place::DottedTitle),
+    abbreviation("Hon", "Honourable", Place::DottedTitle),
+    abbreviation("St", "Street", Place::Closing),
+    abbreviation("Jr", "Junior", Place::Closing),
+    abbreviation("Sr", "Senior", Place::Closing),
+    abbreviation("etc", "et cetera", Place::Closing),
+    abbreviation("vs", "versus", Place::Inline),
+    abbreviation("approx", "approximately", Place::Inline),
+    abbreviation("No", "number", Place::Number),
 ];
 
 /// Turns selected text into something worth reading aloud: hard-wrapped lines
@@ -581,7 +639,7 @@ fn starts_capitalised(body: &str) -> bool {
 fn ends_sentence(body: &str) -> bool {
     let end = body.trim_end_matches(|c: char| CLOSERS.contains(&c) || matches!(c, '*' | '_' | '`'));
     end.ends_with(|c: char| TERMINATORS.contains(&c) || c == ':' || c == ';')
-        && !ends_with_abbreviation(end)
+        && !ends_with_abbreviation(end, "")
 }
 
 /// A word broken at a hyphen; the hyphen stays, since it may belong to a
@@ -725,7 +783,7 @@ fn raw_sentences(text: &str) -> Vec<&str> {
             chars.next();
         }
         let at_break = chars.peek().is_none_or(|&(_, next)| next.is_whitespace());
-        if at_break && !ends_with_abbreviation(&text[start..end]) {
+        if at_break && !ends_with_abbreviation(&text[start..end], &text[end..]) {
             sentences.push(text[start..end].trim());
             start = end;
         }
@@ -735,15 +793,24 @@ fn raw_sentences(text: &str) -> Vec<&str> {
     sentences
 }
 
-fn ends_with_abbreviation(text: &str) -> bool {
+/// Whether `text` ends in an abbreviation, given the text `after` it ("No."
+/// counts only before a number).
+fn ends_with_abbreviation(text: &str, after: &str) -> bool {
     let word = text
         .rsplit(char::is_whitespace)
         .next()
         .unwrap_or_default()
         .trim_start_matches(|c: char| !c.is_alphanumeric());
-    ABBREVIATIONS
+    let before_number = after.trim_start().starts_with(|c: char| c.is_ascii_digit());
+    INITIALS_AND_MONTHS
         .iter()
         .any(|abbreviation| word.eq_ignore_ascii_case(abbreviation))
+        || word.strip_suffix('.').is_some_and(|stem| {
+            ABBREVIATIONS.iter().any(|abbreviation| {
+                stem.eq_ignore_ascii_case(abbreviation.written)
+                    && (abbreviation.place != Place::Number || before_number)
+            })
+        })
 }
 
 /// Cuts at the last clause break (`,;:` then whitespace, so "$1,500" and "10:30"
@@ -1429,6 +1496,78 @@ fn clock(hour: u64, minutes: u64, meridiem: Option<(&str, bool)>) -> Option<Stri
         Some((marker, false)) => format!("{time} {marker}"),
         None => time,
     })
+}
+
+/// Says the titles and abbreviations in `ABBREVIATIONS` in full for the local
+/// voice ("Dr. Smith" → "Doctor Smith"), dropping their stop. A closing word
+/// ("etc.") keeps it at the end of the text or before a capitalised word.
+pub fn expand_abbreviations(text: &str) -> String {
+    let words = whitespace_words(text);
+    let last_spoken = words
+        .iter()
+        .rposition(|(_, word)| word.contains(char::is_alphanumeric));
+    let mut out = String::with_capacity(text.len() + text.len() / 4);
+    let mut copied = 0;
+    for (k, &(start, word)) in words.iter().enumerate() {
+        let next = words.get(k + 1).map(|&(_, next)| next);
+        let at_end = last_spoken.is_none_or(|at| at <= k);
+        if let Some(said) = expand_abbreviation(word, next, at_end) {
+            out.push_str(&text[copied..start]);
+            out.push_str(&said);
+            copied = start + word.len();
+        }
+    }
+    out.push_str(&text[copied..]);
+    out
+}
+
+/// One whitespace-delimited word said in full, or `None` when it is no
+/// abbreviation in this place.
+fn expand_abbreviation(word: &str, next: Option<&str>, at_end: bool) -> Option<String> {
+    let body = word.trim_start_matches(|c: char| !c.is_alphanumeric());
+    let prefix = &word[..word.len() - body.len()];
+    let letters = leading_letters(body);
+    let rest = &body[letters.len()..];
+    let dotted = rest.starts_with('.');
+    let tail = rest.strip_prefix('.').unwrap_or(rest);
+    let starts_digit = |text: &str| text.starts_with(|c: char| c.is_ascii_digit());
+    // "Mr. and Mrs. Smith"
+    let before_name = capitalised(next, false) || matches!(next, Some("and" | "or" | "&"));
+    let fits = |place: Place| match place {
+        Place::Title if dotted => tail.is_empty() && before_name,
+        Place::Title => tail.is_empty() && capitalised(next, true),
+        Place::DottedTitle => dotted && tail.is_empty() && before_name,
+        Place::Closing | Place::Inline => !tail.contains(char::is_alphanumeric),
+        // "No. 5" or "No.5"
+        Place::Number => {
+            dotted && (starts_digit(tail) || tail.is_empty() && next.is_some_and(starts_digit))
+        }
+    };
+    let abbreviation = ABBREVIATIONS
+        .iter()
+        .find(|abbreviation| abbreviation.written == letters && fits(abbreviation.place))?;
+    let closes = tail.chars().all(|c| CLOSERS.contains(&c));
+    let keeps_stop = dotted
+        && closes
+        && match abbreviation.place {
+            Place::Closing => at_end || capitalised(next, false),
+            Place::Inline => at_end,
+            _ => false,
+        };
+    let stop = if keeps_stop { "." } else { "" };
+    let space = if starts_digit(tail) { " " } else { "" };
+    Some(format!("{prefix}{}{stop}{space}{tail}", abbreviation.said))
+}
+
+/// The word starts with a capital, after any opening quote or bracket; with
+/// `name`, a capital then a small letter ("Who", not "A").
+fn capitalised(word: Option<&str>, name: bool) -> bool {
+    let mut chars = word
+        .unwrap_or_default()
+        .trim_start_matches(['"', '\'', '('])
+        .chars();
+    chars.next().is_some_and(char::is_uppercase)
+        && (!name || chars.next().is_some_and(char::is_lowercase))
 }
 
 /// What `spell_out` asks of the local voice's lexicon.
@@ -2647,6 +2786,15 @@ mod tests {
                 "Mrs. Jones vs. Mr. Brown is next.",
             ]
         );
+        assert_eq!(
+            sentences("It holds approx. ten. Ask Prof. Lee for No. 5 now. Nobody would say no. Then we all walked home."),
+            vec![
+                "It holds approx. ten.",
+                "Ask Prof. Lee for No. 5 now.",
+                "Nobody would say no.",
+                "Then we all walked home.",
+            ]
+        );
     }
 
     #[test]
@@ -3455,6 +3603,73 @@ mod tests {
             "end.)",
         ] {
             assert_eq!(spelled(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn titles_are_said_in_full_without_their_stop() {
+        let said = expand_abbreviations;
+        assert_eq!(
+            said("Dr. Smith met Mr. Jones at 7.30pm."),
+            "Doctor Smith met Mister Jones at 7.30pm."
+        );
+        assert_eq!(said("Mrs. Robinson"), "Missus Robinson");
+        assert_eq!(
+            said("Dr Who and Ms Smith"),
+            "Doctor Who and [Ms](/mˈɪz/) Smith"
+        );
+        assert_eq!(said("Mr. and Mrs. Smith"), "Mister and Missus Smith");
+        assert_eq!(said("(Prof. J. Lee)"), "(Professor J. Lee)");
+        assert_eq!(
+            said("Gen. Lee and Capt. Kirk"),
+            "General Lee and Captain Kirk"
+        );
+        // Without a name after them, or without the stop where that is no title.
+        for kept in [
+            "Gen Z",
+            "Col A",
+            "Rev. 2",
+            "Mr",
+            "the Dr.",
+            "MR. SMITH",
+            "Dr.Smith",
+            "mr. x",
+        ] {
+            assert_eq!(said(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn saint_before_a_name_street_after_one() {
+        let said = expand_abbreviations;
+        assert_eq!(said("St. John's"), "Saint John's");
+        assert_eq!(said("St John's"), "Saint John's");
+        assert_eq!(said("Baker St. is long."), "Baker Street is long.");
+        assert_eq!(said("I live on Baker St."), "I live on Baker Street.");
+        assert_eq!(said("Smith Jr., the son"), "Smith Junior, the son");
+    }
+
+    #[test]
+    fn closing_abbreviations_keep_a_stop_that_ends_a_sentence() {
+        let said = expand_abbreviations;
+        assert_eq!(
+            said("fruit, veg, etc. Then we left."),
+            "fruit, veg, et cetera. Then we left."
+        );
+        assert_eq!(
+            said("fruit, veg, etc., and more"),
+            "fruit, veg, et cetera, and more"
+        );
+        assert_eq!(said("fruit, etc. and more"), "fruit, et cetera and more");
+        assert_eq!(said("(fruit, etc.)"), "(fruit, et cetera.)");
+        assert_eq!(said("fruit etc"), "fruit et cetera");
+        assert_eq!(
+            said("cats vs. Dogs, approx. ten vs dogs approx."),
+            "cats versus Dogs, approximately ten versus dogs approximately."
+        );
+        assert_eq!(said("No. 5 and No.7"), "number 5 and number 7");
+        for kept in ["No. Thanks.", "No.", "VS Code", "Etc."] {
+            assert_eq!(said(kept), kept, "{kept}");
         }
     }
 

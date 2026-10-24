@@ -5,7 +5,7 @@
 //! sessions; one session at a time holds it.
 
 use super::espeak;
-use super::text::{self, expand_numbers, joins_numbers, spell_out};
+use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out};
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
@@ -654,10 +654,11 @@ fn text_to_ids(g2p: &G2P, dialect: Dialect, text: &str) -> Result<(Vec<i64>, usi
     Ok(token_ids(&to_kokoro_phonemes(&raw, dialect)))
 }
 
-/// `text` as misaki-rs should get it: plain characters, numbers in words and
-/// initialisms spelled.
+/// `text` as misaki-rs should get it: plain characters, abbreviations and
+/// numbers in words and initialisms spelled.
 fn reading(g2p: &G2P, text: &str) -> String {
-    spell_out(&expand_numbers(&plain_text(text)), &g2p.lexicon)
+    let words = expand_numbers(&expand_abbreviations(&plain_text(text)));
+    spell_out(&words, &g2p.lexicon)
 }
 
 /// Initialisms read as misaki reads a proper noun it spells: each letter's
@@ -1139,6 +1140,21 @@ mod tests {
             read_gb("Get v2.0 or 3.14"),
             read_gb("Get version two point zero or three point one four")
         );
+    }
+
+    #[test]
+    fn titles_and_abbreviations_lose_their_stop() {
+        let g2p = G2P::new(Language::EnglishGB);
+        let sentence = "Dr. Smith met Mr. Jones at 7.30pm.";
+        assert_eq!(
+            reading(&g2p, sentence),
+            "Doctor Smith met Mister Jones at seven thirty PM."
+        );
+        let read_gb = |text| read(&g2p, Dialect::British, text);
+        assert_eq!(read_gb(sentence).matches('.').count(), 1);
+        assert_eq!(read_gb("Ms. Smith"), "mˈɪz smˈɪθ");
+        assert_eq!(read_gb("Baker St. is long."), "bˈAkə stɹˈiːt ɪz lˈɒŋ.");
+        assert_eq!(read_gb("fruit, etc. Then"), "fɹˈuːt, ˈɛt sˈɛtəɹə. ðˈɛn");
     }
 
     #[test]
@@ -1627,9 +1643,12 @@ mod tests {
                 "Call the API URL.",
                 "NASA launched it.",
                 "Update to iOS 17.",
+                "Dr. Smith met Mr. Jones at 7.30pm.",
             ] {
                 assert!(seconds(text) > 0.5, "{text}");
             }
+            let titles = read(&g2p, dialect, "Dr. Smith met Mr. Jones at 7.30pm.");
+            assert_eq!(titles.matches('.').count(), 1, "{titles}");
             // Letter names take longer than the one syllable of "earl".
             let spelled = seconds("URL");
             let word = seconds("earl");
