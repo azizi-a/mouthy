@@ -1426,8 +1426,10 @@ const SAID_AS_WORDS: &[(&str, &str)] = &[
     ("AJAX", "ajax"),
     ("CORS", "cors"),
     ("CUDA", "cuda"),
+    ("FIXME", "fix me"),
     ("JSON", "jason"),
     ("README", "read me"),
+    ("TODO", "to do"),
     ("TOML", "tom el"),
     ("UNIX", "unix"),
     ("YAML", "yam el"),
@@ -3226,6 +3228,7 @@ mod tests {
         assert_eq!(spelled("JSON and YAML"), "jason and yam el");
         assert_eq!(spelled("a json file"), "a jason file");
         assert_eq!(spelled("JSONs"), "jasons");
+        assert_eq!(spelled("TODO: FIXME"), "to do: fix me");
         assert_eq!(spelled("Json"), "Json");
     }
 
