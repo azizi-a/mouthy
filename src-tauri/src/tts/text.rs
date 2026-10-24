@@ -1405,6 +1405,242 @@ fn clock(hour: u64, minutes: u64, meridiem: Option<(&str, bool)>) -> Option<Stri
     })
 }
 
+/// What `spell_out` asks of the local voice's lexicon.
+pub trait Lexicon {
+    /// Whether it has an entry for `word` with exactly these capitals.
+    fn has(&self, word: &str) -> bool;
+    /// Text the phonemiser reads as the names of `letters` (ASCII capitals),
+    /// ending in an "s" sound when `plural`.
+    fn spell(&self, letters: &str, plural: bool) -> String;
+}
+
+/// Initialisms whose letters also spell a word the lexicon has. Next to
+/// lower-case words they are the initialism ("your ID", "the US", "mac OS");
+/// next to other capitals, a shouted word ("DO IT NOW").
+const INITIALISMS_THAT_SPELL_WORDS: &[&str] = &[
+    "AD", "AM", "BA", "BI", "COO", "ER", "ETA", "ID", "IDE", "IT", "LED", "MA", "OS", "PA", "SEC",
+    "US",
+];
+/// Said as words but missing from the lexicon, and a spelling it reads that way.
+const SAID_AS_WORDS: &[(&str, &str)] = &[
+    ("AJAX", "ajax"),
+    ("CORS", "cors"),
+    ("CUDA", "cuda"),
+    ("JSON", "jason"),
+    ("TOML", "tom el"),
+    ("UNIX", "unix"),
+    ("YAML", "yam el"),
+];
+/// Longer capitals with a vowel are read as a word ("UNESCO").
+const MAX_SPELLED_LETTERS: usize = 4;
+
+/// Rewrites, for the local voice, words its phonemiser would misread:
+/// initialisms are spelled letter by letter ("ID", "the API URL", "IDs") and
+/// words joined in camel case are split ("GitHub", "macOS", "HTMLParser").
+/// Words the lexicon has as written ("NASA", "iOS", "McDonald") and capitals
+/// that spell an English word ("NOTE", "DO NOT") are left as they are.
+pub fn spell_out(text: &str, lexicon: &impl Lexicon) -> String {
+    let words = whitespace_words(text);
+    let mut out = String::with_capacity(text.len() + text.len() / 2);
+    let mut copied = 0;
+    for (k, &(start, word)) in words.iter().enumerate() {
+        out.push_str(&text[copied..start]);
+        copied = start + word.len();
+        let shouted_before = k > 0
+            && word.starts_with(|c: char| c.is_ascii_alphabetic())
+            && is_shouted_word(trailing_letters(words[k - 1].1), lexicon);
+        let shouted_after = word.ends_with(|c: char| c.is_ascii_alphabetic())
+            && words
+                .get(k + 1)
+                .is_some_and(|&(_, next)| is_shouted_word(leading_letters(next), lexicon));
+        spell_word(word, shouted_before || shouted_after, lexicon, &mut out);
+    }
+    out.push_str(&text[copied..]);
+    out
+}
+
+/// Each run of non-whitespace and the byte offset it starts at.
+fn whitespace_words(text: &str) -> Vec<(usize, &str)> {
+    let mut words = Vec::new();
+    let mut start = None;
+    for (i, c) in text.char_indices() {
+        match (c.is_whitespace(), start) {
+            (false, None) => start = Some(i),
+            (true, Some(from)) => {
+                words.push((from, &text[from..i]));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(from) = start {
+        words.push((from, &text[from..]));
+    }
+    words
+}
+
+fn leading_letters(word: &str) -> &str {
+    let len = word.bytes().take_while(u8::is_ascii_alphabetic).count();
+    &word[..len]
+}
+
+fn trailing_letters(word: &str) -> &str {
+    let len = word
+        .bytes()
+        .rev()
+        .take_while(u8::is_ascii_alphabetic)
+        .count();
+    &word[word.len() - len..]
+}
+
+/// An English word in capitals, or the pronoun "I" or article "A".
+fn is_shouted_word(word: &str, lexicon: &impl Lexicon) -> bool {
+    matches!(word, "I" | "A")
+        || (word.len() >= 2 && is_capitals(word) && knows_as_word(word, lexicon))
+}
+
+fn is_capitals(word: &str) -> bool {
+    word.bytes().all(|b| b.is_ascii_uppercase())
+}
+
+/// The lexicon has the word as written, in lower case or capitalised.
+fn knows_as_word(capitals: &str, lexicon: &impl Lexicon) -> bool {
+    let lower = capitals.to_ascii_lowercase();
+    let capitalised = format!("{}{}", &capitals[..1], &lower[1..]);
+    lexicon.has(capitals) || lexicon.has(&lower) || lexicon.has(&capitalised)
+}
+
+/// Rewrites each run of ASCII letters in one whitespace-delimited word.
+fn spell_word(word: &str, shouted: bool, lexicon: &impl Lexicon, out: &mut String) {
+    let mut i = 0;
+    while let Some(c) = word[i..].chars().next() {
+        if !c.is_ascii_alphabetic() {
+            out.push(c);
+            i += c.len_utf8();
+            continue;
+        }
+        let letters = leading_letters(&word[i..]);
+        let after = &word[i + letters.len()..];
+        // "ID's": the apostrophe and s belong to the initialism.
+        let possessive = ["'s", "'S"].iter().any(|s| after.starts_with(s))
+            && !after[2..].starts_with(|c: char| c.is_ascii_alphanumeric());
+        let suffix_len = if possessive { 2 } else { 0 };
+        match say_letters(letters, possessive, shouted, lexicon) {
+            Some(said) => {
+                out.push_str(&said);
+                i += letters.len() + suffix_len;
+            }
+            None => {
+                out.push_str(letters);
+                i += letters.len();
+            }
+        }
+    }
+}
+
+/// What to say for a run of letters, or `None` to leave it as written.
+/// `possessive`: an "'s" follows, which the result then includes.
+fn say_letters(
+    letters: &str,
+    possessive: bool,
+    shouted: bool,
+    lexicon: &impl Lexicon,
+) -> Option<String> {
+    if letters.len() >= 2 && is_capitals(letters) {
+        return say_capitals(letters, possessive, shouted, lexicon);
+    }
+    // "URLs": capitals with a plural s.
+    if let Some(stem) = letters.strip_suffix('s') {
+        if stem.len() >= 2 && is_capitals(stem) && !possessive {
+            return say_capitals(stem, true, shouted, lexicon);
+        }
+    }
+    let respelt = SAID_AS_WORDS
+        .iter()
+        .find(|(capitals, _)| capitals.eq_ignore_ascii_case(letters))
+        .filter(|_| letters.bytes().all(|b| b.is_ascii_lowercase()));
+    if let Some((_, said)) = respelt {
+        return Some(with_suffix(said, possessive));
+    }
+    let parts = camel_parts(letters, lexicon);
+    if parts.len() < 2 {
+        return None;
+    }
+    let last = parts.len() - 1;
+    let said: Vec<String> = parts
+        .iter()
+        .enumerate()
+        .map(|(n, part)| {
+            let possessive = possessive && n == last;
+            let capitals = part.len() >= 2 && is_capitals(part);
+            capitals
+                .then(|| say_capitals(part, possessive, false, lexicon))
+                .flatten()
+                .unwrap_or_else(|| with_suffix(part, possessive))
+        })
+        .collect();
+    Some(said.join(" "))
+}
+
+fn with_suffix(word: &str, possessive: bool) -> String {
+    if possessive {
+        format!("{word}'s")
+    } else {
+        word.to_string()
+    }
+}
+
+/// An all-capital word: spelled unless it is said as a word. `plural` covers
+/// an "s" or "'s" after it.
+fn say_capitals(
+    capitals: &str,
+    plural: bool,
+    shouted: bool,
+    lexicon: &impl Lexicon,
+) -> Option<String> {
+    if let Some((_, said)) = SAID_AS_WORDS.iter().find(|(word, _)| *word == capitals) {
+        return Some(if plural {
+            format!("{said}s")
+        } else {
+            said.to_string()
+        });
+    }
+    let spell = if INITIALISMS_THAT_SPELL_WORDS.contains(&capitals) {
+        !shouted
+    } else {
+        !knows_as_word(capitals, lexicon)
+            && (capitals.len() <= MAX_SPELLED_LETTERS
+                || !capitals.contains(['A', 'E', 'I', 'O', 'U', 'Y']))
+    };
+    spell.then(|| lexicon.spell(capitals, plural))
+}
+
+/// A word in camel case cut where a lower-case letter meets a capital
+/// ("Git|Hub") and before the last capital of a run followed by two lower-case
+/// letters ("HTML|Parser", but not "IPv6" or "IDs"). Words the lexicon has as
+/// written ("iOS", "YouTube") and "Mc" names stay whole.
+fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
+    if lexicon.has(word) || word.starts_with("Mc") {
+        return vec![word];
+    }
+    let b = word.as_bytes();
+    let mut parts = Vec::new();
+    let mut start = 0;
+    for i in 1..b.len() {
+        let lower_to_upper = b[i - 1].is_ascii_lowercase() && b[i].is_ascii_uppercase();
+        let upper_run_ends = b[i - 1].is_ascii_uppercase()
+            && b[i].is_ascii_uppercase()
+            && b.get(i + 1).is_some_and(u8::is_ascii_lowercase)
+            && b.get(i + 2).is_some_and(u8::is_ascii_lowercase);
+        if lower_to_upper || upper_run_ends {
+            parts.push(&word[start..i]);
+            start = i;
+        }
+    }
+    parts.push(&word[start..]);
+    parts
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2759,5 +2995,139 @@ mod tests {
         );
         assert_eq!(cardinal(1_000_000_000_000), None);
         assert_eq!(expand_numbers("$1000000000000"), "$1000000000000");
+    }
+
+    /// A lexicon with a few entries that marks spelled letters `<A P I>`.
+    struct Words(&'static [&'static str]);
+
+    impl Lexicon for Words {
+        fn has(&self, word: &str) -> bool {
+            self.0.contains(&word)
+        }
+
+        fn spell(&self, letters: &str, plural: bool) -> String {
+            let spaced: Vec<String> = letters.chars().map(String::from).collect();
+            let s = if plural { "s" } else { "" };
+            format!("<{}>{s}", spaced.join(" "))
+        }
+    }
+
+    const WORDS: Words = Words(&[
+        "NASA", "GIF", "RAM", "covid", "iOS", "YouTube", "McDonald", "IT", "US", "ID", "OS", "AM",
+        "it", "us", "id", "do", "not", "now", "let", "know", "note", "must", "the", "you", "here",
+        "arm", "pm", "readme",
+    ]);
+
+    fn spelled(text: &str) -> String {
+        spell_out(text, &WORDS)
+    }
+
+    #[test]
+    fn initialisms_are_spelled() {
+        assert_eq!(
+            spelled("Copy the ID from the URL."),
+            "Copy the <I D> from the <U R L>."
+        );
+        assert_eq!(spelled("the API URL"), "the <A P I> <U R L>");
+        assert_eq!(spelled("I use API keys"), "I use <A P I> keys");
+        assert_eq!(spelled("(HTTPS)"), "(<H T T P S>)");
+    }
+
+    #[test]
+    fn a_plural_or_possessive_s_joins_the_initialism() {
+        assert_eq!(spelled("IDs and URLs"), "<I D>s and <U R L>s");
+        assert_eq!(spelled("the API's docs"), "the <A P I>s docs");
+        assert_eq!(spelled("CPUs, GPUs."), "<C P U>s, <G P U>s.");
+    }
+
+    #[test]
+    fn capitals_the_lexicon_reads_as_words_stay() {
+        for kept in [
+            "NASA and GIF",
+            "more RAM",
+            "NOTE: you MUST",
+            "DO NOT",
+            "ARM64",
+            "seven PM",
+        ] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn longer_capitals_are_a_word_when_they_have_a_vowel() {
+        assert_eq!(spelled("UNESCO and README"), "UNESCO and README");
+        assert_eq!(spelled("HTTPS"), "<H T T P S>");
+        assert_eq!(spelled("WWDC"), "<W W D C>");
+    }
+
+    #[test]
+    fn single_letters_stay() {
+        for kept in ["I think a B is fine", "Plan A", "x", "3D", "H2O"] {
+            assert_eq!(spelled(kept), kept);
+        }
+    }
+
+    #[test]
+    fn an_initialism_that_spells_a_word_is_a_word_among_capitals() {
+        assert_eq!(spelled("the IT team"), "the <I T> team");
+        assert_eq!(spelled("the US and the UK"), "the <U S> and the <U K>");
+        assert_eq!(spelled("seven AM"), "seven <A M>");
+        for kept in ["DO IT NOW", "LET US KNOW", "I AM here", "DO IT, now"] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+        // A comma or an unknown initialism is no shouted neighbour.
+        assert_eq!(spelled("IT, US"), "<I T>, <U S>");
+        assert_eq!(spelled("the API ID"), "the <A P I> <I D>");
+    }
+
+    #[test]
+    fn camel_case_is_split_into_words() {
+        assert_eq!(spelled("GitHub"), "Git Hub");
+        assert_eq!(spelled("macOS"), "mac <O S>");
+        assert_eq!(spelled("HTMLParser"), "<H T M L> Parser");
+        assert_eq!(spelled("iPhone"), "i Phone");
+        assert_eq!(spelled("OAuth"), "O Auth");
+        assert_eq!(spelled("XMLHttpRequest"), "<X M L> Http Request");
+        assert_eq!(spelled("GitHub's API"), "Git Hub's <A P I>");
+    }
+
+    #[test]
+    fn camel_case_the_lexicon_has_stays_whole() {
+        for kept in [
+            "iOS 17", "YouTube", "McDonald", "McKinsey", "IPv6", "Hello", "hello",
+        ] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn acronyms_said_as_words_are_respelt() {
+        assert_eq!(spelled("JSON and YAML"), "jason and yam el");
+        assert_eq!(spelled("a json file"), "a jason file");
+        assert_eq!(spelled("JSONs"), "jasons");
+        assert_eq!(spelled("Json"), "Json");
+    }
+
+    #[test]
+    fn letters_next_to_digits_and_punctuation_are_spelled_alone() {
+        assert_eq!(spelled("MP3 and ID3"), "<M P>3 and <I D>3");
+        assert_eq!(spelled("URL: here"), "<U R L>: here");
+        assert_eq!(spelled("EC2-API"), "<E C>2-<A P I>");
+        assert_eq!(spelled("COVID-19"), "COVID-19");
+    }
+
+    #[test]
+    fn spelling_keeps_every_other_character() {
+        for kept in [
+            "",
+            "   ",
+            "café ünïcode 日本",
+            "don't O'Reilly",
+            "a\tb\n c ",
+        ] {
+            assert_eq!(spelled(kept), kept);
+        }
+        assert_eq!(spelled("  the  ID\n"), "  the  <I D>\n");
     }
 }

@@ -5,10 +5,11 @@
 //! sessions; one session at a time holds it.
 
 use super::espeak;
-use super::text::{expand_numbers, joins_numbers};
+use super::text::{self, expand_numbers, joins_numbers, spell_out};
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
+use misaki_rs::lexicon::{Lexicon, PhonemeEntry};
 use misaki_rs::{Language, G2P};
 use ort::environment::Environment;
 use ort::logging::LogLevel;
@@ -648,9 +649,54 @@ fn style_row(rows: &[f32], tokens: usize) -> &[f32] {
 /// Kokoro ids for `text`, and how many symbols had no id.
 fn text_to_ids(g2p: &G2P, dialect: Dialect, text: &str) -> Result<(Vec<i64>, usize), String> {
     let (raw, _) = g2p
-        .g2p(&expand_numbers(&plain_text(text)))
+        .g2p(&reading(g2p, text))
         .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
     Ok(token_ids(&to_kokoro_phonemes(&raw, dialect)))
+}
+
+/// `text` as misaki-rs should get it: plain characters, numbers in words and
+/// initialisms spelled.
+fn reading(g2p: &G2P, text: &str) -> String {
+    spell_out(&expand_numbers(&plain_text(text)), &g2p.lexicon)
+}
+
+/// Initialisms read as misaki reads a proper noun it spells: each letter's
+/// name from the gold lexicon, the last one stressed ("ˌApˌiːˈI"). They reach
+/// misaki as a `[letters](/phonemes/)` override, because its tagger misreads
+/// spaced letters: "I use A P I keys" tags the "A" as an article, "ɐ".
+impl text::Lexicon for Lexicon {
+    fn has(&self, word: &str) -> bool {
+        self.golds.contains_key(word)
+    }
+
+    fn spell(&self, letters: &str, plural: bool) -> String {
+        let names: Option<String> = letters
+            .chars()
+            .map(|c| match self.golds.get(&c.to_string()) {
+                Some(PhonemeEntry::Simple(name)) => Some(name.as_str()),
+                _ => None,
+            })
+            .collect();
+        let Some(names) = names else {
+            return letters
+                .chars()
+                .map(String::from)
+                .collect::<Vec<_>>()
+                .join(" ");
+        };
+        // misaki's `get_nnp`: every stress secondary, then the last primary.
+        let mut phonemes = self.apply_stress(&names, Some(0.0));
+        if let Some(at) = phonemes.rfind('ˌ') {
+            phonemes.replace_range(at..at + 'ˌ'.len_utf8(), "ˈ");
+        }
+        let s = if plural {
+            phonemes = self.append_s(&phonemes);
+            "s"
+        } else {
+            ""
+        };
+        format!("[{letters}{s}](/{phonemes}/)")
+    }
 }
 
 /// Accented and ligature letters as the plain letters misaki-rs looks up;
@@ -842,7 +888,6 @@ mod tests {
     use super::*;
     use crate::tts::text::split_sentences;
     use misaki_rs::fallback::FallbackError;
-    use misaki_rs::lexicon::PhonemeEntry;
     use misaki_rs::Fallback;
     use std::collections::{BTreeSet, HashMap};
 
@@ -1012,6 +1057,77 @@ mod tests {
         assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
         // Not after a plain letter: left for misaki-rs.
         assert_eq!(plain_text("日\u{301}"), "日\u{301}");
+    }
+
+    /// Kokoro symbols for `text` as the local voice reads it.
+    fn read(g2p: &G2P, dialect: Dialect, text: &str) -> String {
+        let (raw, _) = g2p.g2p(&reading(g2p, text)).unwrap();
+        to_kokoro_phonemes(&raw, dialect)
+    }
+
+    #[test]
+    fn initialisms_read_as_letter_names() {
+        let gb = G2P::new(Language::EnglishGB);
+        let read_gb = |text| read(&gb, Dialect::British, text);
+        assert_eq!(read_gb("Your ID"), "jˌɔː ˌIdˈiː");
+        assert_eq!(read_gb("the API URL"), "ði ˌApˌiːˈI jˌuːˌɑːˈɛl");
+        // Spaced letters would get the article's "ɐ" for this "A".
+        assert_eq!(read_gb("I use API keys"), "ˌI jˈuːs ˌApˌiːˈI kˈiːz");
+        assert_eq!(read_gb("IDs"), "ˌIdˈiːz");
+        assert_eq!(read_gb("the US government"), "ði jˌuːˈɛs ɡˈʌvənmənt");
+        assert_eq!(read_gb("at 7 a.m."), "at sˈɛvən ˌAˈɛm.");
+        let us = G2P::new(Language::EnglishUS);
+        assert_eq!(read(&us, Dialect::American, "Your ID"), "jˌʊɹ ˌIdˈi");
+        assert_eq!(read(&us, Dialect::American, "macOS"), "mˈæk ˌOˈɛs");
+    }
+
+    #[test]
+    fn words_in_capitals_and_known_names_read_as_before() {
+        let g2p = G2P::new(Language::EnglishGB);
+        for text in [
+            "NASA",
+            "RAM",
+            "GIF",
+            "iOS 17",
+            "DO IT NOW",
+            "UNESCO",
+            "COVID-19",
+        ] {
+            let (raw, _) = g2p.g2p(text).unwrap();
+            assert_eq!(
+                read(&g2p, Dialect::British, text),
+                to_kokoro_phonemes(&raw, Dialect::British),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn camel_case_reads_as_its_words() {
+        let g2p = G2P::new(Language::EnglishGB);
+        let read_gb = |text| read(&g2p, Dialect::British, text);
+        assert_eq!(read_gb("GitHub"), read_gb("Git Hub"));
+        assert_eq!(read_gb("HTMLParser"), "ˌAʧtˌiːˌɛmˈɛl pˈɑːsə");
+        assert_eq!(read_gb("iPhone"), "ˈI fˈQn");
+        assert_eq!(read_gb("JSON"), "ʤˈAsᵊn");
+        assert_eq!(read_gb("YAML"), "jˈam ˌɛl");
+    }
+
+    #[test]
+    fn every_letter_has_a_stressed_name_in_both_lexicons() {
+        for gold in [
+            misaki_rs::data::load_gb_gold(),
+            misaki_rs::data::load_us_gold(),
+        ] {
+            for letter in 'A'..='Z' {
+                match gold.get(&letter.to_string()) {
+                    Some(PhonemeEntry::Simple(name)) => {
+                        assert!(name.contains('ˈ'), "{letter}: {name}")
+                    }
+                    other => panic!("{letter}: {other:?}"),
+                }
+            }
+        }
     }
 
     #[test]
@@ -1383,7 +1499,7 @@ mod tests {
         let plain = G2P::new(Language::EnglishGB);
         let (mut oov, mut read_by_espeak) = (0, 0);
         for text in CORPUS {
-            let (raw, _) = g2p.g2p(&expand_numbers(&plain_text(text))).unwrap();
+            let (raw, _) = g2p.g2p(&reading(&g2p, text)).unwrap();
             let phonemes = to_kokoro_phonemes(&raw, Dialect::British);
             let words = std::mem::take(&mut *unknown.lock().unwrap());
             println!("{text}\n  {phonemes}\n  not in the lexicon: {words:?}");
@@ -1417,6 +1533,45 @@ mod tests {
         let stopped = Arc::new(AtomicBool::new(true));
         let error = open(&files, &stopped).err().unwrap();
         assert!(error.starts_with("Stopped"), "{error}");
+    }
+
+    /// Prints how each dialect reads initialisms, with the audio's length:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored initialisms --nocapture`.
+    #[test]
+    #[ignore = "needs Kokoro model files"]
+    fn local_voice_reads_initialisms() {
+        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let stop = Arc::new(AtomicBool::new(false));
+        for (voice, language) in [
+            ("bm_lewis", Language::EnglishGB),
+            ("af_alloy", Language::EnglishUS),
+        ] {
+            let g2p = G2P::new(language);
+            let dialect = Dialect::for_voice(voice);
+            let files = ModelFiles::new(&models, ModelVariant::Int8, voice);
+            let mut loaded = open(&files, &stop).unwrap();
+            let mut seconds = |text: &str| {
+                let samples = loaded.synthesize(text, 1.0, true).unwrap();
+                let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
+                println!(
+                    "{voice} {text:32} {seconds:.2} s  {}",
+                    read(&g2p, dialect, text)
+                );
+                seconds
+            };
+            for text in [
+                "Install macOS.",
+                "Call the API URL.",
+                "NASA launched it.",
+                "Update to iOS 17.",
+            ] {
+                assert!(seconds(text) > 0.5, "{text}");
+            }
+            // Letter names take longer than the one syllable of the word "id".
+            let spelled = seconds("ID");
+            let word = seconds("[id](/ˈɪd/)");
+            assert!(spelled > word + 0.1, "{spelled} s against {word} s");
+        }
     }
 
     /// Needs the model files: `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored local`.
