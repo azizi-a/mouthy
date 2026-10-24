@@ -1427,6 +1427,7 @@ const SAID_AS_WORDS: &[(&str, &str)] = &[
     ("CORS", "cors"),
     ("CUDA", "cuda"),
     ("JSON", "jason"),
+    ("README", "read me"),
     ("TOML", "tom el"),
     ("UNIX", "unix"),
     ("YAML", "yam el"),
@@ -1435,10 +1436,12 @@ const SAID_AS_WORDS: &[(&str, &str)] = &[
 const MAX_SPELLED_LETTERS: usize = 4;
 
 /// Rewrites, for the local voice, words its phonemiser would misread:
-/// initialisms are spelled letter by letter ("ID", "the API URL", "IDs") and
-/// words joined in camel case are split ("GitHub", "macOS", "HTMLParser").
-/// Words the lexicon has as written ("NASA", "iOS", "McDonald") and capitals
-/// that spell an English word ("NOTE", "DO NOT") are left as they are.
+/// initialisms are spelled letter by letter ("ID", "the API URL", "IDs",
+/// "U.S."), words joined in camel case are split ("GitHub", "macOS",
+/// "HTMLParser") and a full stop inside a name is read "dot" ("Node.js",
+/// ".env"), where the phonemiser would end a sentence. Words the lexicon has
+/// as written ("NASA", "iOS", "McDonald") and capitals that spell an English
+/// word ("NOTE", "DO NOT") are left as they are.
 pub fn spell_out(text: &str, lexicon: &impl Lexicon) -> String {
     let words = whitespace_words(text);
     let mut out = String::with_capacity(text.len() + text.len() / 2);
@@ -1453,7 +1456,11 @@ pub fn spell_out(text: &str, lexicon: &impl Lexicon) -> String {
             && words
                 .get(k + 1)
                 .is_some_and(|&(_, next)| is_shouted_word(leading_letters(next), lexicon));
-        spell_word(word, shouted_before || shouted_after, lexicon, &mut out);
+        let last = !words[k + 1..]
+            .iter()
+            .any(|(_, next)| next.contains(|c: char| c.is_alphanumeric()));
+        let shouted = shouted_before || shouted_after;
+        spell_word(word, shouted, last, lexicon, &mut out);
     }
     out.push_str(&text[copied..]);
     out
@@ -1510,10 +1517,27 @@ fn knows_as_word(capitals: &str, lexicon: &impl Lexicon) -> bool {
     lexicon.has(capitals) || lexicon.has(&lower) || lexicon.has(&capitalised)
 }
 
-/// Rewrites each run of ASCII letters in one whitespace-delimited word.
-fn spell_word(word: &str, shouted: bool, lexicon: &impl Lexicon, out: &mut String) {
+/// Rewrites the letters and full stops of one whitespace-delimited word;
+/// `last`: no later word has a letter or digit.
+fn spell_word(word: &str, shouted: bool, last: bool, lexicon: &impl Lexicon, out: &mut String) {
     let mut i = 0;
     while let Some(c) = word[i..].chars().next() {
+        let before = word[..i].chars().next_back();
+        if c == '.' {
+            out.push_str(read_stop(before, word[i + 1..].chars().next()));
+            i += 1;
+            continue;
+        }
+        let starts_word = !before.is_some_and(|b| b.is_ascii_alphanumeric() || b == '.');
+        if let Some((letters, len)) = starts_word.then(|| dotted_initials(&word[i..])).flatten() {
+            out.push_str(&lexicon.spell(&letters, false));
+            // Only at the very end is the last stop a sentence's.
+            if last && !word[i + len..].contains(|c: char| c.is_alphanumeric()) {
+                out.push('.');
+            }
+            i += len;
+            continue;
+        }
         if !c.is_ascii_alphabetic() {
             out.push(c);
             i += c.len_utf8();
@@ -1536,6 +1560,46 @@ fn spell_word(word: &str, shouted: bool, lexicon: &impl Lexicon, out: &mut Strin
             }
         }
     }
+}
+
+/// A full stop between letters or digits, unless both are digits, is "dot"
+/// ("Node.js", "file2.txt", "3.x"), as is one starting a word (".env").
+fn read_stop(before: Option<char>, after: Option<char>) -> &'static str {
+    let alphanumeric = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric());
+    let digit = |c: Option<char>| c.is_some_and(|c| c.is_ascii_digit());
+    if alphanumeric(before) && alphanumeric(after) && !(digit(before) && digit(after)) {
+        " dot "
+    } else if before.is_none_or(|b| "([{\"'/".contains(b))
+        && after.is_some_and(|c| c.is_ascii_alphabetic())
+    {
+        "dot "
+    } else {
+        "."
+    }
+}
+
+/// Initials with full stops, such as "U.S.", "e.g." or "Ph.D.": their letters
+/// in capitals and the bytes they span, the last stop included.
+fn dotted_initials(text: &str) -> Option<(String, usize)> {
+    let (mut letters, mut len, mut initials) = (String::new(), 0, 0);
+    loop {
+        let rest = &text[len..];
+        let run = leading_letters(rest);
+        // One letter, or a capital and a small letter as in "Ph" or "Sc".
+        let initial = match run.as_bytes() {
+            [_] => true,
+            [first, second] => first.is_ascii_uppercase() && second.is_ascii_lowercase(),
+            _ => false,
+        };
+        if !initial || !rest[run.len()..].starts_with('.') {
+            break;
+        }
+        letters.push_str(&run.to_ascii_uppercase());
+        len += run.len() + 1;
+        initials += 1;
+    }
+    let ends_word = !text[len..].starts_with(|c: char| c.is_alphanumeric());
+    (initials >= 2 && ends_word).then_some((letters, len))
 }
 
 /// What to say for a run of letters, or `None` to leave it as written.
@@ -2431,6 +2495,26 @@ mod tests {
     }
 
     #[test]
+    fn a_stop_inside_a_word_never_ends_a_sentence() {
+        assert_eq!(
+            sentences("Install Node.js from nodejs.org before you start. Then open README.md in the editor."),
+            vec![
+                "Install Node.js from nodejs.org before you start.",
+                "Then open README.md in the editor.",
+            ]
+        );
+        assert_eq!(
+            sentences(
+                "It waited…then it ran the tests again. The U.S. team said the build was fine."
+            ),
+            vec![
+                "It waited…then it ran the tests again.",
+                "The U.S. team said the build was fine.",
+            ]
+        );
+    }
+
+    #[test]
     fn split_merges_short_fragments() {
         assert_eq!(
             sentences("We need tools like hammers and saws. Yes. That is all for today."),
@@ -3015,7 +3099,7 @@ mod tests {
     const WORDS: Words = Words(&[
         "NASA", "GIF", "RAM", "covid", "iOS", "YouTube", "McDonald", "IT", "US", "ID", "OS", "AM",
         "it", "us", "id", "do", "not", "now", "let", "know", "note", "must", "the", "you", "here",
-        "arm", "pm", "readme",
+        "arm", "pm", "net",
     ]);
 
     fn spelled(text: &str) -> String {
@@ -3056,7 +3140,7 @@ mod tests {
 
     #[test]
     fn longer_capitals_are_a_word_when_they_have_a_vowel() {
-        assert_eq!(spelled("UNESCO and README"), "UNESCO and README");
+        assert_eq!(spelled("UNESCO and SIGKILL"), "UNESCO and SIGKILL");
         assert_eq!(spelled("HTTPS"), "<H T T P S>");
         assert_eq!(spelled("WWDC"), "<W W D C>");
     }
@@ -3129,5 +3213,54 @@ mod tests {
             assert_eq!(spelled(kept), kept);
         }
         assert_eq!(spelled("  the  ID\n"), "  the  <I D>\n");
+    }
+
+    #[test]
+    fn a_stop_inside_a_name_is_read_dot() {
+        assert_eq!(spelled("Install Node.js now."), "Install Node dot js now.");
+        assert_eq!(
+            spelled("ort.pyke.io, file2.txt and settings.rs"),
+            "ort dot pyke dot io, file2 dot txt and settings dot rs"
+        );
+        assert_eq!(spelled("README.md"), "read me dot md");
+        assert_eq!(spelled("3.x or example.com"), "3 dot x or example dot com");
+        assert_eq!(
+            spelled("a .env file, .NET and (.gitignore)"),
+            "a dot env file, dot NET and (dot gitignore)"
+        );
+        assert_eq!(spelled("Node.JSON"), "Node dot jason");
+    }
+
+    #[test]
+    fn stops_outside_names_stay() {
+        for kept in [
+            "It ends here.",
+            "3.14",
+            "wait...what",
+            "...so",
+            "Dr. Smith",
+            "etc.",
+            "f().bar",
+            "end.)",
+        ] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn dotted_initials_are_spelled_without_their_stops() {
+        assert_eq!(spelled("the U.S. government"), "the <U S> government");
+        assert_eq!(spelled("tools, e.g. hammers"), "tools, <E G> hammers");
+        assert_eq!(
+            spelled("(i.e.) a Ph.D. and U.S.A.-made"),
+            "(<I E>) a <P H D> and <U S A>-made"
+        );
+        // At the end of the text the last stop ends the sentence.
+        assert_eq!(spelled("I live in the U.S."), "I live in the <U S>.");
+        assert_eq!(spelled("in the U.S.\")"), "in the <U S>.\")");
+        // Not initials: no last stop, a longer word, or letters after.
+        assert_eq!(spelled("A.B"), "A dot B");
+        assert_eq!(spelled("co.uk."), "co dot uk.");
+        assert_eq!(spelled("e.g.foo"), "e dot g dot foo");
     }
 }

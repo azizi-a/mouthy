@@ -1114,6 +1114,28 @@ mod tests {
     }
 
     #[test]
+    fn a_stop_inside_a_name_is_no_sentence_end() {
+        let g2p = G2P::new(Language::EnglishGB);
+        let read_gb = |text| read(&g2p, Dialect::British, text);
+        assert_eq!(
+            read_gb("Use Node.js today."),
+            "jˈuːs nˈQd dˈɒt ʤˌAˈɛs tədˈA."
+        );
+        assert_eq!(read_gb("Tools, e.g. hammers."), "tˈuːlz, ˌiːʤˈiː hˈaməz.");
+        assert_eq!(read_gb("the U.S. team"), "ði jˌuːˈɛs tˈiːm");
+        assert_eq!(read_gb("Live in the U.S."), "lˈɪv ɪn ði jˌuːˈɛs.");
+        assert_eq!(
+            read_gb("README.md and ort.pyke.io"),
+            "ɹˈiːd mˌiː dˈɒt ˌɛmdˈiː and ˈɔːt dˈɒt pˈIk dˈɒt ˈIQ"
+        );
+        assert_eq!(read_gb("example.com"), read_gb("example dot com"));
+        assert_eq!(
+            read_gb("Get v2.0 or 3.14"),
+            read_gb("Get version two point zero or three point one four")
+        );
+    }
+
+    #[test]
     fn every_letter_has_a_stressed_name_in_both_lexicons() {
         for gold in [
             misaki_rs::data::load_gb_gold(),
@@ -1561,6 +1583,7 @@ mod tests {
             };
             for text in [
                 "Install macOS.",
+                "Node.js is fast.",
                 "Call the API URL.",
                 "NASA launched it.",
                 "Update to iOS 17.",
