@@ -528,10 +528,10 @@ fn join(a: &Line, b: &Line, c: Option<&Line>, first_pair: bool, widest: usize) -
     if by_hand && !(cut && lowercase) {
         return Join::Keep;
     }
-    // A number or a code such as "a1b2c3d" only next to lower-case prose, so
-    // program output such as a git log stays apart.
+    // A number, a code or a word in capitals only next to lower-case prose,
+    // so a git log, compiler errors and log levels stay apart.
     let prose = lowercase
-        || b.body.starts_with(char::is_uppercase)
+        || starts_capitalised(b.body)
         || starts_lowercase(a.body)
         || c.is_some_and(|c| c.start == Start::Text && starts_lowercase(c.body));
     if !prose {
@@ -566,6 +566,16 @@ fn fits(a: &Line, b: &Line, widest: usize) -> bool {
 fn starts_lowercase(body: &str) -> bool {
     let word = body.split_whitespace().next().unwrap_or_default();
     word.starts_with(char::is_lowercase) && !word.contains(|c: char| c.is_ascii_digit())
+}
+
+/// A capitalised word, as a wrapped sentence goes on with a name or "I";
+/// codes such as "E0308" or "ABC-123" and capitals such as "WARN" are not.
+fn starts_capitalised(body: &str) -> bool {
+    let word = body.split_whitespace().next().unwrap_or_default();
+    let mut letters = word.chars().filter(|c| c.is_alphabetic());
+    word.starts_with(char::is_uppercase)
+        && !word.contains(|c: char| c.is_ascii_digit())
+        && (word.chars().count() == 1 || letters.any(char::is_lowercase))
 }
 
 fn ends_sentence(body: &str) -> bool {
@@ -2266,8 +2276,14 @@ mod tests {
 
     #[test]
     fn reflow_joins_numbers_and_codes_only_in_wrapped_prose() {
-        let log = "a1b2c3d fix: reflow wrapped lines before sentence splitting\n9f8e7d6 feat: default voice alloy for fresh installs\ne4f5a6b chore: bump version to 0.2.0 for the release";
-        assert_eq!(reflowed(log).len(), 3);
+        for apart in [
+            "a1b2c3d fix: reflow wrapped lines before sentence splitting\n9f8e7d6 feat: default voice alloy for fresh installs\ne4f5a6b chore: bump version to 0.2.0 for the release",
+            "E0308 mismatched types in src/tts/text.rs line 12\nE0425 cannot find value `foo` in this scope here",
+            "The quick brown fox jumps over the lazy dog and the\nABC-123 ticket says the API should return JSON data",
+            "INFO Starting server on port 8080 with 4 workers ok\nWARN Disk usage on the main volume is at 91 percent\nERROR Failed to connect to the database at db:5432",
+        ] {
+            assert_eq!(reflowed(apart).len(), apart.lines().count(), "{apart}");
+        }
         let output = "$ cargo test\nrunning 48 tests\ntest result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out";
         assert_eq!(reflowed(output).len(), 3);
         let wrapped = "The fox runs off into the neighbouring field, where the farmer keeps\n12 sheep and a goat behind the old stone wall that runs along the\nlane to the village.";
