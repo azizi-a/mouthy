@@ -528,18 +528,18 @@ fn join(a: &Line, b: &Line, c: Option<&Line>, first_pair: bool, widest: usize) -
     if by_hand && !(cut && lowercase) {
         return Join::Keep;
     }
-    if wrapped_hyphen(a.body) {
-        return if lowercase { Join::Hyphen } else { Join::Keep };
-    }
-    // A capital mid-sentence (a name, "I", a number) only next to lower-case prose,
-    // so a list or a heading over a short line stays apart.
+    // A number or a code such as "a1b2c3d" only next to lower-case prose, so
+    // program output such as a git log stays apart.
     let prose = lowercase
+        || b.body.starts_with(char::is_uppercase)
         || starts_lowercase(a.body)
         || c.is_some_and(|c| c.start == Start::Text && starts_lowercase(c.body));
-    if prose {
-        Join::Space
-    } else {
+    if !prose {
         Join::Keep
+    } else if wrapped_hyphen(a.body) {
+        Join::Hyphen
+    } else {
+        Join::Space
     }
 }
 
@@ -2206,13 +2206,33 @@ mod tests {
     }
 
     #[test]
-    fn reflow_joins_capitalised_lines_only_in_wrapped_prose() {
+    fn reflow_joins_capitalised_lines_on_the_fit_test_alone() {
+        let names = "Mouthy reads text copied from Safari, Mail, Notes and\nVisual Studio Code aloud, and I use it every day with\nClaude Code to hear long replies.";
+        assert_eq!(
+            reflowed(names),
+            vec!["Mouthy reads text copied from Safari, Mail, Notes and Visual Studio Code aloud, and I use it every day with Claude Code to hear long replies."]
+        );
+        // The cost: unmarked lines of a similar width join too.
         let list = "Download the latest build from the releases page\nOpen it twice to confirm the Gatekeeper prompt\nGrant Accessibility when asked";
-        assert_eq!(reflowed(list).len(), 3);
+        assert_eq!(reflowed(list).len(), 1);
         let web = "Mouthy reads selected text aloud with an offline voice on your Mac\nInstall";
-        assert_eq!(reflowed(web).len(), 2);
+        assert_eq!(reflowed(web).len(), 1);
+        // A line that left room for the capital word was broken by hand.
+        let heading = "Mouthy reads selected text aloud\nInstall it from the releases page and grant Accessibility";
+        assert_eq!(reflowed(heading).len(), 2);
+    }
+
+    #[test]
+    fn reflow_joins_numbers_and_codes_only_in_wrapped_prose() {
+        let log = "a1b2c3d fix: reflow wrapped lines before sentence splitting\n9f8e7d6 feat: default voice alloy for fresh installs\ne4f5a6b chore: bump version to 0.2.0 for the release";
+        assert_eq!(reflowed(log).len(), 3);
         let output = "$ cargo test\nrunning 48 tests\ntest result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out";
         assert_eq!(reflowed(output).len(), 3);
+        let wrapped = "The fox runs off into the neighbouring field, where the farmer keeps\n12 sheep and a goat behind the old stone wall that runs along the\nlane to the village.";
+        assert_eq!(
+            reflowed(wrapped),
+            vec!["The fox runs off into the neighbouring field, where the farmer keeps 12 sheep and a goat behind the old stone wall that runs along the lane to the village."]
+        );
     }
 
     #[test]
@@ -2221,8 +2241,10 @@ mod tests {
             reflowed("The fox runs off into the neighbouring field, where the well-\nknown farmer keeps his sheep."),
             vec!["The fox runs off into the neighbouring field, where the well-known farmer keeps his sheep."]
         );
-        let capital = "The fox runs off into the neighbouring field, where the Anglo-\nSaxon farmer keeps his sheep.";
-        assert_eq!(reflowed(capital).len(), 2);
+        assert_eq!(
+            reflowed("The fox runs off into the neighbouring field, where the Anglo-\nSaxon farmer keeps his sheep."),
+            vec!["The fox runs off into the neighbouring field, where the Anglo-Saxon farmer keeps his sheep."]
+        );
     }
 
     #[test]
