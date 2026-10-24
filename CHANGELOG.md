@@ -2,7 +2,9 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.3.0 — 2026-10-24
+
+Reading copied text as prose: lines wrapped by terminals, email and PDFs are joined again, and the offline voice says initialisms, dotted names, number ranges and abbreviations as a person would. New installs default to the American English voice `af_alloy`.
 
 ### Added
 
