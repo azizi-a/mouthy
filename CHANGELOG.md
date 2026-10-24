@@ -6,12 +6,19 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- Text wrapped onto several lines, as terminals, man pages, email and PDFs deliver it, is joined again before reading, so a sentence is no longer cut at every line end. A line is joined to the next only when the next line's first word would not have fitted on it. Headings, list items, quotes, tables, chat lines, fenced code, code that opens a block with `{` or `:`, and lines ending in punctuation keep their breaks.
+- Text wrapped onto several lines, as terminals, man pages, email and PDFs deliver it, is joined again before reading, so a sentence is no longer cut at every line end. A line is joined to the next only when the next line's first word would not have fitted on it, whether it starts with a capital or not, so lines of a similar width with no punctuation, such as an unmarked list, join too. Headings, list items, quotes, tables, chat lines, fenced code, code that opens a block with `{` or `:` and lines ending in punctuation keep their breaks, as do lines starting with a number, a code such as a commit hash, or a word in capitals such as a log level, outside lower-case prose.
+- The offline voice spells initialisms by their letter names ("ID", "the API URL", "IDs", "U.S.", "e.g.") and reads camel-case names as their words ("GitHub", "macOS", "HTMLParser"). Capitals its dictionary knows as words stay words ("NASA", "RAM", "NOTE"), and JSON, YAML, TOML, README, TODO and FIXME are said as words.
 
 ### Changed
 
 - New installs default to the American English voice `af_alloy` instead of `bm_lewis`; existing installs keep the voice they use.
 - Settings with no speech engine saved, or an unreadable one, now use the offline voice instead of the HTTP server; installs that chose the HTTP server keep it.
+
+### Fixed
+
+- With the offline voice, a dash between two plain numbers reads "to", so "pages 10-12" is "pages ten to twelve" and "a 3-1 win" is "three to one".
+- With the offline voice, a full stop inside a name no longer ends a sentence: "Node.js", "example.com" and ".env" are read with "dot", and "e.g." or "U.S." without pauses.
+- With the offline voice, titles and common abbreviations are said in full without a pause after them: "Dr. Smith" is "Doctor Smith", and "Mr.", "Mrs.", "Ms.", "St.", "etc.", "vs.", "approx." and "No. 5" likewise.
 
 ## 0.2.0 — 2026-10-14
 

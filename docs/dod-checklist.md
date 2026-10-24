@@ -45,5 +45,6 @@ Run on the built app (`bun run tauri build --bundles app`), not `tauri dev`: und
 - What you heard in step 11: whether it sounds like one sentence, or like several stuck together.
 - Re-testing after the P2.7 and P2.8 fixes: steps 4, 11, 15, 17, 20 and 21 are enough.
 - Any word Alloy mispronounces (step 4, 12 or your own text), and whether the 62 MB app size is acceptable.
+- To check wrapped text, initialisms and dotted names by ear, read [listening-test.md](listening-test.md) aloud with Mouthy and note any part that differs from its "You should hear" line.
 
 Your old data is in `~/mouthy-data-backup`; to go back to it, quit Mouthy, delete `~/Library/Application Support/com.azizi.mouthy` and move the backup there.
