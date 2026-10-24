@@ -528,18 +528,18 @@ fn join(a: &Line, b: &Line, c: Option<&Line>, first_pair: bool, widest: usize) -
     if by_hand && !(cut && lowercase) {
         return Join::Keep;
     }
-    if wrapped_hyphen(a.body) {
-        return if lowercase { Join::Hyphen } else { Join::Keep };
-    }
-    // A capital mid-sentence (a name, "I", a number) only next to lower-case prose,
-    // so a list or a heading over a short line stays apart.
+    // A number, a code or a word in capitals only next to lower-case prose,
+    // so a git log, compiler errors and log levels stay apart.
     let prose = lowercase
+        || starts_capitalised(b.body)
         || starts_lowercase(a.body)
         || c.is_some_and(|c| c.start == Start::Text && starts_lowercase(c.body));
-    if prose {
-        Join::Space
-    } else {
+    if !prose {
         Join::Keep
+    } else if wrapped_hyphen(a.body) {
+        Join::Hyphen
+    } else {
+        Join::Space
     }
 }
 
@@ -566,6 +566,16 @@ fn fits(a: &Line, b: &Line, widest: usize) -> bool {
 fn starts_lowercase(body: &str) -> bool {
     let word = body.split_whitespace().next().unwrap_or_default();
     word.starts_with(char::is_lowercase) && !word.contains(|c: char| c.is_ascii_digit())
+}
+
+/// A capitalised word, as a wrapped sentence goes on with a name or "I";
+/// codes such as "E0308" or "ABC-123" and capitals such as "WARN" are not.
+fn starts_capitalised(body: &str) -> bool {
+    let word = body.split_whitespace().next().unwrap_or_default();
+    let mut letters = word.chars().filter(|c| c.is_alphabetic());
+    word.starts_with(char::is_uppercase)
+        && !word.contains(|c: char| c.is_ascii_digit())
+        && (word.chars().count() == 1 || letters.any(char::is_lowercase))
 }
 
 fn ends_sentence(body: &str) -> bool {
@@ -1405,6 +1415,407 @@ fn clock(hour: u64, minutes: u64, meridiem: Option<(&str, bool)>) -> Option<Stri
     })
 }
 
+/// What `spell_out` asks of the local voice's lexicon.
+pub trait Lexicon {
+    /// Whether it has an entry for `word` with exactly these capitals.
+    fn has(&self, word: &str) -> bool;
+    /// Text the phonemiser reads as the names of `letters` (ASCII capitals),
+    /// ending in an "s" sound when `plural`.
+    fn spell(&self, letters: &str, plural: bool) -> String;
+}
+
+/// Initialisms whose letters also spell a word the lexicon has. Next to
+/// lower-case words they are the initialism ("your ID", "the US", "mac OS");
+/// next to other capitals, a shouted word ("DO IT NOW").
+const INITIALISMS_THAT_SPELL_WORDS: &[&str] = &[
+    "AD", "AM", "BA", "BI", "COO", "ER", "ETA", "ID", "IDE", "IT", "LED", "MA", "OS", "PA", "SEC",
+    "US",
+];
+/// Said as words but missing from the lexicon, and a spelling it reads that way.
+const SAID_AS_WORDS: &[(&str, &str)] = &[
+    ("AJAX", "ajax"),
+    ("CORS", "cors"),
+    ("CUDA", "cuda"),
+    ("FIXME", "fix me"),
+    ("JSON", "jason"),
+    ("README", "read me"),
+    ("TODO", "to do"),
+    ("TOML", "tom el"),
+    ("UNIX", "unix"),
+    ("YAML", "yam el"),
+];
+/// Longer capitals with a vowel are read as a word ("UNESCO").
+const MAX_SPELLED_LETTERS: usize = 4;
+
+/// Rewrites, for the local voice, words its phonemiser would misread:
+/// initialisms are spelled letter by letter ("ID", "the API URL", "IDs",
+/// "U.S."), words joined in camel case are split ("GitHub", "macOS",
+/// "HTMLParser") and a full stop inside a name is read "dot" ("Node.js",
+/// ".env"), where the phonemiser would end a sentence. Words the lexicon has
+/// as written ("NASA", "iOS", "McDonald") and capitals that spell an English
+/// word ("NOTE", "DO NOT") are left as they are.
+pub fn spell_out(text: &str, lexicon: &impl Lexicon) -> String {
+    let words = whitespace_words(text);
+    let last_spoken = words
+        .iter()
+        .rposition(|(_, word)| word.contains(|c: char| c.is_alphanumeric()));
+    let mut out = String::with_capacity(text.len() + text.len() / 2);
+    let mut copied = 0;
+    for (k, &(start, word)) in words.iter().enumerate() {
+        out.push_str(&text[copied..start]);
+        copied = start + word.len();
+        let shouted_before = word.starts_with(|c: char| c.is_ascii_alphabetic())
+            && shouted_towards(&words[..k], Side::Before, lexicon);
+        let shouted_after = word.ends_with(|c: char| c.is_ascii_alphabetic())
+            && shouted_towards(&words[k + 1..], Side::After, lexicon);
+        let ends = Ends {
+            text: last_spoken.is_none_or(|at| at <= k),
+            before_capitalised: words
+                .get(k + 1)
+                .is_some_and(|&(_, next)| starts_capitalised(next)),
+        };
+        spell_word(
+            word,
+            shouted_before || shouted_after,
+            ends,
+            lexicon,
+            &mut out,
+        );
+    }
+    out.push_str(&text[copied..]);
+    out
+}
+
+/// Each run of non-whitespace and the byte offset it starts at.
+fn whitespace_words(text: &str) -> Vec<(usize, &str)> {
+    let mut words = Vec::new();
+    let mut start = None;
+    for (i, c) in text.char_indices() {
+        match (c.is_whitespace(), start) {
+            (false, None) => start = Some(i),
+            (true, Some(from)) => {
+                words.push((from, &text[from..i]));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(from) = start {
+        words.push((from, &text[from..]));
+    }
+    words
+}
+
+fn leading_letters(word: &str) -> &str {
+    let len = word.bytes().take_while(u8::is_ascii_alphabetic).count();
+    &word[..len]
+}
+
+fn trailing_letters(word: &str) -> &str {
+    let len = word
+        .bytes()
+        .rev()
+        .take_while(u8::is_ascii_alphabetic)
+        .count();
+    &word[word.len() - len..]
+}
+
+#[derive(Clone, Copy)]
+enum Side {
+    Before,
+    After,
+}
+
+/// Whether the word next to an initialism, on `side` across a space, is a
+/// shouted English word ("DO IT NOW"). "I" and "A" count only with another
+/// one beyond them ("I AM HERE"), and an initialism that spells a word never
+/// counts, so "the ID I sent" and "your US ID" are spelled.
+fn shouted_towards(words: &[(usize, &str)], side: Side, lexicon: &impl Lexicon) -> bool {
+    let (next, beyond) = match side {
+        Side::Before => (words.len().checked_sub(1), words.len().checked_sub(2)),
+        Side::After => (Some(0), Some(1)),
+    };
+    let facing = |at: Option<usize>| {
+        at.and_then(|at| words.get(at))
+            .map(|&(_, word)| match side {
+                Side::Before => trailing_letters(word),
+                Side::After => leading_letters(word),
+            })
+    };
+    let Some(neighbour) = facing(next) else {
+        return false;
+    };
+    if matches!(neighbour, "I" | "A") {
+        let whole = next
+            .and_then(|at| words.get(at))
+            .is_some_and(|&(_, w)| w == neighbour);
+        return whole && facing(beyond).is_some_and(|word| is_shouted_word(word, lexicon));
+    }
+    is_shouted_word(neighbour, lexicon)
+}
+
+/// An English word in capitals, not an initialism that spells one.
+fn is_shouted_word(word: &str, lexicon: &impl Lexicon) -> bool {
+    word.len() >= 2
+        && is_capitals(word)
+        && !INITIALISMS_THAT_SPELL_WORDS.contains(&word)
+        && knows(word, lexicon)
+}
+
+fn is_capitals(word: &str) -> bool {
+    word.bytes().all(|b| b.is_ascii_uppercase())
+}
+
+/// The lexicon has the word as written, in lower case or capitalised.
+fn knows(word: &str, lexicon: &impl Lexicon) -> bool {
+    let lower = word.to_ascii_lowercase();
+    let capitalised = format!("{}{}", lower[..1].to_ascii_uppercase(), &lower[1..]);
+    lexicon.has(word) || lexicon.has(&lower) || lexicon.has(&capitalised)
+}
+
+/// Where a whitespace-delimited word sits, for whether its last stop may end
+/// a sentence.
+#[derive(Clone, Copy)]
+struct Ends {
+    /// No later word has a letter or digit.
+    text: bool,
+    /// The next word is capitalised ("Analysts").
+    before_capitalised: bool,
+}
+
+/// Rewrites the letters and full stops of one whitespace-delimited word.
+fn spell_word(word: &str, shouted: bool, ends: Ends, lexicon: &impl Lexicon, out: &mut String) {
+    let mut i = 0;
+    while let Some(c) = word[i..].chars().next() {
+        let before = word[..i].chars().next_back();
+        if c == '.' {
+            out.push_str(read_stop(before, word[i + 1..].chars().next()));
+            i += 1;
+            continue;
+        }
+        let starts_word = !before.is_some_and(|b| b.is_ascii_alphanumeric() || b == '.');
+        if let Some((letters, len)) = starts_word.then(|| dotted_initials(&word[i..])).flatten() {
+            let suffix = apostrophe_after(&word[i + len..]);
+            if suffix == Apostrophe::Other {
+                out.push_str(&word[i..i + len]);
+                i += len;
+                continue;
+            }
+            if suffix == Apostrophe::S {
+                out.push_str(&lexicon.spell(&letters, true));
+                i += len + 2;
+                continue;
+            }
+            out.push_str(&lexicon.spell(&letters, false));
+            // The last stop ends the sentence at the end of the text, and is
+            // taken to before a capitalised word ("in the U.S. Analysts
+            // expect"), though not after "e.g." or "i.e.".
+            let rest = &word[i + len..];
+            let at_end = ends.text && !rest.contains(|c: char| c.is_alphanumeric());
+            let before_sentence = ends.before_capitalised
+                && word[i..].starts_with(|c: char| c.is_ascii_uppercase())
+                && rest.chars().all(|c| matches!(c, '"' | '\'' | ')'));
+            if at_end || before_sentence {
+                out.push('.');
+            }
+            i += len;
+            continue;
+        }
+        if !c.is_ascii_alphabetic() {
+            out.push(c);
+            i += c.len_utf8();
+            continue;
+        }
+        let letters = leading_letters(&word[i..]);
+        let suffix = apostrophe_after(&word[i + letters.len()..]);
+        if suffix == Apostrophe::Other {
+            out.push_str(letters);
+            i += letters.len();
+            continue;
+        }
+        let possessive = suffix == Apostrophe::S;
+        let suffix_len = if possessive { 2 } else { 0 };
+        match say_letters(letters, possessive, shouted, lexicon) {
+            Some(said) => {
+                out.push_str(&said);
+                i += letters.len() + suffix_len;
+            }
+            None => {
+                out.push_str(letters);
+                i += letters.len();
+            }
+        }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+enum Apostrophe {
+    None,
+    /// "ID's", which joins the initialism.
+    S,
+    /// "ID'd": misaki-rs would read it as one token with the override's
+    /// letters, which voids the override, so the word stays as written.
+    Other,
+}
+
+fn apostrophe_after(text: &str) -> Apostrophe {
+    match text.strip_prefix('\'').map(leading_letters) {
+        Some("s" | "S") => Apostrophe::S,
+        Some(letters) if !letters.is_empty() => Apostrophe::Other,
+        _ => Apostrophe::None,
+    }
+}
+
+/// A full stop between letters or digits, unless both are digits, is "dot"
+/// ("Node.js", "file2.txt", "3.x"), as is one starting a word (".env").
+fn read_stop(before: Option<char>, after: Option<char>) -> &'static str {
+    let alphanumeric = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric());
+    let digit = |c: Option<char>| c.is_some_and(|c| c.is_ascii_digit());
+    if alphanumeric(before) && alphanumeric(after) && !(digit(before) && digit(after)) {
+        " dot "
+    } else if before.is_none_or(|b| "([{\"'/".contains(b))
+        && after.is_some_and(|c| c.is_ascii_alphabetic())
+    {
+        "dot "
+    } else {
+        "."
+    }
+}
+
+/// Initials with full stops, such as "U.S.", "e.g." or "Ph.D.": their letters
+/// in capitals and the bytes they span, the last stop included.
+fn dotted_initials(text: &str) -> Option<(String, usize)> {
+    let (mut letters, mut len, mut initials) = (String::new(), 0, 0);
+    loop {
+        let rest = &text[len..];
+        let run = leading_letters(rest);
+        // One letter, or a capital and a small letter as in "Ph" or "Sc".
+        let initial = match run.as_bytes() {
+            [_] => true,
+            [first, second] => first.is_ascii_uppercase() && second.is_ascii_lowercase(),
+            _ => false,
+        };
+        if !initial || !rest[run.len()..].starts_with('.') {
+            break;
+        }
+        letters.push_str(&run.to_ascii_uppercase());
+        len += run.len() + 1;
+        initials += 1;
+    }
+    let ends_word = !text[len..].starts_with(|c: char| c.is_alphanumeric());
+    (initials >= 2 && ends_word).then_some((letters, len))
+}
+
+/// What to say for a run of letters, or `None` to leave it as written.
+/// `possessive`: an "'s" follows, which the result then includes.
+fn say_letters(
+    letters: &str,
+    possessive: bool,
+    shouted: bool,
+    lexicon: &impl Lexicon,
+) -> Option<String> {
+    if letters.len() >= 2 && is_capitals(letters) {
+        return say_capitals(letters, possessive, shouted, lexicon);
+    }
+    // "URLs": capitals with a plural s.
+    if let Some(stem) = letters.strip_suffix('s') {
+        if stem.len() >= 2 && is_capitals(stem) && !possessive {
+            return say_capitals(stem, true, shouted, lexicon);
+        }
+    }
+    let respelt = SAID_AS_WORDS
+        .iter()
+        .find(|(capitals, _)| capitals.eq_ignore_ascii_case(letters))
+        .filter(|_| letters.bytes().all(|b| b.is_ascii_lowercase()));
+    if let Some((_, said)) = respelt {
+        return Some(with_suffix(said, possessive));
+    }
+    let parts = camel_parts(letters, lexicon);
+    if parts.len() < 2 {
+        return None;
+    }
+    let last = parts.len() - 1;
+    let said: Vec<String> = parts
+        .iter()
+        .enumerate()
+        .map(|(n, part)| {
+            let possessive = possessive && n == last;
+            let capitals = part.len() >= 2 && is_capitals(part);
+            capitals
+                .then(|| say_capitals(part, possessive, false, lexicon))
+                .flatten()
+                .unwrap_or_else(|| with_suffix(part, possessive))
+        })
+        .collect();
+    Some(said.join(" "))
+}
+
+fn with_suffix(word: &str, possessive: bool) -> String {
+    if possessive {
+        format!("{word}'s")
+    } else {
+        word.to_string()
+    }
+}
+
+/// An all-capital word: spelled unless it is said as a word. `plural` covers
+/// an "s" or "'s" after it.
+fn say_capitals(
+    capitals: &str,
+    plural: bool,
+    shouted: bool,
+    lexicon: &impl Lexicon,
+) -> Option<String> {
+    if let Some((_, said)) = SAID_AS_WORDS.iter().find(|(word, _)| *word == capitals) {
+        return Some(if plural {
+            format!("{said}s")
+        } else {
+            said.to_string()
+        });
+    }
+    let spell = if INITIALISMS_THAT_SPELL_WORDS.contains(&capitals) {
+        !shouted
+    } else {
+        !knows(capitals, lexicon)
+            && (capitals.len() <= MAX_SPELLED_LETTERS
+                || !capitals.contains(['A', 'E', 'I', 'O', 'U', 'Y']))
+    };
+    spell.then(|| lexicon.spell(capitals, plural))
+}
+
+/// A word in camel case cut where a lower-case letter meets a capital
+/// ("Git|Hub") and before the last capital of a run followed by two lower-case
+/// letters ("HTML|Parser", but not "IPv6" or "IDs"). It stays whole when the
+/// lexicon has it as written ("iOS", "YouTube"), for "Mc" names, and when a
+/// part is no word the lexicon has ("PostgreSQL"), since a fragment reads
+/// worse than the whole word spelled or read by espeak-ng.
+fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
+    if lexicon.has(word) || word.starts_with("Mc") {
+        return vec![word];
+    }
+    let b = word.as_bytes();
+    let mut parts = Vec::new();
+    let mut start = 0;
+    for i in 1..b.len() {
+        let lower_to_upper = b[i - 1].is_ascii_lowercase() && b[i].is_ascii_uppercase();
+        let upper_run_ends = b[i - 1].is_ascii_uppercase()
+            && b[i].is_ascii_uppercase()
+            && b.get(i + 1).is_some_and(u8::is_ascii_lowercase)
+            && b.get(i + 2).is_some_and(u8::is_ascii_lowercase);
+        if lower_to_upper || upper_run_ends {
+            parts.push(&word[start..i]);
+            start = i;
+        }
+    }
+    parts.push(&word[start..]);
+    let readable = |part: &str| part.len() == 1 || is_capitals(part) || knows(part, lexicon);
+    if parts.iter().all(|part| readable(part)) {
+        parts
+    } else {
+        vec![word]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1906,13 +2317,39 @@ mod tests {
     }
 
     #[test]
-    fn reflow_joins_capitalised_lines_only_in_wrapped_prose() {
+    fn reflow_joins_capitalised_lines_on_the_fit_test_alone() {
+        let names = "Mouthy reads text copied from Safari, Mail, Notes and\nVisual Studio Code aloud, and I use it every day with\nClaude Code to hear long replies.";
+        assert_eq!(
+            reflowed(names),
+            vec!["Mouthy reads text copied from Safari, Mail, Notes and Visual Studio Code aloud, and I use it every day with Claude Code to hear long replies."]
+        );
+        // The cost: unmarked lines of a similar width join too.
         let list = "Download the latest build from the releases page\nOpen it twice to confirm the Gatekeeper prompt\nGrant Accessibility when asked";
-        assert_eq!(reflowed(list).len(), 3);
+        assert_eq!(reflowed(list).len(), 1);
         let web = "Mouthy reads selected text aloud with an offline voice on your Mac\nInstall";
-        assert_eq!(reflowed(web).len(), 2);
+        assert_eq!(reflowed(web).len(), 1);
+        // A line that left room for the capital word was broken by hand.
+        let heading = "Mouthy reads selected text aloud\nInstall it from the releases page and grant Accessibility";
+        assert_eq!(reflowed(heading).len(), 2);
+    }
+
+    #[test]
+    fn reflow_joins_numbers_and_codes_only_in_wrapped_prose() {
+        for apart in [
+            "a1b2c3d fix: reflow wrapped lines before sentence splitting\n9f8e7d6 feat: default voice alloy for fresh installs\ne4f5a6b chore: bump version to 0.2.0 for the release",
+            "E0308 mismatched types in src/tts/text.rs line 12\nE0425 cannot find value `foo` in this scope here",
+            "The quick brown fox jumps over the lazy dog and the\nABC-123 ticket says the API should return JSON data",
+            "INFO Starting server on port 8080 with 4 workers ok\nWARN Disk usage on the main volume is at 91 percent\nERROR Failed to connect to the database at db:5432",
+        ] {
+            assert_eq!(reflowed(apart).len(), apart.lines().count(), "{apart}");
+        }
         let output = "$ cargo test\nrunning 48 tests\ntest result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out";
         assert_eq!(reflowed(output).len(), 3);
+        let wrapped = "The fox runs off into the neighbouring field, where the farmer keeps\n12 sheep and a goat behind the old stone wall that runs along the\nlane to the village.";
+        assert_eq!(
+            reflowed(wrapped),
+            vec!["The fox runs off into the neighbouring field, where the farmer keeps 12 sheep and a goat behind the old stone wall that runs along the lane to the village."]
+        );
     }
 
     #[test]
@@ -1921,8 +2358,10 @@ mod tests {
             reflowed("The fox runs off into the neighbouring field, where the well-\nknown farmer keeps his sheep."),
             vec!["The fox runs off into the neighbouring field, where the well-known farmer keeps his sheep."]
         );
-        let capital = "The fox runs off into the neighbouring field, where the Anglo-\nSaxon farmer keeps his sheep.";
-        assert_eq!(reflowed(capital).len(), 2);
+        assert_eq!(
+            reflowed("The fox runs off into the neighbouring field, where the Anglo-\nSaxon farmer keeps his sheep."),
+            vec!["The fox runs off into the neighbouring field, where the Anglo-Saxon farmer keeps his sheep."]
+        );
     }
 
     #[test]
@@ -2190,6 +2629,26 @@ mod tests {
             vec![
                 "Bring tools (e.g. hammers) and more.",
                 "Mrs. Jones vs. Mr. Brown is next.",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_stop_inside_a_word_never_ends_a_sentence() {
+        assert_eq!(
+            sentences("Install Node.js from nodejs.org before you start. Then open README.md in the editor."),
+            vec![
+                "Install Node.js from nodejs.org before you start.",
+                "Then open README.md in the editor.",
+            ]
+        );
+        assert_eq!(
+            sentences(
+                "It waited…then it ran the tests again. The U.S. team said the build was fine."
+            ),
+            vec![
+                "It waited…then it ran the tests again.",
+                "The U.S. team said the build was fine.",
             ]
         );
     }
@@ -2759,5 +3218,222 @@ mod tests {
         );
         assert_eq!(cardinal(1_000_000_000_000), None);
         assert_eq!(expand_numbers("$1000000000000"), "$1000000000000");
+    }
+
+    /// A lexicon with a few entries that marks spelled letters `<A P I>`.
+    struct Words(&'static [&'static str]);
+
+    impl Lexicon for Words {
+        fn has(&self, word: &str) -> bool {
+            self.0.contains(&word)
+        }
+
+        fn spell(&self, letters: &str, plural: bool) -> String {
+            let spaced: Vec<String> = letters.chars().map(String::from).collect();
+            let s = if plural { "s" } else { "" };
+            format!("<{}>{s}", spaced.join(" "))
+        }
+    }
+
+    const WORDS: Words = Words(&[
+        "NASA", "GIF", "RAM", "covid", "iOS", "YouTube", "McDonald", "IT", "US", "ID", "OS", "AM",
+        "it", "us", "id", "do", "not", "now", "let", "know", "note", "must", "the", "you", "here",
+        "arm", "pm", "net", "git", "hub", "mac", "phone", "parser", "auth", "fast",
+    ]);
+
+    fn spelled(text: &str) -> String {
+        spell_out(text, &WORDS)
+    }
+
+    #[test]
+    fn initialisms_are_spelled() {
+        assert_eq!(
+            spelled("Copy the ID from the URL."),
+            "Copy the <I D> from the <U R L>."
+        );
+        assert_eq!(spelled("the API URL"), "the <A P I> <U R L>");
+        assert_eq!(spelled("I use API keys"), "I use <A P I> keys");
+        assert_eq!(spelled("(HTTPS)"), "(<H T T P S>)");
+    }
+
+    #[test]
+    fn a_plural_or_possessive_s_joins_the_initialism() {
+        assert_eq!(spelled("IDs and URLs"), "<I D>s and <U R L>s");
+        assert_eq!(spelled("the API's docs"), "the <A P I>s docs");
+        assert_eq!(spelled("CPUs, GPUs."), "<C P U>s, <G P U>s.");
+        assert_eq!(spelled("The U.S.'s debt"), "The <U S>s debt");
+        // Any other ending would void the override, so the word stays.
+        assert_eq!(spelled("ID'd and U.S.'d"), "ID'd and U.S.'d");
+    }
+
+    #[test]
+    fn capitals_the_lexicon_reads_as_words_stay() {
+        for kept in [
+            "NASA and GIF",
+            "more RAM",
+            "NOTE: you MUST",
+            "DO NOT",
+            "ARM64",
+            "seven PM",
+        ] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn longer_capitals_are_a_word_when_they_have_a_vowel() {
+        assert_eq!(spelled("UNESCO and SIGKILL"), "UNESCO and SIGKILL");
+        assert_eq!(spelled("HTTPS"), "<H T T P S>");
+        assert_eq!(spelled("WWDC"), "<W W D C>");
+    }
+
+    #[test]
+    fn single_letters_stay() {
+        for kept in ["I think a B is fine", "Plan A", "x", "3D", "H2O"] {
+            assert_eq!(spelled(kept), kept);
+        }
+    }
+
+    #[test]
+    fn an_initialism_that_spells_a_word_is_a_word_among_capitals() {
+        assert_eq!(spelled("the IT team"), "the <I T> team");
+        assert_eq!(spelled("the US and the UK"), "the <U S> and the <U K>");
+        assert_eq!(spelled("seven AM"), "seven <A M>");
+        for kept in ["DO IT NOW", "LET US KNOW", "I AM HERE", "DO IT, now"] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+        // A comma, an unknown initialism or another that spells a word is no
+        // shouted neighbour, nor is "I" or "A" among lower-case words.
+        assert_eq!(spelled("IT, US"), "<I T>, <U S>");
+        assert_eq!(spelled("the API ID"), "the <A P I> <I D>");
+        assert_eq!(spelled("your US ID card"), "your <U S> <I D> card");
+        assert_eq!(
+            spelled("Thanks for the ID I sent."),
+            "Thanks for the <I D> I sent."
+        );
+        assert_eq!(
+            spelled("When I was in the US I learned a lot."),
+            "When I was in the <U S> I learned a lot."
+        );
+        assert_eq!(spelled("The ID A gave me."), "The <I D> A gave me.");
+        assert_eq!(spelled("I AM here"), "I <A M> here");
+    }
+
+    #[test]
+    fn camel_case_is_split_into_words() {
+        assert_eq!(spelled("GitHub"), "Git Hub");
+        assert_eq!(spelled("macOS"), "mac <O S>");
+        assert_eq!(spelled("HTMLParser"), "<H T M L> Parser");
+        assert_eq!(spelled("iPhone"), "i Phone");
+        assert_eq!(spelled("OAuth and FastAPI"), "O Auth and Fast <A P I>");
+        assert_eq!(spelled("GitHub's API"), "Git Hub's <A P I>");
+    }
+
+    #[test]
+    fn camel_case_stays_whole_unless_every_part_is_readable() {
+        for kept in [
+            "iOS 17",
+            "YouTube",
+            "McDonald",
+            "McKinsey",
+            "IPv6",
+            "Hello",
+            "hello",
+            // "Http" and "Postgre" are no words.
+            "XMLHttpRequest",
+            "PostgreSQL",
+        ] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn acronyms_said_as_words_are_respelt() {
+        assert_eq!(spelled("JSON and YAML"), "jason and yam el");
+        assert_eq!(spelled("a json file"), "a jason file");
+        assert_eq!(spelled("JSONs"), "jasons");
+        assert_eq!(spelled("TODO: FIXME"), "to do: fix me");
+        assert_eq!(spelled("Json"), "Json");
+    }
+
+    #[test]
+    fn letters_next_to_digits_and_punctuation_are_spelled_alone() {
+        assert_eq!(spelled("MP3 and ID3"), "<M P>3 and <I D>3");
+        assert_eq!(spelled("URL: here"), "<U R L>: here");
+        assert_eq!(spelled("EC2-API"), "<E C>2-<A P I>");
+        assert_eq!(spelled("COVID-19"), "COVID-19");
+    }
+
+    #[test]
+    fn spelling_keeps_every_other_character() {
+        for kept in [
+            "",
+            "   ",
+            "café ünïcode 日本",
+            "don't O'Reilly",
+            "a\tb\n c ",
+        ] {
+            assert_eq!(spelled(kept), kept);
+        }
+        assert_eq!(spelled("  the  ID\n"), "  the  <I D>\n");
+    }
+
+    #[test]
+    fn a_stop_inside_a_name_is_read_dot() {
+        assert_eq!(spelled("Install Node.js now."), "Install Node dot js now.");
+        assert_eq!(
+            spelled("ort.pyke.io, file2.txt and settings.rs"),
+            "ort dot pyke dot io, file2 dot txt and settings dot rs"
+        );
+        assert_eq!(spelled("README.md"), "read me dot md");
+        assert_eq!(spelled("3.x or example.com"), "3 dot x or example dot com");
+        assert_eq!(
+            spelled("a .env file, .NET and (.gitignore)"),
+            "a dot env file, dot NET and (dot gitignore)"
+        );
+        assert_eq!(spelled("Node.JSON"), "Node dot jason");
+    }
+
+    #[test]
+    fn stops_outside_names_stay() {
+        for kept in [
+            "It ends here.",
+            "3.14",
+            "wait...what",
+            "...so",
+            "Dr. Smith",
+            "etc.",
+            "f().bar",
+            "end.)",
+        ] {
+            assert_eq!(spelled(kept), kept, "{kept}");
+        }
+    }
+
+    #[test]
+    fn dotted_initials_are_spelled_without_their_stops() {
+        assert_eq!(spelled("the U.S. government"), "the <U S> government");
+        assert_eq!(spelled("tools, e.g. hammers"), "tools, <E G> hammers");
+        assert_eq!(
+            spelled("(i.e.) a Ph.D. and U.S.A.-made"),
+            "(<I E>) a <P H D> and <U S A>-made"
+        );
+        // At the end of the text, or before a capitalised word, the last stop
+        // ends the sentence; never after "e.g." or before "API" or "team".
+        assert_eq!(spelled("I live in the U.S."), "I live in the <U S>.");
+        assert_eq!(spelled("in the U.S.\")"), "in the <U S>.\")");
+        assert_eq!(
+            spelled("Prices rose in the U.S. Analysts expect more."),
+            "Prices rose in the <U S>. Analysts expect more."
+        );
+        assert_eq!(spelled("e.g. Python"), "<E G> Python");
+        assert_eq!(
+            spelled("the U.S. API and the U.S., Canada"),
+            "the <U S> <A P I> and the <U S>, Canada"
+        );
+        // Not initials: no last stop, a longer word, or letters after.
+        assert_eq!(spelled("A.B"), "A dot B");
+        assert_eq!(spelled("co.uk."), "co dot uk.");
+        assert_eq!(spelled("e.g.foo"), "e dot g dot foo");
     }
 }
