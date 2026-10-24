@@ -9,6 +9,7 @@ Design lane: not applicable · Intent-critical: yes
 
 <!-- Fresh agents read this first. Keep it current. -->
 
+- **v0.3.0 release in progress (2026-10-24):** version bump PR from `chore/release-0.3.0`; build, tag and draft release follow after merge. See Release R2.
 - **v0.2.0 released as a draft (2026-10-14):** unsigned dmg on a draft GitHub release, tag `v0.2.0` pushed; the user publishes it. See Release R1.
 - **Phase 2 signed off (2026-10-14).** The user ran `docs/dod-checklist.md` on a second Mac: all steps passed after P2.7 (seam trim, overlay ×) and P2.8 (whole-sentence inference). Final re-test: step 11 sounds like one sentence, memory about 650 MB. Phase 3 starts only after the user says so; candidates are listed under Phase 3.
 - **Default voice `af_alloy` (2026-10-21, PR from `chore/default-voice-alloy`):** fresh stores get `af_alloy` (American English); stored voices are never migrated. The dev app-data holds only `bm_lewis.bin`, and the dev store keeps its stored voice.
@@ -588,6 +589,16 @@ The app process adds ~50–85 MB (P2.3b: 348 MB after the load against ~265 MB h
 **Decisions:** the README and release notes say Privacy & Security → Open Anyway first, since macOS 15 dropped right-click → Open for unsigned apps (kept for macOS 14 and earlier), with `xattr` as the alternative. No empty `Unreleased` block in CHANGELOG: AGENTS.md has the next change add its own top version. This clone had Handy's upstream tags; the local Handy `v0.2.0` (`3f920d7`) was deleted for ours, and only `v0.2.0` was pushed. Fetch upstream with `--no-tags` (or set `remote.upstream.tagOpt`) so Handy's tags do not come back.
 
 **Not verified:** installing from the dmg and launching on a clean Mac (Gatekeeper prompt, Accessibility grant, model download).
+
+### Release R2 — v0.3.0, unsigned (2026-10-24) `[chore]`
+
+**Part 1:** one SSH-signed commit `chore(release): v0.3.0` on `chore/release-0.3.0`, opened as a PR to main: version 0.3.0 in `package.json`, `tauri.conf.json`, `Cargo.toml` and `Cargo.lock` (`cargo update -p mouthy --offline`); the changelog's Unreleased block becomes `0.3.0 — 2026-10-24` with an intro line; the README names `Mouthy_0.3.0_aarch64.dmg`. `bun.lock` holds no app version. `docs/listening-test.md` keeps its `0.2.0` line (sample terminal output). Nothing built or tagged.
+
+**Built:** part 2, after the merge.
+
+**Signature:** part 2.
+
+**Published:** part 2.
 
 ## Phase 3 (only after the user says so)
 
