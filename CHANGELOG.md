@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 
+- With the offline voice, a dash between two plain numbers reads "to", so "pages 10-12" is "pages ten to twelve" and "a 3-1 win" is "three to one".
 - With the offline voice, a full stop inside a name no longer ends a sentence: "Node.js", "example.com" and ".env" are read with "dot", and "e.g." or "U.S." without pauses.
 
 ## 0.2.0 — 2026-10-14

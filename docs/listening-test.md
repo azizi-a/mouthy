@@ -85,7 +85,7 @@ Dr. Smith met Mr. Jones at 7.30pm.
 
 Read pages 10-12 first.
 
-You should hear: the committee sentence in one tone, with short pauses at its commas and no longer gap (selected alone, it starts after its first comma, so expect a seam there); a full pause after "It works"; the heading, a full pause, then its paragraph; "Doctor Smith met Mister Jones at seven thirty P M", with a pause after "Doctor" and "Mister" (a known limit); and "pages ten twelve", with no "to" yet.
+You should hear: the committee sentence in one tone, with short pauses at its commas and no longer gap (selected alone, it starts after its first comma, so expect a seam there); a full pause after "It works"; the heading, a full pause, then its paragraph; "Doctor Smith met Mister Jones at seven thirty P M", with a pause after "Doctor" and "Mister" (a known limit); and "pages ten to twelve".
 
 ## Part 4: Dots and numbers
 

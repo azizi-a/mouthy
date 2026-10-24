@@ -646,7 +646,7 @@ From the user: text copied from programs that lay out their own lines (Claude Co
 - Dependencies: move `ort` to 2.0 final when it ships.
 - Answers to H9 (lexicons loaded from the models folder via a misaki-rs fork), H10 (hexgrad's lexicons through our own lookup) and H11 (unload after idle).
 - Intonation vs latency: `split_first_clause` gives a long first sentence's head its own inference (P2.8 notes); reading it whole would cost ~1 s of first audio.
-- Text: fold overrides for words whose accent matters (résumé, rosé, exposé, saké via misaki `[word](/ph/)` markers); spaced ranges read with "to"; `7.30-9.30pm`; two-number phone chains; a spaced hyphen or unspaced em dash as a pause. From P3.1: shouted function words spelled by misaki's NNP rule (a `[word](+2)` override); the full stop after "Dr.", "etc." and "vs." mid-sentence.
+- Text: fold overrides for words whose accent matters (résumé, rosé, exposé, saké via misaki `[word](/ph/)` markers); spaced ranges ("10 – 12") and mixed ones ("10-20%", "£5-10", "5-6pm") read with "to"; `7.30-9.30pm`; two-number phone chains; a spaced hyphen or unspaced em dash as a pause. From P3.1: shouted function words spelled by misaki's NNP rule (a `[word](+2)` override); the full stop after "Dr.", "etc." and "vs." mid-sentence.
 - Models page: "In use" badge while on HTTP; Download button showing the remaining size; `sync_all` on the full-size-partial path; Time Machine exclusion for `models/`; App Nap during hidden downloads (unverified).
 - Pre-existing: when handy-keys cannot start (no Accessibility), `init_shortcuts` reports success and the hotkey is silently dead instead of falling back to Tauri.
 - H4: an in-app warning about the ⌥⎋ clash with Spoken Content, if wanted.

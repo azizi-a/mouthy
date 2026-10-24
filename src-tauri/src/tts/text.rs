@@ -800,26 +800,31 @@ pub fn expand_numbers(text: &str) -> String {
             let (span, tail) = rest.split_at(number.len);
             rest = tail;
             prev = span.chars().next_back();
-            let Some(spoken) = number.spoken() else {
-                out.push_str(span);
-                continue;
-            };
-            if number.is_short_decade() {
-                // "'90s": the apostrophe stands for the dropped century.
-                out.truncate(out.trim_end_matches(['\'', '’']).len());
+            let spoken = number.spoken();
+            match &spoken {
+                Some(spoken) => {
+                    if number.is_short_decade() {
+                        // "'90s": the apostrophe stands for the dropped century.
+                        out.truncate(out.trim_end_matches(['\'', '’']).len());
+                    }
+                    out.push_str(spoken);
+                }
+                None => out.push_str(span),
             }
-            out.push_str(&spoken);
-            // "1990-2000", "9:00-17:00": a dash between two of a kind reads "to".
+            // "pages 10-12", "1990-2000", "9:00-17:00": a dash between two
+            // counts, or two spoken numbers of one kind, reads "to".
             if let Some(after_dash) = rest.strip_prefix(['-', '–']) {
-                let same_kind = may_start_number(Some('-'), after_dash)
+                let is_range = may_start_number(Some('-'), after_dash)
                     .then(|| Number::parse(after_dash))
                     .flatten()
                     .is_some_and(|next| {
-                        next.kind() == number.kind()
-                            && next.kind() != Kind::Other
-                            && next.spoken().is_some()
+                        (number.is_count() && next.is_count())
+                            || (next.kind() == number.kind()
+                                && next.kind() != Kind::Other
+                                && spoken.is_some()
+                                && next.spoken().is_some())
                     });
-                if same_kind {
+                if is_range {
                     out.push_str(" to ");
                     rest = after_dash;
                     prev = Some(' ');
@@ -1066,6 +1071,17 @@ impl<'a> Number<'a> {
             Suffix::None if self.parts.is_empty() && self.whole.len() == 4 => Kind::Year,
             _ => Kind::Other,
         }
+    }
+
+    /// A plain count such as "12" or "1,500". Four digits read as a year, so
+    /// "555-1234" stays a phone number; a leading zero marks a code.
+    fn is_count(&self) -> bool {
+        self.kind() == Kind::Other
+            && self.suffix == Suffix::None
+            && self.parts.is_empty()
+            && !self.negative
+            && !self.version
+            && (self.whole == "0" || !self.whole.starts_with('0'))
     }
 
     /// "'90s" as opposed to "1990s".
@@ -3132,7 +3148,9 @@ mod tests {
     fn negative_numbers_keep_their_sign() {
         assert_eq!(expand_numbers("-5 degrees"), "minus 5 degrees");
         assert_eq!(expand_numbers("(-4.5)"), "(minus four point five)");
-        assert_eq!(expand_numbers("pages 5-10"), "pages 5-10");
+        assert_eq!(expand_numbers("pages 5-10"), "pages 5 to 10");
+        assert_eq!(expand_numbers("from -5 to 10"), "from minus 5 to 10");
+        assert_eq!(expand_numbers("10 -5"), "10 minus 5");
     }
 
     #[test]
@@ -3150,6 +3168,36 @@ mod tests {
             expand_numbers("7.30pm–9.30pm"),
             "seven thirty PM to nine thirty PM"
         );
+        assert_eq!(expand_numbers("10%-20%"), "ten percent to twenty percent");
+    }
+
+    #[test]
+    fn ranges_of_counts_read_with_to() {
+        assert_eq!(expand_numbers("pages 10-12"), "pages 10 to 12");
+        assert_eq!(expand_numbers("a 3-1 win"), "a 3 to 1 win");
+        assert_eq!(expand_numbers("ages 18–25"), "ages 18 to 25");
+        assert_eq!(expand_numbers("1,000-2,000"), "1,000 to 2,000");
+        assert_eq!(expand_numbers("a 0-0 draw"), "a 0 to 0 draw");
+    }
+
+    #[test]
+    fn dashes_beside_words_or_codes_stay_as_written() {
+        for text in [
+            "COVID-19",
+            "ID-10",
+            "3-D",
+            "2-factor",
+            "5km-10km",
+            "-5-10",
+            "01-02",
+            "call 555-1234",
+            "10--12",
+        ] {
+            let spoken = expand_numbers(text);
+            assert!(!spoken.contains(" to "), "{text} -> {spoken}");
+        }
+        assert_eq!(expand_numbers("COVID-19"), "COVID-19");
+        assert_eq!(expand_numbers("3-D"), "3-D");
     }
 
     #[test]
