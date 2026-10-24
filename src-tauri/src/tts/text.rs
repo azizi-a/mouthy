@@ -1456,6 +1456,9 @@ const MAX_SPELLED_LETTERS: usize = 4;
 /// word ("NOTE", "DO NOT") are left as they are.
 pub fn spell_out(text: &str, lexicon: &impl Lexicon) -> String {
     let words = whitespace_words(text);
+    let last_spoken = words
+        .iter()
+        .rposition(|(_, word)| word.contains(|c: char| c.is_alphanumeric()));
     let mut out = String::with_capacity(text.len() + text.len() / 2);
     let mut copied = 0;
     for (k, &(start, word)) in words.iter().enumerate() {
@@ -1465,11 +1468,19 @@ pub fn spell_out(text: &str, lexicon: &impl Lexicon) -> String {
             && shouted_towards(&words[..k], Side::Before, lexicon);
         let shouted_after = word.ends_with(|c: char| c.is_ascii_alphabetic())
             && shouted_towards(&words[k + 1..], Side::After, lexicon);
-        let last = !words[k + 1..]
-            .iter()
-            .any(|(_, next)| next.contains(|c: char| c.is_alphanumeric()));
-        let shouted = shouted_before || shouted_after;
-        spell_word(word, shouted, last, lexicon, &mut out);
+        let ends = Ends {
+            text: last_spoken.is_none_or(|at| at <= k),
+            before_capitalised: words
+                .get(k + 1)
+                .is_some_and(|&(_, next)| starts_capitalised(next)),
+        };
+        spell_word(
+            word,
+            shouted_before || shouted_after,
+            ends,
+            lexicon,
+            &mut out,
+        );
     }
     out.push_str(&text[copied..]);
     out
@@ -1562,9 +1573,18 @@ fn knows(word: &str, lexicon: &impl Lexicon) -> bool {
     lexicon.has(word) || lexicon.has(&lower) || lexicon.has(&capitalised)
 }
 
-/// Rewrites the letters and full stops of one whitespace-delimited word;
-/// `last`: no later word has a letter or digit.
-fn spell_word(word: &str, shouted: bool, last: bool, lexicon: &impl Lexicon, out: &mut String) {
+/// Where a whitespace-delimited word sits, for whether its last stop may end
+/// a sentence.
+#[derive(Clone, Copy)]
+struct Ends {
+    /// No later word has a letter or digit.
+    text: bool,
+    /// The next word is capitalised ("Analysts").
+    before_capitalised: bool,
+}
+
+/// Rewrites the letters and full stops of one whitespace-delimited word.
+fn spell_word(word: &str, shouted: bool, ends: Ends, lexicon: &impl Lexicon, out: &mut String) {
     let mut i = 0;
     while let Some(c) = word[i..].chars().next() {
         let before = word[..i].chars().next_back();
@@ -1587,8 +1607,15 @@ fn spell_word(word: &str, shouted: bool, last: bool, lexicon: &impl Lexicon, out
                 continue;
             }
             out.push_str(&lexicon.spell(&letters, false));
-            // Only at the very end is the last stop a sentence's.
-            if last && !word[i + len..].contains(|c: char| c.is_alphanumeric()) {
+            // The last stop ends the sentence at the end of the text, and is
+            // taken to before a capitalised word ("in the U.S. Analysts
+            // expect"), though not after "e.g." or "i.e.".
+            let rest = &word[i + len..];
+            let at_end = ends.text && !rest.contains(|c: char| c.is_alphanumeric());
+            let before_sentence = ends.before_capitalised
+                && word[i..].starts_with(|c: char| c.is_ascii_uppercase())
+                && rest.chars().all(|c| matches!(c, '"' | '\'' | ')'));
+            if at_end || before_sentence {
                 out.push('.');
             }
             i += len;
@@ -3391,9 +3418,19 @@ mod tests {
             spelled("(i.e.) a Ph.D. and U.S.A.-made"),
             "(<I E>) a <P H D> and <U S A>-made"
         );
-        // At the end of the text the last stop ends the sentence.
+        // At the end of the text, or before a capitalised word, the last stop
+        // ends the sentence; never after "e.g." or before "API" or "team".
         assert_eq!(spelled("I live in the U.S."), "I live in the <U S>.");
         assert_eq!(spelled("in the U.S.\")"), "in the <U S>.\")");
+        assert_eq!(
+            spelled("Prices rose in the U.S. Analysts expect more."),
+            "Prices rose in the <U S>. Analysts expect more."
+        );
+        assert_eq!(spelled("e.g. Python"), "<E G> Python");
+        assert_eq!(
+            spelled("the U.S. API and the U.S., Canada"),
+            "the <U S> <A P I> and the <U S>, Canada"
+        );
         // Not initials: no last stop, a longer word, or letters after.
         assert_eq!(spelled("A.B"), "A dot B");
         assert_eq!(spelled("co.uk."), "co dot uk.");

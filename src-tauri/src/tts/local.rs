@@ -1129,6 +1129,7 @@ mod tests {
         assert_eq!(read_gb("Tools, e.g. hammers."), "tˈuːlz, ˌiːʤˈiː hˈaməz.");
         assert_eq!(read_gb("the U.S. team"), "ði jˌuːˈɛs tˈiːm");
         assert_eq!(read_gb("Live in the U.S."), "lˈɪv ɪn ði jˌuːˈɛs.");
+        assert!(read_gb("in the U.S. Analysts expect").contains("jˌuːˈɛs. "));
         assert_eq!(
             read_gb("README.md and ort.pyke.io"),
             "ɹˈiːd mˌiː dˈɒt ˌɛmdˈiː and ˈɔːt dˈɒt pˈIk dˈɒt ˈIQ"
