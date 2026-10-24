@@ -752,6 +752,10 @@ fn plain_text(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for (i, c) in text.char_indices() {
         match c {
+            // misaki-rs takes `[text](…)` as a pronunciation, and an earlier
+            // `[` would swallow the words before a `spell_out` override.
+            '[' => out.push('('),
+            ']' => out.push(')'),
             '’' | '‘' | 'ʼ' => out.push('\''),
             '“' | '”' | '„' => out.push('"'),
             // Minus sign.
@@ -1132,6 +1136,40 @@ mod tests {
         assert_eq!(
             read_gb("Get v2.0 or 3.14"),
             read_gb("Get version two point zero or three point one four")
+        );
+    }
+
+    #[test]
+    fn brackets_in_the_text_keep_their_words() {
+        let g2p = G2P::new(Language::EnglishGB);
+        let read_gb = |text| read(&g2p, Dialect::British, text);
+        for (text, parenthesised) in [
+            (
+                "He said [the CEO] would resign.",
+                "He said (the CEO) would resign.",
+            ),
+            (
+                "[TODO: fix the API before release]",
+                "(TODO: fix the API before release)",
+            ),
+            (
+                "Use the PDF (see [the FAQ]).",
+                "Use the PDF (see (the FAQ)).",
+            ),
+            (
+                "Read [the API docs][1] first.",
+                "Read (the API docs)(1) first.",
+            ),
+        ] {
+            assert_eq!(read_gb(text), read_gb(parenthesised), "{text}");
+        }
+        assert_eq!(
+            read_gb("He said [the CEO] would resign."),
+            "hˌiː sˈɛd ðə sˌiːˌiːˈQ wʊd ɹɪzˈIn."
+        );
+        assert_eq!(
+            read_gb("[TODO: fix the API before release]"),
+            "tə dˈuː: fˈɪks ði ˌApˌiːˈI bɪfˌɔː ɹɪlˈiːs"
         );
     }
 
