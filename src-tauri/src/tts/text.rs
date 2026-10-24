@@ -1502,8 +1502,7 @@ fn trailing_letters(word: &str) -> &str {
 
 /// An English word in capitals, or the pronoun "I" or article "A".
 fn is_shouted_word(word: &str, lexicon: &impl Lexicon) -> bool {
-    matches!(word, "I" | "A")
-        || (word.len() >= 2 && is_capitals(word) && knows_as_word(word, lexicon))
+    matches!(word, "I" | "A") || (word.len() >= 2 && is_capitals(word) && knows(word, lexicon))
 }
 
 fn is_capitals(word: &str) -> bool {
@@ -1511,10 +1510,10 @@ fn is_capitals(word: &str) -> bool {
 }
 
 /// The lexicon has the word as written, in lower case or capitalised.
-fn knows_as_word(capitals: &str, lexicon: &impl Lexicon) -> bool {
-    let lower = capitals.to_ascii_lowercase();
-    let capitalised = format!("{}{}", &capitals[..1], &lower[1..]);
-    lexicon.has(capitals) || lexicon.has(&lower) || lexicon.has(&capitalised)
+fn knows(word: &str, lexicon: &impl Lexicon) -> bool {
+    let lower = word.to_ascii_lowercase();
+    let capitalised = format!("{}{}", lower[..1].to_ascii_uppercase(), &lower[1..]);
+    lexicon.has(word) || lexicon.has(&lower) || lexicon.has(&capitalised)
 }
 
 /// Rewrites the letters and full stops of one whitespace-delimited word;
@@ -1672,7 +1671,7 @@ fn say_capitals(
     let spell = if INITIALISMS_THAT_SPELL_WORDS.contains(&capitals) {
         !shouted
     } else {
-        !knows_as_word(capitals, lexicon)
+        !knows(capitals, lexicon)
             && (capitals.len() <= MAX_SPELLED_LETTERS
                 || !capitals.contains(['A', 'E', 'I', 'O', 'U', 'Y']))
     };
@@ -1681,8 +1680,10 @@ fn say_capitals(
 
 /// A word in camel case cut where a lower-case letter meets a capital
 /// ("Git|Hub") and before the last capital of a run followed by two lower-case
-/// letters ("HTML|Parser", but not "IPv6" or "IDs"). Words the lexicon has as
-/// written ("iOS", "YouTube") and "Mc" names stay whole.
+/// letters ("HTML|Parser", but not "IPv6" or "IDs"). It stays whole when the
+/// lexicon has it as written ("iOS", "YouTube"), for "Mc" names, and when a
+/// part is no word the lexicon has ("PostgreSQL"), since a fragment reads
+/// worse than the whole word spelled or read by espeak-ng.
 fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
     if lexicon.has(word) || word.starts_with("Mc") {
         return vec![word];
@@ -1702,7 +1703,12 @@ fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
         }
     }
     parts.push(&word[start..]);
-    parts
+    let readable = |part: &str| part.len() == 1 || is_capitals(part) || knows(part, lexicon);
+    if parts.iter().all(|part| readable(part)) {
+        parts
+    } else {
+        vec![word]
+    }
 }
 
 #[cfg(test)]
@@ -3121,7 +3127,7 @@ mod tests {
     const WORDS: Words = Words(&[
         "NASA", "GIF", "RAM", "covid", "iOS", "YouTube", "McDonald", "IT", "US", "ID", "OS", "AM",
         "it", "us", "id", "do", "not", "now", "let", "know", "note", "must", "the", "you", "here",
-        "arm", "pm", "net",
+        "arm", "pm", "net", "git", "hub", "mac", "phone", "parser", "auth", "fast",
     ]);
 
     fn spelled(text: &str) -> String {
@@ -3193,15 +3199,23 @@ mod tests {
         assert_eq!(spelled("macOS"), "mac <O S>");
         assert_eq!(spelled("HTMLParser"), "<H T M L> Parser");
         assert_eq!(spelled("iPhone"), "i Phone");
-        assert_eq!(spelled("OAuth"), "O Auth");
-        assert_eq!(spelled("XMLHttpRequest"), "<X M L> Http Request");
+        assert_eq!(spelled("OAuth and FastAPI"), "O Auth and Fast <A P I>");
         assert_eq!(spelled("GitHub's API"), "Git Hub's <A P I>");
     }
 
     #[test]
-    fn camel_case_the_lexicon_has_stays_whole() {
+    fn camel_case_stays_whole_unless_every_part_is_readable() {
         for kept in [
-            "iOS 17", "YouTube", "McDonald", "McKinsey", "IPv6", "Hello", "hello",
+            "iOS 17",
+            "YouTube",
+            "McDonald",
+            "McKinsey",
+            "IPv6",
+            "Hello",
+            "hello",
+            // "Http" and "Postgre" are no words.
+            "XMLHttpRequest",
+            "PostgreSQL",
         ] {
             assert_eq!(spelled(kept), kept, "{kept}");
         }
