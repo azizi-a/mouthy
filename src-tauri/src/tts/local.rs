@@ -1630,9 +1630,9 @@ mod tests {
             ] {
                 assert!(seconds(text) > 0.5, "{text}");
             }
-            // Letter names take longer than the one syllable of the word "id".
-            let spelled = seconds("ID");
-            let word = seconds("[id](/ˈɪd/)");
+            // Letter names take longer than the one syllable of "earl".
+            let spelled = seconds("URL");
+            let word = seconds("earl");
             assert!(spelled > word + 0.1, "{spelled} s against {word} s");
         }
     }
