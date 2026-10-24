@@ -1451,13 +1451,10 @@ pub fn spell_out(text: &str, lexicon: &impl Lexicon) -> String {
     for (k, &(start, word)) in words.iter().enumerate() {
         out.push_str(&text[copied..start]);
         copied = start + word.len();
-        let shouted_before = k > 0
-            && word.starts_with(|c: char| c.is_ascii_alphabetic())
-            && is_shouted_word(trailing_letters(words[k - 1].1), lexicon);
+        let shouted_before = word.starts_with(|c: char| c.is_ascii_alphabetic())
+            && shouted_towards(&words[..k], Side::Before, lexicon);
         let shouted_after = word.ends_with(|c: char| c.is_ascii_alphabetic())
-            && words
-                .get(k + 1)
-                .is_some_and(|&(_, next)| is_shouted_word(leading_letters(next), lexicon));
+            && shouted_towards(&words[k + 1..], Side::After, lexicon);
         let last = !words[k + 1..]
             .iter()
             .any(|(_, next)| next.contains(|c: char| c.is_alphanumeric()));
@@ -1502,9 +1499,46 @@ fn trailing_letters(word: &str) -> &str {
     &word[word.len() - len..]
 }
 
-/// An English word in capitals, or the pronoun "I" or article "A".
+#[derive(Clone, Copy)]
+enum Side {
+    Before,
+    After,
+}
+
+/// Whether the word next to an initialism, on `side` across a space, is a
+/// shouted English word ("DO IT NOW"). "I" and "A" count only with another
+/// one beyond them ("I AM HERE"), and an initialism that spells a word never
+/// counts, so "the ID I sent" and "your US ID" are spelled.
+fn shouted_towards(words: &[(usize, &str)], side: Side, lexicon: &impl Lexicon) -> bool {
+    let (next, beyond) = match side {
+        Side::Before => (words.len().checked_sub(1), words.len().checked_sub(2)),
+        Side::After => (Some(0), Some(1)),
+    };
+    let facing = |at: Option<usize>| {
+        at.and_then(|at| words.get(at))
+            .map(|&(_, word)| match side {
+                Side::Before => trailing_letters(word),
+                Side::After => leading_letters(word),
+            })
+    };
+    let Some(neighbour) = facing(next) else {
+        return false;
+    };
+    if matches!(neighbour, "I" | "A") {
+        let whole = next
+            .and_then(|at| words.get(at))
+            .is_some_and(|&(_, w)| w == neighbour);
+        return whole && facing(beyond).is_some_and(|word| is_shouted_word(word, lexicon));
+    }
+    is_shouted_word(neighbour, lexicon)
+}
+
+/// An English word in capitals, not an initialism that spells one.
 fn is_shouted_word(word: &str, lexicon: &impl Lexicon) -> bool {
-    matches!(word, "I" | "A") || (word.len() >= 2 && is_capitals(word) && knows(word, lexicon))
+    word.len() >= 2
+        && is_capitals(word)
+        && !INITIALISMS_THAT_SPELL_WORDS.contains(&word)
+        && knows(word, lexicon)
 }
 
 fn is_capitals(word: &str) -> bool {
@@ -3187,12 +3221,24 @@ mod tests {
         assert_eq!(spelled("the IT team"), "the <I T> team");
         assert_eq!(spelled("the US and the UK"), "the <U S> and the <U K>");
         assert_eq!(spelled("seven AM"), "seven <A M>");
-        for kept in ["DO IT NOW", "LET US KNOW", "I AM here", "DO IT, now"] {
+        for kept in ["DO IT NOW", "LET US KNOW", "I AM HERE", "DO IT, now"] {
             assert_eq!(spelled(kept), kept, "{kept}");
         }
-        // A comma or an unknown initialism is no shouted neighbour.
+        // A comma, an unknown initialism or another that spells a word is no
+        // shouted neighbour, nor is "I" or "A" among lower-case words.
         assert_eq!(spelled("IT, US"), "<I T>, <U S>");
         assert_eq!(spelled("the API ID"), "the <A P I> <I D>");
+        assert_eq!(spelled("your US ID card"), "your <U S> <I D> card");
+        assert_eq!(
+            spelled("Thanks for the ID I sent."),
+            "Thanks for the <I D> I sent."
+        );
+        assert_eq!(
+            spelled("When I was in the US I learned a lot."),
+            "When I was in the <U S> I learned a lot."
+        );
+        assert_eq!(spelled("The ID A gave me."), "The <I D> A gave me.");
+        assert_eq!(spelled("I AM here"), "I <A M> here");
     }
 
     #[test]
