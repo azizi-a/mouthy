@@ -261,6 +261,11 @@
         "description": "ソースコードを見て貢献する",
         "button": "GitHub で見る"
       },
+      "thirdPartyNotices": {
+        "title": "Third-party licences",
+        "description": "Licences of the software Mouthy includes",
+        "button": "Open"
+      },
       "acknowledgments": {
         "title": "謝辞",
         "handy": {

@@ -261,6 +261,11 @@
         "description": "查看源代码并贡献",
         "button": "在 GitHub 上查看"
       },
+      "thirdPartyNotices": {
+        "title": "Third-party licences",
+        "description": "Licences of the software Mouthy includes",
+        "button": "Open"
+      },
       "acknowledgments": {
         "title": "致谢",
         "handy": {

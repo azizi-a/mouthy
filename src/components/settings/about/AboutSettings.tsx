@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { commands } from "@/bindings";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
@@ -76,6 +77,19 @@ export const AboutSettings: React.FC = () => {
             </div>
           </SettingContainer>
         ))}
+        <SettingContainer
+          title={t("settings.about.thirdPartyNotices.title")}
+          description={t("settings.about.thirdPartyNotices.description")}
+          grouped={true}
+        >
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => commands.openThirdPartyNotices()}
+          >
+            {t("settings.about.thirdPartyNotices.button")}
+          </Button>
+        </SettingContainer>
       </SettingsGroup>
     </div>
   );

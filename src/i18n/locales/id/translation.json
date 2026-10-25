@@ -261,6 +261,11 @@
         "description": "Lihat kode sumber dan berkontribusi",
         "button": "Lihat di GitHub"
       },
+      "thirdPartyNotices": {
+        "title": "Third-party licences",
+        "description": "Licences of the software Mouthy includes",
+        "button": "Open"
+      },
       "acknowledgments": {
         "title": "Ucapan Terima Kasih",
         "handy": {

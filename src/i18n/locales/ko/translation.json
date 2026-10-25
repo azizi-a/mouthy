@@ -261,6 +261,11 @@
         "description": "소스 코드 보기 및 기여",
         "button": "GitHub에서 보기"
       },
+      "thirdPartyNotices": {
+        "title": "Third-party licences",
+        "description": "Licences of the software Mouthy includes",
+        "button": "Open"
+      },
       "acknowledgments": {
         "title": "감사의 말",
         "handy": {

@@ -125,6 +125,24 @@ pub fn open_app_data_dir(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[specta::specta]
+#[tauri::command]
+pub fn open_third_party_notices(app: AppHandle) -> Result<(), String> {
+    let notices = app
+        .path()
+        .resolve(
+            "resources/THIRD_PARTY_NOTICES.txt",
+            tauri::path::BaseDirectory::Resource,
+        )
+        .map_err(|e| format!("Failed to find third-party notices: {}", e))?;
+
+    app.opener()
+        .open_path(notices.to_string_lossy(), None::<String>)
+        .map_err(|e| format!("Failed to open third-party notices: {}", e))?;
+
+    Ok(())
+}
+
 /// Try to initialize Enigo (keyboard/mouse simulation).
 /// On macOS, this will return an error if accessibility permissions are not granted.
 #[specta::specta]

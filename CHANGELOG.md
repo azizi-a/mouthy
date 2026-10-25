@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+### Added
+
+- The app ships the licences of Mouthy and the software it includes, ONNX Runtime's third-party notices among them; Settings → About → Third-party licences opens them.
+
 ### Changed
 
 - New app icon and menu-bar icons: a pair of lips, open while Mouthy is speaking.

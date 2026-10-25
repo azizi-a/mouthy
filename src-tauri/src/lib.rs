@@ -302,6 +302,7 @@ pub fn run(cli_args: CliArgs) {
         commands::set_log_level,
         commands::open_log_dir,
         commands::open_app_data_dir,
+        commands::open_third_party_notices,
         commands::initialize_enigo,
         commands::initialize_shortcuts,
         commands::audio::get_available_output_devices,
