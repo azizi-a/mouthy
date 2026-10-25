@@ -252,7 +252,8 @@ fn voices_dir(models_dir: &Path) -> PathBuf {
     kokoro_dir(models_dir).join("voices")
 }
 
-/// Voice ids with a `.bin` file in the voices folder, sorted.
+/// Voice ids with a `.bin` file in the voices folder, sorted. A name with `-`
+/// is left out: the voice setting reads `-` as subtraction and refuses it.
 pub fn installed_voices(models_dir: &Path) -> Vec<String> {
     let Ok(entries) = fs::read_dir(voices_dir(models_dir)) else {
         return Vec::new();
@@ -262,7 +263,7 @@ pub fn installed_voices(models_dir: &Path) -> Vec<String> {
         .map(|entry| entry.path())
         .filter(|path| path.extension().is_some_and(|ext| ext == "bin") && path.is_file())
         .filter_map(|path| path.file_stem()?.to_str().map(str::to_string))
-        .filter(|stem| is_voice_name(stem))
+        .filter(|stem| is_voice_name(stem) && !stem.contains('-'))
         .collect();
     voices.sort();
     voices
@@ -1777,6 +1778,21 @@ mod tests {
             fs::write(voices.join(name), b"").unwrap();
         }
         assert_eq!(installed_voices(dir.path()), vec!["af_heart", "bm_lewis"]);
+    }
+
+    #[test]
+    fn installed_voices_leave_out_names_the_setting_refuses() {
+        let dir = tempfile::tempdir().unwrap();
+        let voices = voices_dir(dir.path());
+        fs::create_dir_all(&voices).unwrap();
+        for name in ["bm_lewis.bin", "my-voice.bin", "bm_lewis-bm_george.bin"] {
+            fs::write(voices.join(name), b"").unwrap();
+        }
+        let installed = installed_voices(dir.path());
+        assert_eq!(installed, vec!["bm_lewis"]);
+        for voice in installed {
+            assert!(VoiceSpec::parse(&voice).is_ok(), "{voice}");
+        }
     }
 
     /// The P2.2 spike's corpus, for judging the lexicons by ear and eye, and
