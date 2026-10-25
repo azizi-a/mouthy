@@ -1969,4 +1969,34 @@ mod tests {
         );
         assert!(!read.is_empty() && read.len() < spelled.len());
     }
+
+    /// Needs `bm_lewis.bin` and `bm_george.bin` beside the model:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored blends --nocapture`.
+    #[test]
+    #[ignore = "needs Kokoro model files"]
+    fn local_voice_blends() {
+        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let stop = Arc::new(AtomicBool::new(false));
+        let speak = |voice: &str| {
+            let files = ModelFiles::new(&models, ModelVariant::Int8, voice);
+            let started = Instant::now();
+            let samples = open(&files, &stop)
+                .unwrap()
+                .synthesize("Hello from Mouthy, this is a blended voice.", 1.0, true)
+                .unwrap();
+            let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
+            println!(
+                "{voice}: {seconds:.2} s of audio in {:?}",
+                started.elapsed()
+            );
+            assert!((1.0..8.0).contains(&seconds), "{voice}: {seconds} s");
+            samples
+        };
+        let lewis = speak("bm_lewis");
+        let george = speak("bm_george");
+        let blend = speak("bm_lewis(70)+bm_george(30)");
+        assert!(blend != lewis && blend != george);
+        // A weight change alone reloads the voice.
+        assert!(speak("bm_lewis(30)+bm_george(70)") != blend);
+    }
 }
