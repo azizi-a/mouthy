@@ -88,9 +88,9 @@
         "noneInstalled": "No voice is downloaded yet. Download one below, or manage files on the Models page.",
         "modelMissing": "The offline model is not downloaded yet, so voices cannot speak or preview.",
         "openModels": "Open Models",
-        "installedOnly": {
-          "title": "Installed only",
-          "description": "Show only the voices downloaded to this Mac."
+        "showUninstalled": {
+          "title": "Show uninstalled voices",
+          "description": "List voices you have not downloaded yet, with a Download button for each."
         },
         "otherGroup": "Other",
         "englishOnly": "Reads English text only, with this language's accent.",

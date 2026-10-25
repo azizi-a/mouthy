@@ -847,6 +847,7 @@ Common rules for every Phase 3 stage: one branch + PR per stage, squash-merged; 
   - **Blend writes:** the slider writes on commit only when a two-voice blend is in use and the weight really changed, so a stored 75/25 shows 80 and is not rewritten; a draft blend writes on Use. Focus writes nothing.
   - **Deviations:** `VoiceSelector.tsx` deleted.
   - **Verification:** review 86 %, fix applied (the commit-on-real-change rule above). `cargo test` 289 pass, clippy, lint, format, translations, `bun run build`, a browser render with mocked IPC. Not run live: the click list, now steps 14–30 of `docs/phase3-checklist.md` (H22).
+  - **Follow-up (PR from `fix/picker-show-uninstalled`):** the user asked for a less cluttered default, so "Installed only" became "Show uninstalled voices", off by default (key `settings.speech.voice.showUninstalled`). With no voice installed every voice is listed and the switch is hidden; a running download stays listed when the switch is off. Checklist steps 14, 15 and 28 match. Not run live.
 
 ### Stage P3.7 — app icon and tray glyphs `[chore]`
 

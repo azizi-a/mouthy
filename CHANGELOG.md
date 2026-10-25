@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+- The Settings voice picker lists only installed voices by default; a 'Show uninstalled voices' switch reveals the rest.
+
 ## 0.4.0 — 2026-10-25
 
 Choosing a voice by ear: Settings lists all 54 Kokoro voices with Preview, and blends the voice in use with a second one. Also new: ⌥⇧⎋ reads the clipboard, skipping text a password manager marked secret; Settings refuses a shortcut another one already uses; a new icon; and the licences of the software Mouthy includes. Mouthy is still not signed or notarised and does not update itself.

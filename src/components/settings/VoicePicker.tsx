@@ -72,7 +72,7 @@ export const VoicePicker: React.FC<VoicePickerProps> = ({
   const usesServer = getSetting("tts_backend") === "http";
   const baseUrl = getSetting("tts_base_url");
   const voice = getSetting("tts_voice") ?? "";
-  const [installedOnly, setInstalledOnly] = useState(false);
+  const [showUninstalled, setShowUninstalled] = useState(false);
   const [showOther, setShowOther] = useState(false);
   const [voiceIds, setVoiceIds] = useState<VoiceIds>({ status: "loading" });
 
@@ -171,16 +171,21 @@ export const VoicePicker: React.FC<VoicePickerProps> = ({
     );
   }
 
+  const noVoiceInstalled =
+    !usesServer && !catalog.some((file) => file.installed);
+  // With nothing installed, list every voice so there is something to download;
+  // a running download stays listed so it can be followed and cancelled.
+  const listUninstalled = showUninstalled || noVoiceInstalled;
   const listed = usesServer
     ? groupByLanguage(ids, languageOf)
     : groupByLanguage(
         catalog
-          .filter((file) => !installedOnly || file.installed)
+          .filter(
+            (file) => listUninstalled || file.installed || file.downloading,
+          )
           .map((file) => file.id),
         (id) => fileOf(id)?.language ?? null,
       );
-  const noVoiceInstalled =
-    !usesServer && !catalog.some((file) => file.installed);
   const otherOpen = showOther || serverError !== undefined || serverEmpty;
 
   return (
@@ -204,12 +209,12 @@ export const VoicePicker: React.FC<VoicePickerProps> = ({
           </Button>
         </div>
       )}
-      {!usesServer && (
+      {!usesServer && !noVoiceInstalled && (
         <ToggleSwitch
-          checked={installedOnly}
-          onChange={setInstalledOnly}
-          label={t("settings.speech.voice.installedOnly.title")}
-          description={t("settings.speech.voice.installedOnly.description")}
+          checked={showUninstalled}
+          onChange={setShowUninstalled}
+          label={t("settings.speech.voice.showUninstalled.title")}
+          description={t("settings.speech.voice.showUninstalled.description")}
           descriptionMode="tooltip"
           grouped={true}
         />
