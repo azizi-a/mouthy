@@ -71,7 +71,7 @@ gh api repos/azizi-a/mouthy/releases/latest --jq .tag_name   # v0.4.0
 
 ### Homebrew cask
 
-Draft assets cannot be downloaded, so bump the cask only after publishing. In a clone of [azizi-a/homebrew-mouthy](https://github.com/azizi-a/homebrew-mouthy), on a new branch, set `version` and `sha256` in `Casks/mouthy.rb` to the published dmg's (the hash is in `SHA256SUMS`), run `brew style` and `brew audit --cask --online` on the cask, then open a PR to the tap's `main`.
+Prepare the cask bump alongside the release: in a clone of [azizi-a/homebrew-mouthy](https://github.com/azizi-a/homebrew-mouthy), on a new branch, set `version` and `sha256` in `Casks/mouthy.rb` to the dmg's (the hash is in `SHA256SUMS`) and open a PR to the tap's `main`. Merge it only after the release is published, because draft assets cannot be downloaded. Before publishing, run `brew style` on the cask and `brew audit --cask --strict` (Homebrew audits casks by name only, so copy the cask into a throwaway local tap); after publishing, run `brew audit --cask --online`.
 
 ## Troubleshooting
 

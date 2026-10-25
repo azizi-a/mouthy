@@ -2,9 +2,13 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.4.1 — 2026-10-25
 
 - The Settings voice picker lists only installed voices by default; a 'Show uninstalled voices' switch reveals the rest.
+
+### Notes
+
+- 0.4.0 was tagged but never published; this is the first release with the Phase 3 features below.
 
 ## 0.4.0 — 2026-10-25
 
