@@ -102,7 +102,7 @@ Open Settings from the tray. The General page has three groups:
 - **Sound:** output device
 - **Models page:** offline voice downloads, model and voice choice
 - **Advanced page:** tray icon, experimental features (shortcut backend)
-- **About page:** language, theme, app data and log folders
+- **About page:** language, theme, app data and log folders, third-party licences
 
 With the HTTP engine, Mouthy sends the selected text to the server URL you set; plain `http://` is unencrypted, so use `https://` for a server on another machine. The Local engine sends nothing anywhere; only the Models page's downloads use the network.
 
@@ -126,4 +126,4 @@ Mouthy is derived from [Handy](https://github.com/cjpais/Handy) by CJ Pais (MIT)
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). The licences of the software Mouthy includes are in [src-tauri/resources/THIRD_PARTY_NOTICES.txt](src-tauri/resources/THIRD_PARTY_NOTICES.txt), which ships inside the app and opens from Settings → About.
