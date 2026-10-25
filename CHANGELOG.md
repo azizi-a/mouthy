@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+- Lock-file updates for rustls, rustls-webpki, serde_with and openssl that close the advisories Dependabot opened (#8–#11).
+
 ## 0.4.1 — 2026-10-25
 
 - The Settings voice picker lists only installed voices by default; a 'Show uninstalled voices' switch reveals the rest.
