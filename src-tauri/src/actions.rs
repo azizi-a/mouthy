@@ -379,7 +379,7 @@ fn start_session_on_main(
     *state.lock() = Some(session);
     overlay::show_overlay(app, OverlayView::Speaking);
     tray::set_tray_state(app, TrayIconState::Speaking);
-    emit_speech_state(app, SessionPhase::Started, input);
+    emit_speech_state(app, SessionPhase::Started, input, None);
     Ok(())
 }
 
@@ -412,7 +412,7 @@ fn stop_speaking_on_main(app: &AppHandle) {
 fn stop_session_on_main(app: &AppHandle, state: &TtsState) -> Option<Input> {
     let session = state.lock().take()?;
     session.stop.store(true, Ordering::SeqCst);
-    emit_speech_state(app, SessionPhase::Ended, session.input);
+    emit_speech_state(app, SessionPhase::Ended, session.input, None);
     Some(session.input)
 }
 
@@ -423,30 +423,58 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
     };
     let input = {
         let mut current = state.lock();
-        let owner = current
-            .as_ref()
-            .filter(|session| Arc::ptr_eq(&session.stop, stop))
-            .map(|session| session.input);
-        let Some(input) = owner else {
+        let Some(input) = owner_input(&current, stop) else {
             return;
         };
         *current = None;
         input
     };
-    match end {
-        PlaybackEnd::Done => overlay::hide_overlay(app),
+    let error = match end {
+        PlaybackEnd::Done => {
+            overlay::hide_overlay(app);
+            None
+        }
         PlaybackEnd::NothingSpoken => {
             info!("No sentence had speakable text");
             overlay::show_overlay(app, input.empty_notice());
+            None
         }
-        PlaybackEnd::Failed(message) => overlay::show_overlay(app, OverlayView::Error { message }),
-    }
+        PlaybackEnd::Failed(message) => {
+            overlay::show_overlay(
+                app,
+                OverlayView::Error {
+                    message: message.clone(),
+                },
+            );
+            Some(message)
+        }
+    };
     tray::set_tray_state(app, TrayIconState::Idle);
-    emit_speech_state(app, SessionPhase::Ended, input);
+    emit_speech_state(app, SessionPhase::Ended, input, error);
     if input == Input::Preview {
         // So the next hotkey finds the settings voice loaded, not the preview's.
         preload_local_voice(app);
     }
+}
+
+/// Tells the UI the session that owns `stop` has started playing audio, unless
+/// it has already ended.
+fn speaking_on_main(app: &AppHandle, stop: &Arc<AtomicBool>) {
+    let Some(state) = app.try_state::<TtsState>() else {
+        return;
+    };
+    let input = owner_input(&state.lock(), stop);
+    if let Some(input) = input {
+        emit_speech_state(app, SessionPhase::Speaking, input, None);
+    }
+}
+
+/// What the current session reads, if it is the one that owns `stop`.
+fn owner_input(current: &Option<Session>, stop: &Arc<AtomicBool>) -> Option<Input> {
+    current
+        .as_ref()
+        .filter(|session| Arc::ptr_eq(&session.stop, stop))
+        .map(|session| session.input)
 }
 
 /// The `speech-state` event's payload.
@@ -455,21 +483,27 @@ struct SpeechStateChange {
     state: SessionPhase,
     /// Whether the session is a voice preview.
     preview: bool,
+    /// Why synthesis or playback failed; only ever on `ended`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 enum SessionPhase {
     Started,
+    /// The first audio is playing.
+    Speaking,
     Ended,
 }
 
 /// Sent from the main thread, so a session's end always reaches the UI before
 /// the start of the session that replaced it.
-fn emit_speech_state(app: &AppHandle, state: SessionPhase, input: Input) {
+fn emit_speech_state(app: &AppHandle, state: SessionPhase, input: Input, error: Option<String>) {
     let change = SpeechStateChange {
         state,
         preview: input == Input::Preview,
+        error,
     };
     if let Err(e) = app.emit("speech-state", change) {
         warn!("Failed to report the speech state: {e}");
@@ -727,7 +761,7 @@ fn play(
     captured_at: Instant,
 ) {
     let mut guard = SessionGuard {
-        app,
+        app: app.clone(),
         stop: stop.clone(),
         end: PlaybackEnd::Done,
     };
@@ -742,18 +776,28 @@ fn play(
     sink.log_on_drop(false);
     let player = Player::connect_new(sink.mixer());
     player.set_volume(volume);
-    guard.end = play_chunks(&player, &rx, &stop, captured_at);
+    // Posted like the session's end, so it is reported only while current.
+    let first_audio = || {
+        let stop = stop.clone();
+        let handle = app.clone();
+        if let Err(e) = app.run_on_main_thread(move || speaking_on_main(&handle, &stop)) {
+            warn!("Failed to report the first audio: {e}");
+        }
+    };
+    guard.end = play_chunks(&player, &rx, &stop, captured_at, first_audio);
 }
 
 /// Plays chunks from `rx` until they run out, synthesis fails or `stop` is
-/// set. Returns a synthesis failure once the audio queued before it has played.
+/// set, calling `first_audio` once the first chunk is queued. Returns a
+/// synthesis failure once the audio queued before it has played.
 fn play_chunks(
     player: &Player,
     rx: &Receiver<Chunk>,
     stop: &AtomicBool,
     captured_at: Instant,
+    first_audio: impl FnOnce(),
 ) -> PlaybackEnd {
-    let mut queued_any = false;
+    let mut first_audio = Some(first_audio);
     loop {
         if stop.load(Ordering::SeqCst) {
             player.stop();
@@ -772,13 +816,13 @@ fn play_chunks(
                     return PlaybackEnd::Done;
                 }
                 player.append(SamplesBuffer::new(MONO, SAMPLE_RATE, pcm_to_f32(&samples)));
-                if !queued_any {
+                if let Some(first_audio) = first_audio.take() {
                     info!(
                         "First audio {} ms after the capture",
                         captured_at.elapsed().as_millis()
                     );
+                    first_audio();
                 }
-                queued_any = true;
             }
             Ok(Err(message)) => {
                 error!("Speech synthesis failed: {message}");
@@ -788,7 +832,7 @@ fn play_chunks(
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
                 play_out(player, stop);
-                return if queued_any {
+                return if first_audio.is_none() {
                     PlaybackEnd::Done
                 } else {
                     PlaybackEnd::NothingSpoken
@@ -1017,16 +1061,81 @@ mod tests {
 
     #[test]
     fn speech_state_payload_names_the_phase_and_whether_it_is_a_preview() {
-        let payload =
-            |state, preview| serde_json::to_value(SpeechStateChange { state, preview }).unwrap();
+        let payload = |state, preview, error| {
+            serde_json::to_value(SpeechStateChange {
+                state,
+                preview,
+                error,
+            })
+            .unwrap()
+        };
         assert_eq!(
-            payload(SessionPhase::Started, true),
+            payload(SessionPhase::Started, true, None),
             serde_json::json!({ "state": "started", "preview": true })
         );
         assert_eq!(
-            payload(SessionPhase::Ended, false),
+            payload(SessionPhase::Speaking, true, None),
+            serde_json::json!({ "state": "speaking", "preview": true })
+        );
+        assert_eq!(
+            payload(SessionPhase::Ended, false, None),
             serde_json::json!({ "state": "ended", "preview": false })
         );
+        assert_eq!(
+            payload(SessionPhase::Ended, true, Some("server error".into())),
+            serde_json::json!({ "state": "ended", "preview": true, "error": "server error" })
+        );
+    }
+
+    #[test]
+    fn only_the_current_session_reports_its_state() {
+        let stop = Arc::new(AtomicBool::new(false));
+        let current = Some(Session::preview(stop.clone()));
+        assert_eq!(owner_input(&current, &stop), Some(Input::Preview));
+        assert_eq!(
+            owner_input(&current, &Arc::new(AtomicBool::new(false))),
+            None,
+            "a replaced session must not report its first audio"
+        );
+        assert_eq!(owner_input(&None, &stop), None);
+    }
+
+    #[test]
+    fn first_audio_is_reported_once_when_the_first_chunk_is_queued() {
+        let (player, _output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        tx.send(Ok(vec![0; 480])).unwrap();
+        tx.send(Ok(vec![0; 480])).unwrap();
+        let stop = AtomicBool::new(false);
+        let reports = std::sync::atomic::AtomicUsize::new(0);
+
+        let (player_ref, stop_ref, reports_ref) = (&player, &stop, &reports);
+        thread::scope(|scope| {
+            let _release = StopOnDrop(stop_ref);
+            let playback = scope.spawn(move || {
+                play_chunks(player_ref, &rx, stop_ref, Instant::now(), || {
+                    reports_ref.fetch_add(1, Ordering::SeqCst);
+                })
+            });
+            thread::sleep(PLAYBACK_POLL * 10);
+            assert_eq!(player.len(), 2);
+            assert_eq!(reports.load(Ordering::SeqCst), 1);
+            stop.store(true, Ordering::SeqCst);
+            assert_eq!(playback.join().unwrap(), PlaybackEnd::Done);
+        });
+
+        let (player, _output) = Player::new();
+        let (tx, rx) = mpsc::sync_channel::<Chunk>(READ_AHEAD);
+        drop(tx);
+        let mut reported = false;
+        play_chunks(
+            &player,
+            &rx,
+            &AtomicBool::new(false),
+            Instant::now(),
+            || reported = true,
+        );
+        assert!(!reported, "nothing was queued, so nothing is reported");
     }
 
     #[test]
@@ -1059,7 +1168,7 @@ mod tests {
         let (player_ref, stop_ref) = (&player, &stop);
         thread::scope(|scope| {
             let playback =
-                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now(), || {}));
             // Nothing is consuming the audio yet, so the error must wait.
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(!playback.is_finished());
@@ -1086,7 +1195,7 @@ mod tests {
         let (player_ref, stop_ref) = (&player, &stop);
         thread::scope(|scope| {
             let playback =
-                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now(), || {}));
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(!playback.is_finished());
 
@@ -1143,7 +1252,7 @@ mod tests {
         thread::scope(|scope| {
             let _release = StopOnDrop(stop_ref);
             let playback =
-                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now(), || {}));
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(
                 !playback.is_finished(),
@@ -1167,7 +1276,7 @@ mod tests {
         thread::scope(|scope| {
             let _release = StopOnDrop(stop_ref);
             let playback =
-                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now(), || {}));
             thread::sleep(PLAYBACK_POLL * 10);
             assert!(!playback.is_finished());
 
@@ -1193,7 +1302,7 @@ mod tests {
         let stop = AtomicBool::new(true);
 
         assert_eq!(
-            play_chunks(&player, &rx, &stop, Instant::now()),
+            play_chunks(&player, &rx, &stop, Instant::now(), || {}),
             PlaybackEnd::Done
         );
         assert!(
@@ -1212,7 +1321,7 @@ mod tests {
         thread::scope(|scope| {
             let _release = StopOnDrop(stop_ref);
             let playback =
-                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now()));
+                scope.spawn(move || play_chunks(player_ref, &rx, stop_ref, Instant::now(), || {}));
             // Player takes READ_AHEAD, the channel holds READ_AHEAD more.
             for _ in 0..READ_AHEAD * 2 {
                 tx.send(Ok(vec![0; 480])).unwrap();
@@ -1244,13 +1353,13 @@ mod tests {
 
         let stop = AtomicBool::new(false);
         assert_eq!(
-            play_chunks(&player, &rx, &stop, Instant::now()),
+            play_chunks(&player, &rx, &stop, Instant::now(), || {}),
             PlaybackEnd::NothingSpoken
         );
         // A stopped session ends quietly even when nothing played.
         stop.store(true, Ordering::SeqCst);
         assert_eq!(
-            play_chunks(&player, &rx, &stop, Instant::now()),
+            play_chunks(&player, &rx, &stop, Instant::now(), || {}),
             PlaybackEnd::Done
         );
     }
