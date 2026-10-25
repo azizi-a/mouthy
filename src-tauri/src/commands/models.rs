@@ -2,8 +2,8 @@
 //!
 //! Downloads run as tasks on the async runtime. Each reports
 //! `model-download-progress` while it runs, and `model-files-changed` is sent
-//! whenever a file starts, stops or goes and after every preload of the local
-//! voice, so the page re-reads the list.
+//! whenever a file starts, stops or goes, when the voice setting changes and
+//! after every preload of the local voice, so the page re-reads the list.
 
 use super::models_dir;
 use crate::settings::{self, ModelVariant};

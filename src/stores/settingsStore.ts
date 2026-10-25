@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
 import type { AppSettings as Settings, AudioDevice } from "@/bindings";
 import { commands } from "@/bindings";
 
@@ -68,7 +69,15 @@ const settingUpdaters: {
   onboarding_completed: (value) =>
     commands.changeOnboardingCompletedSetting(value as boolean),
   tts_base_url: (value) => commands.changeTtsBaseUrlSetting(value as string),
-  tts_voice: (value) => commands.changeTtsVoiceSetting(value as string),
+  // The Local engine rejects a malformed blend and stores its canonical form.
+  tts_voice: async (value) => {
+    const result = await commands.changeTtsVoiceSetting(value as string);
+    if (result.status === "error") {
+      toast.error(result.error);
+      throw new Error(result.error);
+    }
+    await useSettingsStore.getState().refreshSettings();
+  },
   tts_speed: (value) => commands.changeTtsSpeedSetting(value as number),
   tts_volume: (value) => commands.changeTtsVolumeSetting(value as number),
   tts_backend: (value) => commands.changeTtsBackendSetting(value as string),

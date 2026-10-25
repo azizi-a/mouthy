@@ -673,6 +673,9 @@ pub fn change_tts_voice_setting(app: AppHandle, voice: String) -> Result<(), Str
         TtsBackend::Http => voice.trim().to_string(),
     };
     settings::write_settings(&app, settings);
+    // The Models page marks the voices in use now, not after the preload,
+    // which waits for any speech in progress.
+    crate::commands::models::files_changed(&app);
     crate::actions::preload_local_voice(&app);
     Ok(())
 }
