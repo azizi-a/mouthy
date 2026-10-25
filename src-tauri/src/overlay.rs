@@ -476,6 +476,8 @@ fn prevent_activation(panel: &tauri_nspanel::NSPanel) {
 pub enum OverlayView {
     Speaking,
     NothingSelected,
+    /// Asked to read the clipboard, but it has no text, or only a secret.
+    ClipboardEmpty,
     Error {
         message: String,
     },
@@ -488,7 +490,9 @@ impl OverlayView {
     fn auto_hide(&self) -> Option<Duration> {
         match self {
             OverlayView::Speaking => None,
-            OverlayView::NothingSelected => Some(Duration::from_secs(2)),
+            OverlayView::NothingSelected | OverlayView::ClipboardEmpty => {
+                Some(Duration::from_secs(2))
+            }
             OverlayView::Error { .. } | OverlayView::ModelMissing => Some(Duration::from_secs(6)),
         }
     }
@@ -717,6 +721,10 @@ mod tests {
         assert_eq!(
             json(OverlayView::NothingSelected),
             serde_json::json!({ "kind": "nothing-selected" })
+        );
+        assert_eq!(
+            json(OverlayView::ClipboardEmpty),
+            serde_json::json!({ "kind": "clipboard-empty" })
         );
         assert_eq!(
             json(OverlayView::Error {

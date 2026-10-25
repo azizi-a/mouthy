@@ -116,6 +116,31 @@ pub fn capture_selection(_app_handle: &AppHandle) -> Result<Selection, String> {
     Err("selection capture is macOS-only".into())
 }
 
+/// The clipboard's plain text, read without changing the clipboard. `None`
+/// when it holds no text, or text a password manager marked as secret.
+#[cfg(target_os = "macos")]
+pub fn read_text() -> Result<Option<String>, String> {
+    Ok(pasteboard::read_text())
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn read_text() -> Result<Option<String>, String> {
+    Err("clipboard reading is macOS-only".into())
+}
+
+/// Pasteboard types that password managers add to a secret they copy
+/// (nspasteboard.org). Clipboard text carrying either is never read aloud.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const SECRET_MARKERS: [&str; 2] = [
+    "org.nspasteboard.ConcealedType",
+    "org.nspasteboard.TransientType",
+];
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn marks_secret(types: &[String]) -> bool {
+    types.iter().any(|t| SECRET_MARKERS.contains(&t.as_str()))
+}
+
 /// Calls `probe` every `interval` until it returns a value, giving up once
 /// `timeout` has passed. Always probes at least once.
 fn poll<T>(
@@ -167,7 +192,9 @@ fn restore_decision(before: isize, observed_copy: Option<isize>, now: isize) -> 
 /// text identical to the clipboard still counts.
 #[cfg(target_os = "macos")]
 mod pasteboard {
-    use super::{poll, restore_decision, RestoreAction, COPY_POLL_INTERVAL, COPY_TIMEOUT};
+    use super::{
+        marks_secret, poll, restore_decision, RestoreAction, COPY_POLL_INTERVAL, COPY_TIMEOUT,
+    };
     use log::{debug, info, warn};
     use objc2::rc::{autoreleasepool, Retained};
     use objc2::runtime::ProtocolObject;
@@ -264,6 +291,25 @@ mod pasteboard {
         if !items.is_empty() && !pasteboard.writeObjects(&NSArray::from_retained_slice(&items)) {
             warn!("Failed to restore the clipboard after copying the selection");
         }
+    }
+
+    pub(super) fn read_text() -> Option<String> {
+        autoreleasepool(|_| {
+            let pasteboard = NSPasteboard::generalPasteboard();
+            let mut types = Vec::new();
+            if let Some(items) = pasteboard.pasteboardItems() {
+                for item in items.iter() {
+                    types.extend(item.types().iter().map(|t| t.to_string()));
+                }
+            }
+            if marks_secret(&types) {
+                info!("The clipboard holds a password manager's secret; not reading it");
+                return None;
+            }
+            // SAFETY: NSPasteboardTypeString is a read-only framework static.
+            let text = pasteboard.stringForType(unsafe { NSPasteboardTypeString })?;
+            Some(text.to_string())
+        })
     }
 
     pub(super) fn capture(
@@ -371,6 +417,50 @@ mod tests {
     fn restore_decision_restores_only_when_the_count_has_not_moved_since_our_read() {
         assert_eq!(restore_decision(7, Some(8), 8), RestoreAction::Restore);
         assert_eq!(restore_decision(7, Some(8), 9), RestoreAction::LeaveAlone);
+    }
+
+    #[test]
+    fn concealed_or_transient_clipboard_text_is_secret() {
+        let types = |names: &[&str]| names.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+        assert!(!marks_secret(&types(&["public.utf8-plain-text"])));
+        assert!(!marks_secret(&[]));
+        assert!(marks_secret(&types(&[
+            "public.utf8-plain-text",
+            "org.nspasteboard.ConcealedType"
+        ])));
+        assert!(marks_secret(&types(&["org.nspasteboard.TransientType"])));
+    }
+
+    /// Writes to the real clipboard, so it runs only on request:
+    /// `cargo test read_text_ -- --ignored --test-threads=1`.
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn read_text_reads_plain_text_and_refuses_a_concealed_secret() {
+        use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
+        use objc2_foundation::{NSData, NSString};
+
+        let pasteboard = NSPasteboard::generalPasteboard();
+        // SAFETY: NSPasteboardTypeString is a read-only framework static.
+        let string_type = unsafe { NSPasteboardTypeString };
+        let write = |text: &str, concealed: bool| {
+            pasteboard.clearContents();
+            pasteboard.setString_forType(&NSString::from_str(text), string_type);
+            if concealed {
+                let concealed_type = NSString::from_str("org.nspasteboard.ConcealedType");
+                pasteboard.setData_forType(Some(&NSData::new()), &concealed_type);
+            }
+        };
+
+        write("The clipboard hotkey works.", false);
+        assert_eq!(
+            read_text(),
+            Ok(Some("The clipboard hotkey works.".to_string()))
+        );
+        write("hunter2", true);
+        assert_eq!(read_text(), Ok(None));
+        pasteboard.clearContents();
+        assert_eq!(read_text(), Ok(None));
     }
 
     #[cfg(target_os = "macos")]

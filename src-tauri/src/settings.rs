@@ -290,6 +290,10 @@ pub fn get_default_settings() -> AppSettings {
     let speak_shortcut = "option+escape";
     #[cfg(not(target_os = "macos"))]
     let speak_shortcut = "alt+escape";
+    #[cfg(target_os = "macos")]
+    let clipboard_shortcut = "option+shift+escape";
+    #[cfg(not(target_os = "macos"))]
+    let clipboard_shortcut = "alt+shift+escape";
 
     let mut bindings = HashMap::new();
     bindings.insert(
@@ -300,6 +304,16 @@ pub fn get_default_settings() -> AppSettings {
             description: "Reads the selected text aloud; press again to stop.".to_string(),
             default_binding: speak_shortcut.to_string(),
             current_binding: speak_shortcut.to_string(),
+        },
+    );
+    bindings.insert(
+        "speak_clipboard".to_string(),
+        ShortcutBinding {
+            id: "speak_clipboard".to_string(),
+            name: "Speak Clipboard".to_string(),
+            description: "Reads the clipboard text aloud; press again to stop.".to_string(),
+            default_binding: clipboard_shortcut.to_string(),
+            current_binding: clipboard_shortcut.to_string(),
         },
     );
 
@@ -708,6 +722,41 @@ mod tests {
         assert!(sync_bindings(&mut bindings, defaults));
 
         assert_eq!(bindings["read"].current_binding, "option+shift+escape");
+    }
+
+    #[test]
+    fn default_bindings_use_distinct_keys() {
+        let defaults = get_default_settings().bindings;
+        for (id, binding) in &defaults {
+            let taken = crate::shortcut::binding_with_keys(&defaults, &binding.current_binding, id);
+            assert!(taken.is_none(), "'{id}' shares its keys");
+        }
+    }
+
+    #[test]
+    fn binding_sync_adds_speak_clipboard_to_a_store_holding_only_speak() {
+        let mut bindings = HashMap::from([("speak".to_string(), binding("speak", "f13"))]);
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+
+        let defaults = get_default_settings().bindings;
+        assert_eq!(
+            bindings["speak_clipboard"].current_binding,
+            defaults["speak_clipboard"].current_binding
+        );
+        assert_eq!(bindings["speak"].current_binding, "f13");
+    }
+
+    #[test]
+    fn binding_sync_leaves_speak_clipboard_unbound_when_speak_has_its_keys() {
+        // Spelled with `alt` so the match must come from parsing.
+        let mut bindings =
+            HashMap::from([("speak".to_string(), binding("speak", "alt+shift+escape"))]);
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+
+        assert!(bindings["speak_clipboard"].is_unbound());
+        assert_eq!(bindings["speak"].current_binding, "alt+shift+escape");
     }
 
     #[cfg(not(target_os = "linux"))]
