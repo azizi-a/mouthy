@@ -40,6 +40,7 @@
         "none": "Няма настроени бързи клавиши",
         "notFound": "Бързият клавиш не е намерен",
         "pressKeys": "Натиснете клавишите...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

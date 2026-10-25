@@ -40,6 +40,7 @@
         "none": "Inga kortkommandon konfigurerade",
         "notFound": "Kortkommando hittades inte",
         "pressKeys": "Tryck på tangenter...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

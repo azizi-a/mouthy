@@ -40,6 +40,7 @@
         "none": "कुनै सर्टकट सेट गरिएको छैन",
         "notFound": "सर्टकट भेटिएन",
         "pressKeys": "किहरू थिच्नुहोस्...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

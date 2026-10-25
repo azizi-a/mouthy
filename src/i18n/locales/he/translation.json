@@ -40,6 +40,7 @@
         "none": "לא הוגדרו קיצורי מקשים",
         "notFound": "קיצור הדרך לא נמצא",
         "pressKeys": "לחץ על המקשים...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

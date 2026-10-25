@@ -40,6 +40,7 @@
         "none": "Žádné zkratky nejsou nastavené",
         "notFound": "Zkratka nenalezena",
         "pressKeys": "Stiskněte klávesy...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

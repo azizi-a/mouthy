@@ -40,6 +40,7 @@
         "none": "لا توجد اختصارات مجهزة",
         "notFound": "الاختصار غير موجود",
         "pressKeys": "اضغط على المفاتيح...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

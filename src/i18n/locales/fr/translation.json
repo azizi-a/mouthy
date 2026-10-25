@@ -40,6 +40,7 @@
         "none": "Aucun raccourci configuré",
         "notFound": "Raccourci non trouvé",
         "pressKeys": "Appuyez sur les touches...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

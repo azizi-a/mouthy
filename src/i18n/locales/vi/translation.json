@@ -40,6 +40,7 @@
         "none": "Chưa cấu hình phím tắt",
         "notFound": "Không tìm thấy phím tắt",
         "pressKeys": "Nhấn phím...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

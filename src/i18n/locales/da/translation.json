@@ -40,6 +40,7 @@
         "none": "Ingen genveje konfigureret",
         "notFound": "Genvej ikke fundet",
         "pressKeys": "Tryk på ønskede taster...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

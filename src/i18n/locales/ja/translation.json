@@ -40,6 +40,7 @@
         "none": "ショートカットが設定されていません",
         "notFound": "ショートカットが見つかりません",
         "pressKeys": "キーを押してください…",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

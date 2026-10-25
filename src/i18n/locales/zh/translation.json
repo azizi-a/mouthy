@@ -40,6 +40,7 @@
         "none": "未配置快捷键",
         "notFound": "未找到快捷键",
         "pressKeys": "请按键...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

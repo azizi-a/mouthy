@@ -40,6 +40,7 @@
         "none": "Belum ada pintasan yang diatur",
         "notFound": "Pintasan tidak ditemukan",
         "pressKeys": "Tekan tombol...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",

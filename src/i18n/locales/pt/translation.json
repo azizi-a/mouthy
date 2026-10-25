@@ -40,6 +40,7 @@
         "none": "Nenhum atalho configurado",
         "notFound": "Atalho não encontrado",
         "pressKeys": "Pressione as teclas...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",
