@@ -6,7 +6,7 @@
 
 use super::espeak;
 use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out};
-use super::voice::is_voice_name;
+use super::voice::{is_voice_name, VoiceSpec};
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
@@ -143,23 +143,44 @@ impl Dialect {
     }
 }
 
-/// The files one local voice needs.
+/// The files one local voice or blend needs.
 #[derive(Debug)]
 pub struct ModelFiles {
     model: PathBuf,
+    /// The voice setting as stored.
     voice_id: String,
-    /// `None` when the voice name could not be a file name.
-    voice: Option<PathBuf>,
+    /// `None` when the setting is not a voice or blend.
+    voices: Option<Vec<VoiceFile>>,
     /// The espeak-ng that reads words the lexicon lacks, if any.
     espeak: Option<PathBuf>,
 }
 
+/// One voice of a blend, or the only one.
+#[derive(Debug)]
+struct VoiceFile {
+    id: String,
+    path: PathBuf,
+    weight: f32,
+}
+
 impl ModelFiles {
     pub fn new(models_dir: &Path, variant: ModelVariant, voice: &str) -> Self {
+        let voices = VoiceSpec::parse(voice).ok().and_then(|spec| {
+            spec.parts()
+                .iter()
+                .map(|(id, weight)| {
+                    Some(VoiceFile {
+                        id: id.clone(),
+                        path: voice_path(models_dir, id)?,
+                        weight: *weight,
+                    })
+                })
+                .collect()
+        });
         Self {
             model: model_path(models_dir, variant),
             voice_id: voice.to_string(),
-            voice: voice_path(models_dir, voice),
+            voices,
             espeak: None,
         }
     }
@@ -171,14 +192,14 @@ impl ModelFiles {
     /// The first file that is not there, described for the log.
     pub fn missing(&self) -> Option<String> {
         if self.model_missing() {
-            Some(self.model.display().to_string())
-        } else if self.voice_missing() {
-            Some(match &self.voice {
-                Some(path) => path.display().to_string(),
-                None => format!("a voice file for '{}'", self.voice_id),
-            })
-        } else {
-            None
+            return Some(self.model.display().to_string());
+        }
+        match &self.voices {
+            Some(voices) => voices
+                .iter()
+                .find(|voice| !voice.path.is_file())
+                .map(|voice| voice.path.display().to_string()),
+            None => Some(format!("a voice file for '{}'", self.voice_id)),
         }
     }
 
@@ -186,9 +207,25 @@ impl ModelFiles {
         !self.model.is_file()
     }
 
-    /// Also true for a voice name that could not be a file name.
-    pub fn voice_missing(&self) -> bool {
-        !self.voice.as_deref().is_some_and(Path::is_file)
+    /// The voices with no file, each once; the whole setting when it is not
+    /// a voice or blend.
+    pub fn missing_voices(&self) -> Vec<String> {
+        let Some(voices) = &self.voices else {
+            return vec![self.voice_id.clone()];
+        };
+        let mut missing: Vec<String> = Vec::new();
+        for voice in voices {
+            if !voice.path.is_file() && !missing.contains(&voice.id) {
+                missing.push(voice.id.clone());
+            }
+        }
+        missing
+    }
+
+    /// A blend reads with its first voice's lexicon, as Kokoro-FastAPI does.
+    fn dialect(&self) -> Option<Dialect> {
+        let first = self.voices.as_ref()?.first()?;
+        Some(Dialect::for_voice(&first.id))
     }
 }
 
@@ -346,13 +383,10 @@ fn lock_loaded() -> MutexGuard<'static, Option<LocalSynth>> {
 /// Makes `loaded` match `files`, reloading only what changed on disk.
 fn ensure_loaded(loaded: &mut Option<LocalSynth>, files: &ModelFiles) -> Result<(), String> {
     let model = FileStamp::of(&files.model, "Kokoro model")?;
-    let voice_path = files
-        .voice
-        .as_deref()
-        .ok_or_else(|| format!("'{}' is not a voice name", files.voice_id))?;
-    let voice = FileStamp::of(voice_path, "voice file")?;
+    let not_a_voice = || format!("'{}' is not a voice or blend", files.voice_id);
+    let voice = voice_stamps(files.voices.as_deref().ok_or_else(not_a_voice)?)?;
     let reading = Reading {
-        dialect: Dialect::for_voice(&files.voice_id),
+        dialect: files.dialect().ok_or_else(not_a_voice)?,
         espeak: files.espeak.clone(),
     };
 
@@ -365,6 +399,17 @@ fn ensure_loaded(loaded: &mut Option<LocalSynth>, files: &ModelFiles) -> Result<
             Ok(())
         }
     }
+}
+
+/// Each voice file as it is now, with its weight, in path order so the same
+/// blend written in another order matches what is loaded.
+fn voice_stamps(voices: &[VoiceFile]) -> Result<Vec<(FileStamp, f32)>, String> {
+    let mut stamps = voices
+        .iter()
+        .map(|voice| Ok((FileStamp::of(&voice.path, "voice file")?, voice.weight)))
+        .collect::<Result<Vec<_>, String>>()?;
+    stamps.sort_by(|a, b| a.0.path.cmp(&b.0.path).then(a.1.total_cmp(&b.1)));
+    Ok(stamps)
 }
 
 /// A file as loaded: a replaced file at the same path loads again.
@@ -403,7 +448,11 @@ struct LocalSynth {
 }
 
 impl LocalSynth {
-    fn load(model: FileStamp, voice: FileStamp, reading: Reading) -> Result<Self, String> {
+    fn load(
+        model: FileStamp,
+        voice: Vec<(FileStamp, f32)>,
+        reading: Reading,
+    ) -> Result<Self, String> {
         let session = load_session(&model.path)?;
         let voice = Voice::load(voice)?;
         let g2p = build_g2p(&reading);
@@ -419,16 +468,14 @@ impl LocalSynth {
     fn refresh(
         &mut self,
         model: FileStamp,
-        voice: FileStamp,
+        voice: Vec<(FileStamp, f32)>,
         reading: Reading,
     ) -> Result<(), String> {
         if self.model != model {
             self.session = load_session(&model.path)?;
             self.model = model;
         }
-        if self.voice.stamp != voice {
-            self.voice = Voice::load(voice)?;
-        }
+        self.voice.refresh(voice)?;
         if self.reading != reading {
             self.g2p = build_g2p(&reading);
             self.reading = reading;
@@ -599,26 +646,71 @@ fn pause_after_ms(piece: &[i64], ends_sentence: bool) -> f32 {
     }
 }
 
-/// A voice's style table: one 256-wide row per input length, raw
-/// little-endian f32.
+/// A voice's style table, one 256-wide row per input length: one voice file,
+/// or several blended.
 struct Voice {
-    stamp: FileStamp,
+    /// The files as loaded, with their weights, in path order.
+    parts: Vec<(FileStamp, f32)>,
     rows: Vec<f32>,
 }
 
 impl Voice {
-    fn load(stamp: FileStamp) -> Result<Self, String> {
-        let bytes = fs::read(&stamp.path)
-            .map_err(|e| format!("Cannot read the voice file {}: {e}", stamp.path.display()))?;
-        let rows = parse_style_rows(&bytes)
-            .ok_or_else(|| format!("{} is not a Kokoro voice file", stamp.path.display()))?;
-        Ok(Self { stamp, rows })
+    fn load(parts: Vec<(FileStamp, f32)>) -> Result<Self, String> {
+        let tables = parts
+            .iter()
+            .map(|(stamp, _)| read_style_rows(&stamp.path))
+            .collect::<Result<Vec<_>, _>>()?;
+        let weighted: Vec<_> = tables
+            .iter()
+            .zip(&parts)
+            .map(|(rows, &(_, weight))| (rows.as_slice(), weight))
+            .collect();
+        let rows = blend(&weighted)?;
+        Ok(Self { parts, rows })
+    }
+
+    /// Reloads when a file or a weight differs from what is loaded. A failure
+    /// keeps the loaded table and its parts.
+    fn refresh(&mut self, parts: Vec<(FileStamp, f32)>) -> Result<(), String> {
+        if self.parts != parts {
+            *self = Self::load(parts)?;
+        }
+        Ok(())
     }
 
     /// The row for `tokens` ids (pads excluded), clamped to the last row.
     fn style(&self, tokens: usize) -> &[f32] {
         style_row(&self.rows, tokens)
     }
+}
+
+/// One voice file's rows: raw little-endian f32.
+fn read_style_rows(path: &Path) -> Result<Vec<f32>, String> {
+    let bytes = fs::read(path)
+        .map_err(|e| format!("Cannot read the voice file {}: {e}", path.display()))?;
+    parse_style_rows(&bytes).ok_or_else(|| format!("{} is not a Kokoro voice file", path.display()))
+}
+
+/// Σ wᵢ/Σw · tableᵢ element by element, as Kokoro-FastAPI blends: the first
+/// table scaled, then each other added scaled. Weights are above zero.
+fn blend(tables: &[(&[f32], f32)]) -> Result<Vec<f32>, String> {
+    let Some((&(first, first_weight), rest)) = tables.split_first() else {
+        return Err("A blend needs at least one voice".into());
+    };
+    if rest.iter().any(|(rows, _)| rows.len() != first.len()) {
+        return Err("The blended voice files differ in size, so they cannot be mixed".into());
+    }
+    let total: f64 = tables.iter().map(|&(_, weight)| f64::from(weight)).sum();
+    let share = |weight: f32| (f64::from(weight) / total) as f32;
+    let first_share = share(first_weight);
+    let mut blended: Vec<f32> = first.iter().map(|value| value * first_share).collect();
+    for &(rows, weight) in rest {
+        let share = share(weight);
+        for (out, value) in blended.iter_mut().zip(rows) {
+            *out += value * share;
+        }
+    }
+    Ok(blended)
 }
 
 fn parse_style_rows(bytes: &[u8]) -> Option<Vec<f32>> {
@@ -1265,7 +1357,18 @@ mod tests {
         assert_eq!(Dialect::for_voice("BM_Lewis"), Dialect::British);
         assert_eq!(Dialect::for_voice("af_heart"), Dialect::American);
         assert_eq!(Dialect::for_voice("am_adam"), Dialect::American);
-        assert_eq!(Dialect::for_voice("ef_dora"), Dialect::American);
+        for voice in ["ef_dora", "jf_alpha", "zm_yunyang", "hf_alpha", "pf_dora"] {
+            assert_eq!(Dialect::for_voice(voice), Dialect::American, "{voice}");
+        }
+    }
+
+    #[test]
+    fn a_blend_reads_with_its_first_voices_dialect() {
+        let dialect = |voice| ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice).dialect();
+        assert_eq!(dialect("bm_lewis+af_alloy"), Some(Dialect::British));
+        assert_eq!(dialect("af_alloy(9)+bm_lewis"), Some(Dialect::American));
+        assert_eq!(dialect("zf_xiaobei+bf_emma"), Some(Dialect::American));
+        assert_eq!(dialect("bm_lewis-af_alloy"), None);
     }
 
     fn numbered_rows(count: usize) -> Vec<f32> {
@@ -1308,6 +1411,84 @@ mod tests {
         assert!(parse_style_rows(&[]).is_none());
         assert!(parse_style_rows(&[0; 4 * STYLE_DIM - 4]).is_none());
         assert!(parse_style_rows(&[0; 4 * STYLE_DIM + 1]).is_none());
+    }
+
+    #[test]
+    fn a_blend_is_the_weighted_average_of_the_tables() {
+        let a: Vec<f32> = (0..2 * STYLE_DIM).map(|i| i as f32).collect();
+        let b: Vec<f32> = (0..2 * STYLE_DIM).map(|i| 1000.0 - i as f32).collect();
+        let blended = blend(&[(&a, 2.0), (&b, 1.0)]).unwrap();
+        assert_eq!(blended.len(), a.len());
+        for (i, value) in blended.iter().enumerate() {
+            let expected = (2.0 * i as f32 + 1000.0 - i as f32) / 3.0;
+            assert!(
+                (value - expected).abs() < 1e-3,
+                "{i}: {value} vs {expected}"
+            );
+        }
+        assert_eq!(style_row(&blended, 1)[0], blended[STYLE_DIM]);
+    }
+
+    #[test]
+    fn one_voice_blends_to_its_own_table() {
+        let a: Vec<f32> = (0..2 * STYLE_DIM).map(|i| i as f32 * 0.37 - 5.0).collect();
+        assert_eq!(blend(&[(&a, 3.0)]).unwrap(), a);
+    }
+
+    #[test]
+    fn tables_of_different_lengths_do_not_blend() {
+        let two = numbered_rows(2);
+        let three = numbered_rows(3);
+        assert!(blend(&[(&two, 1.0), (&three, 1.0)]).is_err());
+        assert!(blend(&[]).is_err());
+    }
+
+    fn write_voice(models: &Path, name: &str, value: f32) {
+        let voices = voices_dir(models);
+        fs::create_dir_all(&voices).unwrap();
+        let bytes: Vec<u8> = std::iter::repeat_n(value.to_le_bytes(), 2 * STYLE_DIM)
+            .flatten()
+            .collect();
+        fs::write(voices.join(format!("{name}.bin")), bytes).unwrap();
+    }
+
+    fn stamps(models: &Path, voice: &str) -> Vec<(FileStamp, f32)> {
+        let files = ModelFiles::new(models, ModelVariant::Int8, voice);
+        voice_stamps(files.voices.as_deref().unwrap()).unwrap()
+    }
+
+    #[test]
+    fn a_weight_change_reloads_the_blend() {
+        let dir = tempfile::tempdir().unwrap();
+        write_voice(dir.path(), "af_one", 1.0);
+        write_voice(dir.path(), "af_four", 4.0);
+
+        let mut voice = Voice::load(stamps(dir.path(), "af_one+af_four")).unwrap();
+        assert_eq!(voice.style(0)[0], 2.5);
+
+        let reweighted = stamps(dir.path(), "af_one(3)+af_four");
+        assert_ne!(voice.parts, reweighted);
+        voice.refresh(reweighted.clone()).unwrap();
+        assert_eq!(voice.parts, reweighted);
+        assert_eq!(voice.style(1)[STYLE_DIM - 1], 1.75);
+
+        // The same blend in another order is what is loaded.
+        assert_eq!(stamps(dir.path(), "af_four+af_one(3)"), voice.parts);
+    }
+
+    #[test]
+    fn a_failed_reload_keeps_the_loaded_blend() {
+        let dir = tempfile::tempdir().unwrap();
+        write_voice(dir.path(), "af_one", 1.0);
+        write_voice(dir.path(), "af_four", 4.0);
+        let mut voice = Voice::load(stamps(dir.path(), "af_one")).unwrap();
+        let loaded = voice.parts.clone();
+
+        let broken = stamps(dir.path(), "af_one+af_four");
+        fs::write(voices_dir(dir.path()).join("af_four.bin"), b"short").unwrap();
+        assert!(voice.refresh(broken).is_err());
+        assert_eq!(voice.parts, loaded);
+        assert_eq!(voice.style(0)[0], 1.0);
     }
 
     #[test]
@@ -1467,11 +1648,28 @@ mod tests {
     #[test]
     fn model_files_follow_the_documented_layout() {
         let models = Path::new("/models");
-        let files = ModelFiles::new(models, ModelVariant::Int8, "bm_lewis");
+        let files = ModelFiles::new(models, ModelVariant::Int8, "bm_lewis(70)+bm_george(30)");
         assert_eq!(files.model, Path::new("/models/kokoro-v1.0/int8.onnx"));
+        let voices: Vec<_> = files
+            .voices
+            .unwrap()
+            .into_iter()
+            .map(|voice| (voice.id, voice.path, voice.weight))
+            .collect();
         assert_eq!(
-            files.voice.as_deref(),
-            Some(Path::new("/models/kokoro-v1.0/voices/bm_lewis.bin"))
+            voices,
+            vec![
+                (
+                    "bm_lewis".to_string(),
+                    PathBuf::from("/models/kokoro-v1.0/voices/bm_lewis.bin"),
+                    70.0
+                ),
+                (
+                    "bm_george".to_string(),
+                    PathBuf::from("/models/kokoro-v1.0/voices/bm_george.bin"),
+                    30.0
+                ),
+            ]
         );
         assert_eq!(
             ModelFiles::new(models, ModelVariant::Fp32, "x").model,
@@ -1482,10 +1680,18 @@ mod tests {
     #[test]
     fn voice_names_cannot_leave_the_voices_folder() {
         let models = Path::new("/models");
-        for name in ["../secret", "a/b", "", "bm lewis", "voice.bin"] {
-            assert_eq!(
-                ModelFiles::new(models, ModelVariant::Int8, name).voice,
-                None,
+        for name in [
+            "../secret",
+            "a/b",
+            "",
+            "bm lewis",
+            "voice.bin",
+            "bm_lewis+../x",
+        ] {
+            assert!(
+                ModelFiles::new(models, ModelVariant::Int8, name)
+                    .voices
+                    .is_none(),
                 "{name:?}"
             );
         }
@@ -1496,21 +1702,57 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let files = ModelFiles::new(dir.path(), ModelVariant::Int8, "bm_lewis");
         assert!(files.missing().unwrap().ends_with("int8.onnx"));
-        assert!(files.model_missing() && files.voice_missing());
+        assert!(files.model_missing());
+        assert_eq!(files.missing_voices(), vec!["bm_lewis"]);
 
         let voices = voices_dir(dir.path());
         fs::create_dir_all(&voices).unwrap();
         fs::write(dir.path().join(KOKORO_DIR).join("int8.onnx"), b"model").unwrap();
         assert!(files.missing().unwrap().ends_with("bm_lewis.bin"));
-        assert!(!files.model_missing() && files.voice_missing());
+        assert!(!files.model_missing());
 
         fs::write(voices.join("bm_lewis.bin"), b"voice").unwrap();
         assert_eq!(files.missing(), None);
-        assert!(!files.model_missing() && !files.voice_missing());
+        assert!(files.missing_voices().is_empty());
         for voice in ["../x", "ef_dora", "af_bella+af_sky", "my favourite voice"] {
             let files = ModelFiles::new(dir.path(), ModelVariant::Int8, voice);
-            assert!(files.voice_missing(), "{voice}");
+            assert!(!files.missing_voices().is_empty(), "{voice}");
             assert!(files.missing().is_some(), "{voice}");
+        }
+    }
+
+    #[test]
+    fn every_absent_voice_of_a_blend_is_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        write_voice(dir.path(), "bm_lewis", 1.0);
+        fs::write(dir.path().join(KOKORO_DIR).join("int8.onnx"), b"model").unwrap();
+
+        let files = ModelFiles::new(
+            dir.path(),
+            ModelVariant::Int8,
+            "bm_lewis+af_alloy+bf_emma(2)",
+        );
+        assert_eq!(files.missing_voices(), vec!["af_alloy", "bf_emma"]);
+        assert!(files.missing().unwrap().ends_with("af_alloy.bin"));
+
+        let files = ModelFiles::new(dir.path(), ModelVariant::Int8, "af_alloy+bm_lewis+af_alloy");
+        assert_eq!(files.missing_voices(), vec!["af_alloy"]);
+        let files = ModelFiles::new(dir.path(), ModelVariant::Int8, "bm_lewis(2)+bm_lewis");
+        assert!(files.missing_voices().is_empty());
+        assert_eq!(files.missing(), None);
+    }
+
+    #[test]
+    fn a_setting_that_is_not_a_voice_counts_as_a_missing_voice() {
+        let dir = tempfile::tempdir().unwrap();
+        write_voice(dir.path(), "bm_lewis", 1.0);
+        fs::write(dir.path().join(KOKORO_DIR).join("int8.onnx"), b"model").unwrap();
+        for voice in ["", "   ", "bm_lewis-bm_george", "bm_lewis(0)", "+"] {
+            let files = ModelFiles::new(dir.path(), ModelVariant::Int8, voice);
+            assert_eq!(files.missing_voices(), vec![voice], "{voice:?}");
+            assert!(files.missing().unwrap().contains("a voice file for"));
+            let error = ensure_loaded(&mut None, &files).unwrap_err();
+            assert!(error.contains("not a voice or blend"), "{voice:?}: {error}");
         }
     }
 

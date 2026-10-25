@@ -10,6 +10,7 @@ use crate::settings::{self, ModelVariant};
 use crate::tts::catalog::{self, CatalogFile, ModelFileKind};
 use crate::tts::download;
 use crate::tts::local::{self, ModelFiles};
+use crate::tts::voice::VoiceSpec;
 use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
 use log::{info, warn};
 use serde::Serialize;
@@ -52,10 +53,20 @@ pub struct ModelFileList {
     pub files: Vec<ModelFile>,
     /// The selected model, if its file is not there.
     pub missing_model: Option<ModelVariant>,
-    /// The selected voice, if the local backend finds no file for it.
-    pub missing_voice: Option<String>,
+    /// The selected voices the local backend finds no file for, or the whole
+    /// setting when it is not a voice or blend.
+    pub missing_voices: Vec<String>,
+    /// The selected voice, or each voice of the selected blend.
+    pub voice_parts: Vec<VoicePart>,
     /// Why the local voice last failed to load, if it did.
     pub load_error: Option<String>,
+}
+
+#[derive(Serialize, Type)]
+pub struct VoicePart {
+    pub id: String,
+    /// Its share of the blend, from 0 to 1.
+    pub share: f32,
 }
 
 #[derive(Serialize, Type)]
@@ -111,6 +122,16 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
         .collect();
     let settings = settings::get_settings(&app);
     let selected = ModelFiles::new(&models_dir, settings.tts_model_variant, &settings.tts_voice);
+    let voice_parts = VoiceSpec::parse(&settings.tts_voice)
+        .map(|spec| {
+            spec.shares()
+                .map(|(id, share)| VoicePart {
+                    id: id.to_string(),
+                    share,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
     Ok(ModelFileList {
         dir: local::kokoro_dir(&models_dir)
             .to_string_lossy()
@@ -119,7 +140,8 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
         missing_model: selected
             .model_missing()
             .then_some(settings.tts_model_variant),
-        missing_voice: selected.voice_missing().then_some(settings.tts_voice),
+        missing_voices: selected.missing_voices(),
+        voice_parts,
         load_error: local::preload_error(),
     })
 }

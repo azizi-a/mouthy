@@ -45,11 +45,6 @@ impl VoiceSpec {
         &self.parts
     }
 
-    /// The voice whose dialect a blend takes, as Kokoro-FastAPI does.
-    pub fn first(&self) -> &str {
-        &self.parts[0].0
-    }
-
     /// Each voice with its share of the blend, from 0 to 1.
     pub fn shares(&self) -> impl Iterator<Item = (&str, f32)> {
         let total: f64 = self.parts.iter().map(|&(_, w)| f64::from(w)).sum();
@@ -124,7 +119,6 @@ mod tests {
     #[test]
     fn a_single_voice_has_weight_one() {
         assert_eq!(parts("bm_lewis"), vec![part("bm_lewis", 1.0)]);
-        assert_eq!(VoiceSpec::parse("bm_lewis").unwrap().first(), "bm_lewis");
     }
 
     #[test]
