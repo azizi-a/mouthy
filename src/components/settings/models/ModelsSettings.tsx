@@ -279,11 +279,13 @@ const FileRow: React.FC<FileRowProps> = ({
           <p className="text-xs text-mid-gray">{description}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {file.installed && !active && !file.downloading && (
-            <Button variant="secondary" size="sm" onClick={onUse}>
-              {t("settings.models.use")}
-            </Button>
-          )}
+          {file.installed &&
+            (!active || share !== undefined) &&
+            !file.downloading && (
+              <Button variant="secondary" size="sm" onClick={onUse}>
+                {t("settings.models.use")}
+              </Button>
+            )}
           {file.downloading ? (
             <Button variant="secondary" size="sm" onClick={onCancel}>
               {t("settings.models.cancel")}
