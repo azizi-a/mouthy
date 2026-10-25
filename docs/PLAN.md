@@ -11,7 +11,7 @@ Design lane: not applicable · Intent-critical: yes
 
 - **Phase 3 planned (2026-10-25, PR from `docs/phase3-plan`):** stages P3.2–P3.7 and Release R3 (v0.4.0, unsigned, with the Homebrew cask as its tail). The user declined Apple signing (H13), so there is no updater and no notarisation in Phase 3; the design mockup and icon are approved (H18, H21); the catalog grows to all 54 Kokoro v1.0 voices (H20). No stage blocks on the user before R3. Panel round 1 is in Review History.
 - **Phase 3 progress (2026-10-25):** P3.7 (#13), P3.3 (#14), P3.2 (#15), P3.5 + P3.5b (#16), P3.4 (#17) and P3.6 (#19, `87ba488`) squash-merged. Live hotkey and UI checks for these stages were not run and fold into H22 (`docs/phase3-checklist.md`).
-- **v0.4.0 released as a draft (2026-10-25):** signed tag `v0.4.0` on `7859d93` pushed; unsigned dmg on a draft release. The tap commits are ready but not pushed (the agent's push was denied): the user pushes them and opens the cask PR (Release R3). The user runs `docs/phase3-checklist.md`, publishes, merges the tap PR, then `gh api repos/azizi-a/mouthy/releases/latest` must return v0.4.0.
+- **v0.4.1 replaces 0.4.0 (2026-10-25, Release R4):** the picker change (#24) landed after the 0.4.0 draft and the `v0.4.0` tag is protected, so the rebuild is 0.4.1. The 0.4.0 draft release is deleted; its tag stays. 0.4.1 is a draft release on a signed tag `v0.4.1`; the cask bump sits on the unpushed branch `cask-0.4.1` of the local tap clone. The user: re-runs `docs/phase3-checklist.md` steps 14–19 (the Show uninstalled voices switch) on the 0.4.1 dmg, publishes the draft, pushes the tap's `main` then `cask-0.4.1`, opens and merges the cask PR, then checks that `gh api repos/azizi-a/mouthy/releases/latest --jq .tag_name` returns `v0.4.1`.
 
 - **v0.3.0 released as a draft (2026-10-24):** unsigned dmg on a draft GitHub release, signed tag `v0.3.0` on `9fc3135` pushed; the user publishes it. See Release R2.
 - **v0.2.0 published (2026-10-15):** unsigned dmg, tag `v0.2.0`. See Release R1.
@@ -862,7 +862,7 @@ Common rules for every Phase 3 stage: one branch + PR per stage, squash-merged; 
 
 ### Release R3 — v0.4.0, unsigned, with the Homebrew cask `[chore]`
 
-- Status: in progress (Parts 1–2 done; tap push pending) · Implementer: chief-implementer · Blocked by: the user pushes the tap commits, publishes the draft and merges the tap PR (H17)
+- Status: superseded by Release R4 (the 0.4.0 draft was deleted unpublished; the tag stays) · Implementer: chief-implementer
 - Part 1 as R2: one signed commit `chore(release): v0.4.0` on `chore/release-0.4.0` (versions in `package.json`, `tauri.conf.json`, `Cargo.toml`, `Cargo.lock` via `cargo update -p mouthy --offline`; `## Unreleased` → `## 0.4.0 — <date>` with an intro line; README dmg name), plus `BUILD.md` "Release" section (the exact commands, `SHA256SUMS`, the cask update) and `docs/phase3-checklist.md` (H22 items, below); PR, squash.
 - Checklist contents (`docs/phase3-checklist.md`; P3.2–P3.5 and P3.7 had no live run, so these are their only end-to-end checks):
   - Menu-bar glyphs on light and dark, idle, speaking and warning.
@@ -883,6 +883,13 @@ Common rules for every Phase 3 stage: one branch + PR per stage, squash-merged; 
   - **Published:** signed annotated tag `v0.4.0` (object `0dc0b62`) on `7859d93` (the 0.4.0 changelog block) pushed by name; a local Handy `v0.4.0` (`40cd7ae`, never on origin) was deleted first. Draft release "Mouthy 0.4.0" with the dmg and `SHA256SUMS`, R2's install notes plus a 0.3.0-upgrade line and the Homebrew line: https://github.com/azizi-a/mouthy/releases/tag/untagged-7e2a1d68ffe888d12bc3 (the URL changes on publish). Uploaded digests match. Not published.
   - **Cask:** the tap was empty, with no branch to target. Ready locally, not pushed (the agent's push was denied): a signed README-only root commit `b3e8391` for the tap's `main` (approved by the orchestrator; the cask still reaches main only by PR), then `cdfecc6` `cask: mouthy 0.4.0` on `cask-0.4.0`. To finish: push `main` first so it becomes the default branch, then push `cask-0.4.0` and open the PR to `main`. `brew style` passes; `brew audit --cask --strict` passes (run through a throwaway local tap, since Homebrew 7 audits casks by name only); `--online` fails only on the draft's 404 and livecheck still returning 0.3.0, as expected before publishing. Install from the tap and `brew livecheck` after publishing were not run.
   - **Deviations:** the cask PR comes before publishing (the user merges it after), not after. `depends_on macos: :ventura`, not `">= :ventura"`: `brew style` requires the bare symbol, which already means "Ventura or later".
+
+### Release R4 — 0.4.1 (2026-10-25) `[chore]`
+
+- Why: the user wanted the picker change (#24) in the release before publishing. The `v0.4.0` tag is protected (no deletion or update), so the rebuild is 0.4.1; the 0.4.0 draft release is deleted and its tag stays.
+- What: R3's recipe with 0.4.1 names: version bump PR, `CI=true bun run tauri build`, signed tag `v0.4.1`, draft release with 0.4.1's and 0.4.0's notes, the tap's `cask-0.4.0` branch reworked as `cask-0.4.1`.
+- Implementation Notes:
+  - **Part 1:** one signed commit `chore(release): v0.4.1` on `chore/release-0.4.1`: versions in `package.json`, `tauri.conf.json`, `Cargo.toml` and `Cargo.lock`; the Unreleased block becomes `0.4.1 — 2026-10-25` with a note that 0.4.0 was never published; README dmg name and status line; `BUILD.md`'s cask paragraph describes the flow R3 actually used (PR prepared with the release, merged after publishing; `--strict` before, `--online` after).
 
 ## Risks & Assumptions
 
