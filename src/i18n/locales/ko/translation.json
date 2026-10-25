@@ -218,7 +218,8 @@
       "keyboardImplementation": {
         "title": "키보드 구현",
         "description": "키보드 단축키 백엔드를 선택하세요.",
-        "bindingsReset": "키보드 단축키가 호환되지 않아 기본값으로 재설정되었습니다"
+        "bindingsReset": "키보드 단축키가 호환되지 않아 기본값으로 재설정되었습니다",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "keyboardDiagnostic": {
         "title": "키보드 진단",
@@ -321,6 +322,7 @@
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
     "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

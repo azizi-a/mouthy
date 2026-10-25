@@ -224,7 +224,8 @@
       "keyboardImplementation": {
         "title": "Tastaturimplementering",
         "description": "Vælg backend til tastaturgenveje.",
-        "bindingsReset": "Tastaturgenveje var inkompatible og blev nulstillet til standard"
+        "bindingsReset": "Tastaturgenveje var inkompatible og blev nulstillet til standard",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "paths": {
         "appData": "Appdata:",
@@ -321,6 +322,7 @@
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
     "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

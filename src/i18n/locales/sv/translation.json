@@ -218,7 +218,8 @@
       "keyboardImplementation": {
         "title": "Tangentbordsimplementering",
         "description": "Välj tangentbordsgenvägens implementation.",
-        "bindingsReset": "Kortkommandona var inkompatibla och återställdes till standardvärden"
+        "bindingsReset": "Kortkommandona var inkompatibla och återställdes till standardvärden",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "paths": {
         "appData": "Appdata:",
@@ -321,6 +322,7 @@
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
     "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

@@ -72,17 +72,23 @@ pub fn unregister_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<
     }
 }
 
-/// Whether two shortcut strings name the same keys, however they are spelled
-/// (`alt` or `option`, letter case, modifier order).
-pub fn same_keys(a: &str, b: &str) -> bool {
-    fn parsed_eq<T: std::str::FromStr + PartialEq>(a: &str, b: &str) -> bool {
-        matches!((a.parse::<T>(), b.parse::<T>()), (Ok(a), Ok(b)) if a == b)
+/// Whether one press can fire both shortcuts, however they are spelled
+/// (`alt` or `option`, letter case, modifier order). handy-keys fires
+/// `option` for either Option key, so it collides with `option_left`;
+/// `option_left` and `option_right` do not collide.
+pub fn keys_collide(a: &str, b: &str) -> bool {
+    use ::handy_keys::Hotkey;
+    use tauri_plugin_global_shortcut::Shortcut;
+    if let (Ok(a), Ok(b)) = (a.parse::<Hotkey>(), b.parse::<Hotkey>()) {
+        if a.key == b.key && (a.modifiers.matches(b.modifiers) || b.modifiers.matches(a.modifiers))
+        {
+            return true;
+        }
     }
-    parsed_eq::<::handy_keys::Hotkey>(a, b)
-        || parsed_eq::<tauri_plugin_global_shortcut::Shortcut>(a, b)
+    matches!((a.parse::<Shortcut>(), b.parse::<Shortcut>()), (Ok(a), Ok(b)) if a == b)
 }
 
-/// The binding, other than `except`, whose current keys are `keys`.
+/// The binding, other than `except`, whose current keys collide with `keys`.
 pub fn binding_with_keys<'a>(
     bindings: &'a HashMap<String, ShortcutBinding>,
     keys: &str,
@@ -90,7 +96,7 @@ pub fn binding_with_keys<'a>(
 ) -> Option<&'a ShortcutBinding> {
     bindings
         .iter()
-        .find(|(id, binding)| id.as_str() != except && same_keys(&binding.current_binding, keys))
+        .find(|(id, binding)| id.as_str() != except && keys_collide(&binding.current_binding, keys))
         .map(|(_, binding)| binding)
 }
 
@@ -283,6 +289,8 @@ pub struct ImplementationChangeResult {
     pub success: bool,
     /// List of binding IDs that were reset to defaults due to incompatibility
     pub reset_bindings: Vec<String>,
+    /// Binding IDs left unset: incompatible, and their default's keys are taken
+    pub unbound_bindings: Vec<String>,
 }
 
 /// Change the keyboard implementation with runtime switching.
@@ -304,6 +312,7 @@ pub fn change_keyboard_implementation_setting(
         return Ok(ImplementationChangeResult {
             success: true,
             reset_bindings: vec![],
+            unbound_bindings: vec![],
         });
     }
 
@@ -333,11 +342,13 @@ pub fn change_keyboard_implementation_setting(
         return Ok(ImplementationChangeResult {
             success: true,
             reset_bindings: vec![],
+            unbound_bindings: vec![],
         });
     }
 
     // Register all shortcuts with new implementation, resetting invalid ones
-    let reset_bindings = register_all_shortcuts_for_implementation(&app, new_impl);
+    let (reset_bindings, unbound_bindings) =
+        register_all_shortcuts_for_implementation(&app, new_impl);
     crate::secure_input::reconcile_fallback(&app);
 
     // Emit event to notify frontend of the change
@@ -346,7 +357,8 @@ pub fn change_keyboard_implementation_setting(
         serde_json::json!({
             "setting": "keyboard_implementation",
             "value": implementation,
-            "reset_bindings": reset_bindings
+            "reset_bindings": reset_bindings,
+            "unbound_bindings": unbound_bindings
         }),
     );
 
@@ -355,6 +367,7 @@ pub fn change_keyboard_implementation_setting(
     Ok(ImplementationChangeResult {
         success: true,
         reset_bindings,
+        unbound_bindings,
     })
 }
 
@@ -418,12 +431,15 @@ fn unregister_all_shortcuts(app: &AppHandle, implementation: KeyboardImplementat
     }
 }
 
-/// Register all shortcuts for a specific implementation, validating and resetting invalid ones
+/// Register all shortcuts for a specific implementation, validating and resetting invalid ones.
+/// Returns the ids reset to their defaults, and those left unbound because
+/// another binding has their default's keys.
 fn register_all_shortcuts_for_implementation(
     app: &AppHandle,
     implementation: KeyboardImplementation,
-) -> Vec<String> {
+) -> (Vec<String>, Vec<String>) {
     let mut reset_bindings = Vec::new();
+    let mut unbound_bindings = Vec::new();
     let default_bindings = settings::get_default_settings().bindings;
     let mut current_settings = settings::get_settings(app);
 
@@ -448,15 +464,18 @@ fn register_all_shortcuts_for_implementation(
 
             // Reset to default, or to unbound if another binding has its keys
             binding.current_binding = default_binding.current_binding.clone();
-            if binding_with_keys(&current_settings.bindings, &binding.current_binding, id).is_some()
-            {
+            let taken = binding_with_keys(&current_settings.bindings, &binding.current_binding, id)
+                .is_some();
+            if taken {
                 binding.current_binding.clear();
+                unbound_bindings.push(id.clone());
+            } else {
+                reset_bindings.push(id.clone());
             }
             current_settings
                 .bindings
                 .insert(id.clone(), binding.clone());
-            reset_bindings.push(id.clone());
-            if binding.is_unbound() {
+            if taken {
                 continue;
             }
         }
@@ -476,11 +495,11 @@ fn register_all_shortcuts_for_implementation(
     }
 
     // Save settings if any bindings were reset
-    if !reset_bindings.is_empty() {
+    if !reset_bindings.is_empty() || !unbound_bindings.is_empty() {
         settings::write_settings(app, current_settings);
     }
 
-    reset_bindings
+    (reset_bindings, unbound_bindings)
 }
 
 /// Initialize HandyKeys if not already initialized, with rollback on failure
@@ -791,7 +810,7 @@ pub fn change_tts_volume_setting(app: AppHandle, volume: f32) -> Result<(), Stri
 
 #[cfg(test)]
 mod tests {
-    use super::{ensure_keys_free, same_keys};
+    use super::{ensure_keys_free, keys_collide};
     use crate::settings::ShortcutBinding;
     use handy_keys::Hotkey;
     use std::collections::HashMap;
@@ -814,11 +833,23 @@ mod tests {
     }
 
     #[test]
-    fn same_keys_ignores_spelling_case_and_modifier_order() {
-        assert!(same_keys("alt+shift+escape", "option+shift+escape"));
-        assert!(same_keys("shift+option+escape", "Option+Shift+Escape"));
-        assert!(!same_keys("option+escape", "option+shift+escape"));
-        assert!(!same_keys("", ""), "unbound bindings never collide");
+    fn keys_collide_whatever_the_spelling_case_and_modifier_order() {
+        assert!(keys_collide("alt+shift+escape", "option+shift+escape"));
+        assert!(keys_collide("shift+option+escape", "Option+Shift+Escape"));
+        assert!(!keys_collide("option+escape", "option+shift+escape"));
+        assert!(!keys_collide("option+escape", "option+space"));
+        assert!(!keys_collide("", ""), "unbound bindings never collide");
+    }
+
+    #[test]
+    fn a_side_specific_modifier_collides_with_either_side() {
+        assert!(keys_collide("option_left+escape", "option+escape"));
+        assert!(keys_collide("option+escape", "option_left+escape"));
+        assert!(keys_collide(
+            "option_left+shift_left+escape",
+            "option+shift+escape"
+        ));
+        assert!(!keys_collide("option_left+escape", "option_right+escape"));
     }
 
     #[test]

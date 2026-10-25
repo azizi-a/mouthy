@@ -759,6 +759,19 @@ mod tests {
         assert_eq!(bindings["speak"].current_binding, "alt+shift+escape");
     }
 
+    #[test]
+    fn binding_sync_leaves_speak_clipboard_unbound_when_speak_uses_its_keys_on_one_side() {
+        // What the handy-keys recorder stores; it fires on the default's press too.
+        let mut bindings = HashMap::from([(
+            "speak".to_string(),
+            binding("speak", "option_left+shift_left+escape"),
+        )]);
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+
+        assert!(bindings["speak_clipboard"].is_unbound());
+    }
+
     #[cfg(not(target_os = "linux"))]
     #[test]
     fn default_overlay_style_is_minimal_when_overlay_defaults_on() {
