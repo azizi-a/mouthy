@@ -8,7 +8,7 @@ import { StartHidden } from "../StartHidden";
 import { ShowOverlay } from "../ShowOverlay";
 import { BackendUrl } from "../BackendUrl";
 import { TtsBackendSelector } from "../TtsBackendSelector";
-import { VoiceSelector } from "../VoiceSelector";
+import { VoicePicker } from "../VoicePicker";
 import { EspeakFallback } from "../EspeakFallback";
 import { SpeedSlider } from "../SpeedSlider";
 import { VolumeSlider } from "../VolumeSlider";
@@ -30,7 +30,7 @@ export const GeneralSettings: React.FC = () => {
       <SettingsGroup title={t("settings.speech.title")}>
         <TtsBackendSelector descriptionMode="tooltip" grouped={true} />
         {usesServer && <BackendUrl descriptionMode="tooltip" grouped={true} />}
-        <VoiceSelector descriptionMode="tooltip" grouped={true} />
+        <VoicePicker descriptionMode="tooltip" />
         {!usesServer && (
           <EspeakFallback descriptionMode="tooltip" grouped={true} />
         )}

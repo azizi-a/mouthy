@@ -75,7 +75,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 ### Frontend Structure (src/)
 
 - `App.tsx` - Main component with onboarding (Accessibility permission)
-- `components/settings/` - Settings UI: `general/`, `models/`, `advanced/`, `debug/`, `about/`
+- `components/settings/` - Settings UI: `general/`, `models/`, `advanced/`, `debug/`, `about/`; `VoicePicker` (Speech group) and the Models page share `VoiceRow` (on `FileRow`), whose Preview/Stop state comes from `hooks/useVoicePreview.ts` (`speech-state`)
 - `components/onboarding/`, `ui/`, `icons/`, `footer/`
 - `overlay/` - Overlay window entry point and `SpeakingOverlay` UI
 - `hooks/useSettings.ts`, `stores/settingsStore.ts` - Settings state (Zustand)
