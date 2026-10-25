@@ -375,6 +375,8 @@ pub fn run(cli_args: CliArgs) {
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if args.iter().any(|a| a == "--speak-selection") {
                 actions::speak_selection(app, "CLI");
+            } else if args.iter().any(|a| a == "--speak-clipboard") {
+                actions::speak_clipboard(app, "CLI");
             } else if args.iter().any(|a| a == "--stop") {
                 actions::stop_speaking(app, "CLI");
             } else {

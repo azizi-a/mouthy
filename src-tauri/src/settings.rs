@@ -1,4 +1,4 @@
-use log::{debug, warn};
+use log::{debug, info, warn};
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use specta::Type;
@@ -80,6 +80,14 @@ pub struct ShortcutBinding {
     pub description: String,
     pub default_binding: String,
     pub current_binding: String,
+}
+
+impl ShortcutBinding {
+    /// No keys, so nothing registers. A default added by an update starts
+    /// this way when another binding already uses its keys.
+    pub fn is_unbound(&self) -> bool {
+        self.current_binding.trim().is_empty()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
@@ -282,6 +290,10 @@ pub fn get_default_settings() -> AppSettings {
     let speak_shortcut = "option+escape";
     #[cfg(not(target_os = "macos"))]
     let speak_shortcut = "alt+escape";
+    #[cfg(target_os = "macos")]
+    let clipboard_shortcut = "option+shift+escape";
+    #[cfg(not(target_os = "macos"))]
+    let clipboard_shortcut = "alt+shift+escape";
 
     let mut bindings = HashMap::new();
     bindings.insert(
@@ -292,6 +304,16 @@ pub fn get_default_settings() -> AppSettings {
             description: "Reads the selected text aloud; press again to stop.".to_string(),
             default_binding: speak_shortcut.to_string(),
             current_binding: speak_shortcut.to_string(),
+        },
+    );
+    bindings.insert(
+        "speak_clipboard".to_string(),
+        ShortcutBinding {
+            id: "speak_clipboard".to_string(),
+            name: "Speak Clipboard".to_string(),
+            description: "Reads the clipboard text aloud; press again to stop.".to_string(),
+            default_binding: clipboard_shortcut.to_string(),
+            current_binding: clipboard_shortcut.to_string(),
         },
     );
 
@@ -411,11 +433,20 @@ fn salvage_settings(stored: &serde_json::Value) -> AppSettings {
     })
 }
 
+/// Brings a stored map in line with this build's default bindings.
+fn sync_bindings_with_defaults(bindings: &mut HashMap<String, ShortcutBinding>) -> bool {
+    sync_bindings(bindings, get_default_settings().bindings)
+}
+
 /// Adds default bindings missing from a stored map and drops stored ids that
 /// are no longer defaults, so retired bindings never register or get shadowed.
+/// A default whose keys another binding already uses is added unbound, so an
+/// update never takes keys the user chose for something else.
 /// Returns whether the map changed.
-fn sync_bindings_with_defaults(bindings: &mut HashMap<String, ShortcutBinding>) -> bool {
-    let defaults = get_default_settings().bindings;
+fn sync_bindings(
+    bindings: &mut HashMap<String, ShortcutBinding>,
+    defaults: HashMap<String, ShortcutBinding>,
+) -> bool {
     let mut changed = false;
 
     bindings.retain(|id, _| {
@@ -427,12 +458,23 @@ fn sync_bindings_with_defaults(bindings: &mut HashMap<String, ShortcutBinding>) 
         keep
     });
 
-    for (key, value) in defaults {
-        if let std::collections::hash_map::Entry::Vacant(entry) = bindings.entry(key) {
-            debug!("Adding missing binding: {}", entry.key());
-            entry.insert(value);
-            changed = true;
+    let missing: Vec<_> = defaults
+        .into_iter()
+        .filter(|(id, _)| !bindings.contains_key(id))
+        .collect();
+    for (id, mut binding) in missing {
+        let keys = &binding.current_binding;
+        if let Some(owner) = crate::shortcut::binding_with_keys(bindings, keys, &id) {
+            info!(
+                "Adding binding '{id}' unbound: '{}' already uses {keys}",
+                owner.id
+            );
+            binding.current_binding.clear();
+        } else {
+            debug!("Adding missing binding: {id}");
         }
+        bindings.insert(id, binding);
+        changed = true;
     }
 
     changed
@@ -651,6 +693,83 @@ mod tests {
             current_bindings(&bindings),
             current_bindings(&get_default_settings().bindings)
         );
+    }
+
+    #[test]
+    fn binding_sync_adds_a_new_default_unbound_when_its_keys_are_taken() {
+        let mut bindings =
+            HashMap::from([("speak".to_string(), binding("speak", "alt+shift+escape"))]);
+        let defaults = HashMap::from([
+            ("speak".to_string(), binding("speak", "option+escape")),
+            ("read".to_string(), binding("read", "option+shift+escape")),
+        ]);
+
+        assert!(sync_bindings(&mut bindings, defaults));
+
+        assert_eq!(bindings["speak"].current_binding, "alt+shift+escape");
+        assert!(bindings["read"].is_unbound());
+        assert_eq!(bindings["read"].default_binding, "option+shift+escape");
+    }
+
+    #[test]
+    fn binding_sync_adds_a_new_default_with_its_keys_when_they_are_free() {
+        let mut bindings = HashMap::from([("speak".to_string(), binding("speak", "f13"))]);
+        let defaults = HashMap::from([
+            ("speak".to_string(), binding("speak", "option+escape")),
+            ("read".to_string(), binding("read", "option+shift+escape")),
+        ]);
+
+        assert!(sync_bindings(&mut bindings, defaults));
+
+        assert_eq!(bindings["read"].current_binding, "option+shift+escape");
+    }
+
+    #[test]
+    fn default_bindings_use_distinct_keys() {
+        let defaults = get_default_settings().bindings;
+        for (id, binding) in &defaults {
+            let taken = crate::shortcut::binding_with_keys(&defaults, &binding.current_binding, id);
+            assert!(taken.is_none(), "'{id}' shares its keys");
+        }
+    }
+
+    #[test]
+    fn binding_sync_adds_speak_clipboard_to_a_store_holding_only_speak() {
+        let mut bindings = HashMap::from([("speak".to_string(), binding("speak", "f13"))]);
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+
+        let defaults = get_default_settings().bindings;
+        assert_eq!(
+            bindings["speak_clipboard"].current_binding,
+            defaults["speak_clipboard"].current_binding
+        );
+        assert_eq!(bindings["speak"].current_binding, "f13");
+    }
+
+    #[test]
+    fn binding_sync_leaves_speak_clipboard_unbound_when_speak_has_its_keys() {
+        // Spelled with `alt` so the match must come from parsing.
+        let mut bindings =
+            HashMap::from([("speak".to_string(), binding("speak", "alt+shift+escape"))]);
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+
+        assert!(bindings["speak_clipboard"].is_unbound());
+        assert_eq!(bindings["speak"].current_binding, "alt+shift+escape");
+    }
+
+    #[test]
+    fn binding_sync_leaves_speak_clipboard_unbound_when_speak_uses_its_keys_on_one_side() {
+        // What the handy-keys recorder stores; it fires on the default's press too.
+        let mut bindings = HashMap::from([(
+            "speak".to_string(),
+            binding("speak", "option_left+shift_left+escape"),
+        )]);
+
+        assert!(sync_bindings_with_defaults(&mut bindings));
+
+        assert!(bindings["speak_clipboard"].is_unbound());
     }
 
     #[cfg(not(target_os = "linux"))]

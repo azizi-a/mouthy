@@ -35,15 +35,20 @@
       "title": "Загальні",
       "shortcut": {
         "title": "Комбінації клавіш",
-        "description": "Configure the keyboard shortcut that reads your selection aloud",
+        "description": "Configure the keyboard shortcuts that read your selection or clipboard aloud",
         "loading": "Завантаження скорочень...",
         "none": "Скорочення не налаштовані",
         "notFound": "Скорочення не знайдено",
         "pressKeys": "Натисніть клавіші...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",
             "description": "Reads the selected text aloud. Press again to stop."
+          },
+          "speak_clipboard": {
+            "name": "Speak Clipboard",
+            "description": "Reads the text you copied aloud. Press again to stop."
           }
         },
         "errors": {
@@ -213,7 +218,8 @@
       "keyboardImplementation": {
         "title": "Реалізація клавіатури",
         "description": "Оберіть бекенд для клавіатурних скорочень.",
-        "bindingsReset": "Клавіатурні скорочення були несумісні та скинуті до значень за замовчуванням"
+        "bindingsReset": "Клавіатурні скорочення були несумісні та скинуті до значень за замовчуванням",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "paths": {
         "appData": "Дані програми:",
@@ -315,6 +321,8 @@
   "overlay": {
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
+    "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Speak clipboard: press ⌥⇧⎋ (Alt+Shift+Esc on Windows/Linux) to read the clipboard text aloud without copying the selection, for terminal programs such as Claude Code and nvim that leave no selection to copy. Clipboard text a password manager marked as secret is not read. Also available as `--speak-clipboard`.
+- Settings refuses a shortcut that another one already uses. After an update, a new shortcut whose keys you already use starts unset.
 - The app ships the licences of Mouthy and the software it includes, ONNX Runtime's third-party notices among them; Settings → About → Third-party licences opens them.
 
 ### Changed

@@ -43,6 +43,11 @@ export const KeyboardImplementationSelector: React.FC<
       if (result.data.reset_bindings.length > 0) {
         toast.warning(t("settings.debug.keyboardImplementation.bindingsReset"));
       }
+      if (result.data.unbound_bindings.length > 0) {
+        toast.warning(
+          t("settings.debug.keyboardImplementation.bindingsUnbound"),
+        );
+      }
 
       await refreshSettings();
     } catch (error) {

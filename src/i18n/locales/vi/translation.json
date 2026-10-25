@@ -35,15 +35,20 @@
       "title": "Chung",
       "shortcut": {
         "title": "Phím tắt Mouthy",
-        "description": "Configure the keyboard shortcut that reads your selection aloud",
+        "description": "Configure the keyboard shortcuts that read your selection or clipboard aloud",
         "loading": "Đang tải phím tắt...",
         "none": "Chưa cấu hình phím tắt",
         "notFound": "Không tìm thấy phím tắt",
         "pressKeys": "Nhấn phím...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",
             "description": "Reads the selected text aloud. Press again to stop."
+          },
+          "speak_clipboard": {
+            "name": "Speak Clipboard",
+            "description": "Reads the text you copied aloud. Press again to stop."
           }
         },
         "errors": {
@@ -213,7 +218,8 @@
       "keyboardImplementation": {
         "title": "Triển khai bàn phím",
         "description": "Chọn hệ thống xử lý phím tắt.",
-        "bindingsReset": "Các phím tắt không tương thích và đã được đặt lại về mặc định"
+        "bindingsReset": "Các phím tắt không tương thích và đã được đặt lại về mặc định",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "paths": {
         "appData": "Dữ liệu ứng dụng:",
@@ -315,6 +321,8 @@
   "overlay": {
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
+    "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

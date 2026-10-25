@@ -35,15 +35,20 @@
       "title": "Obecné",
       "shortcut": {
         "title": "Zkratky Mouthy",
-        "description": "Configure the keyboard shortcut that reads your selection aloud",
+        "description": "Configure the keyboard shortcuts that read your selection or clipboard aloud",
         "loading": "Načítám zkratky...",
         "none": "Žádné zkratky nejsou nastavené",
         "notFound": "Zkratka nenalezena",
         "pressKeys": "Stiskněte klávesy...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",
             "description": "Reads the selected text aloud. Press again to stop."
+          },
+          "speak_clipboard": {
+            "name": "Speak Clipboard",
+            "description": "Reads the text you copied aloud. Press again to stop."
           }
         },
         "errors": {
@@ -213,7 +218,8 @@
       "keyboardImplementation": {
         "title": "Implementace klávesnice",
         "description": "Zvolte backend pro klávesové zkratky.",
-        "bindingsReset": "Klávesové zkratky byly nekompatibilní a byly obnoveny na výchozí hodnoty"
+        "bindingsReset": "Klávesové zkratky byly nekompatibilní a byly obnoveny na výchozí hodnoty",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "paths": {
         "appData": "Data aplikace:",
@@ -315,6 +321,8 @@
   "overlay": {
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
+    "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

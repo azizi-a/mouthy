@@ -35,15 +35,20 @@
       "title": "Общие",
       "shortcut": {
         "title": "Ярлыки Mouthy",
-        "description": "Configure the keyboard shortcut that reads your selection aloud",
+        "description": "Configure the keyboard shortcuts that read your selection or clipboard aloud",
         "loading": "Загрузка ярлыков...",
         "none": "Ярлыки не настроены",
         "notFound": "Ярлык не найден",
         "pressKeys": "Нажимайте клавиши...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",
             "description": "Reads the selected text aloud. Press again to stop."
+          },
+          "speak_clipboard": {
+            "name": "Speak Clipboard",
+            "description": "Reads the text you copied aloud. Press again to stop."
           }
         },
         "errors": {
@@ -213,7 +218,8 @@
       "keyboardImplementation": {
         "title": "Реализация клавиатуры",
         "description": "Выберите бэкенд для клавиатурных сочетаний.",
-        "bindingsReset": "Клавиатурные сочетания были несовместимы и сброшены к значениям по умолчанию"
+        "bindingsReset": "Клавиатурные сочетания были несовместимы и сброшены к значениям по умолчанию",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "paths": {
         "appData": "Данные приложения:",
@@ -315,6 +321,8 @@
   "overlay": {
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
+    "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

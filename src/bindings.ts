@@ -469,7 +469,11 @@ export type ImplementationChangeResult = { success: boolean;
 /**
  * List of binding IDs that were reset to defaults due to incompatibility
  */
-reset_bindings: string[] }
+reset_bindings: string[]; 
+/**
+ * Binding IDs left unset: incompatible, and their default's keys are taken
+ */
+unbound_bindings: string[] }
 export type KeyboardDiagnosticReport = { secure_input_enabled: boolean; culprit_pid: number | null; culprit_name: string | null; 
 /**
  * Counts only — key identity is deliberately never captured.

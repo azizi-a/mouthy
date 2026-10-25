@@ -13,6 +13,8 @@ mod handler;
 pub mod handy_keys;
 pub mod tauri_impl;
 
+use std::collections::HashMap;
+
 use log::{debug, error, info, warn};
 use serde::Serialize;
 use specta::Type;
@@ -70,6 +72,50 @@ pub fn unregister_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<
     }
 }
 
+/// Whether one press can fire both shortcuts, however they are spelled
+/// (`alt` or `option`, letter case, modifier order). handy-keys fires
+/// `option` for either Option key, so it collides with `option_left`;
+/// `option_left` and `option_right` do not collide.
+pub fn keys_collide(a: &str, b: &str) -> bool {
+    use ::handy_keys::Hotkey;
+    use tauri_plugin_global_shortcut::Shortcut;
+    if let (Ok(a), Ok(b)) = (a.parse::<Hotkey>(), b.parse::<Hotkey>()) {
+        if a.key == b.key && (a.modifiers.matches(b.modifiers) || b.modifiers.matches(a.modifiers))
+        {
+            return true;
+        }
+    }
+    matches!((a.parse::<Shortcut>(), b.parse::<Shortcut>()), (Ok(a), Ok(b)) if a == b)
+}
+
+/// The binding, other than `except`, whose current keys collide with `keys`.
+pub fn binding_with_keys<'a>(
+    bindings: &'a HashMap<String, ShortcutBinding>,
+    keys: &str,
+    except: &str,
+) -> Option<&'a ShortcutBinding> {
+    bindings
+        .iter()
+        .find(|(id, binding)| id.as_str() != except && keys_collide(&binding.current_binding, keys))
+        .map(|(_, binding)| binding)
+}
+
+/// Two bindings on the same keys cannot both work, so a change to keys that
+/// another binding uses is refused.
+fn ensure_keys_free(
+    bindings: &HashMap<String, ShortcutBinding>,
+    id: &str,
+    keys: &str,
+) -> Result<(), String> {
+    match binding_with_keys(bindings, keys, id) {
+        Some(owner) => Err(format!(
+            "Shortcut '{keys}' is already used by {}",
+            owner.name
+        )),
+        None => Ok(()),
+    }
+}
+
 // ============================================================================
 // Binding Management Commands
 // ============================================================================
@@ -121,6 +167,11 @@ pub fn change_binding(
             }
         }
     };
+
+    if let Err(e) = ensure_keys_free(&settings.bindings, &id, &binding) {
+        warn!("change_binding error: {}", e);
+        return Err(e);
+    }
 
     // Unregister the existing binding
     if let Err(e) = unregister_shortcut(&app, binding_to_modify.clone()) {
@@ -238,6 +289,8 @@ pub struct ImplementationChangeResult {
     pub success: bool,
     /// List of binding IDs that were reset to defaults due to incompatibility
     pub reset_bindings: Vec<String>,
+    /// Binding IDs left unset: incompatible, and their default's keys are taken
+    pub unbound_bindings: Vec<String>,
 }
 
 /// Change the keyboard implementation with runtime switching.
@@ -259,6 +312,7 @@ pub fn change_keyboard_implementation_setting(
         return Ok(ImplementationChangeResult {
             success: true,
             reset_bindings: vec![],
+            unbound_bindings: vec![],
         });
     }
 
@@ -288,11 +342,13 @@ pub fn change_keyboard_implementation_setting(
         return Ok(ImplementationChangeResult {
             success: true,
             reset_bindings: vec![],
+            unbound_bindings: vec![],
         });
     }
 
     // Register all shortcuts with new implementation, resetting invalid ones
-    let reset_bindings = register_all_shortcuts_for_implementation(&app, new_impl);
+    let (reset_bindings, unbound_bindings) =
+        register_all_shortcuts_for_implementation(&app, new_impl);
     crate::secure_input::reconcile_fallback(&app);
 
     // Emit event to notify frontend of the change
@@ -301,7 +357,8 @@ pub fn change_keyboard_implementation_setting(
         serde_json::json!({
             "setting": "keyboard_implementation",
             "value": implementation,
-            "reset_bindings": reset_bindings
+            "reset_bindings": reset_bindings,
+            "unbound_bindings": unbound_bindings
         }),
     );
 
@@ -310,6 +367,7 @@ pub fn change_keyboard_implementation_setting(
     Ok(ImplementationChangeResult {
         success: true,
         reset_bindings,
+        unbound_bindings,
     })
 }
 
@@ -373,12 +431,15 @@ fn unregister_all_shortcuts(app: &AppHandle, implementation: KeyboardImplementat
     }
 }
 
-/// Register all shortcuts for a specific implementation, validating and resetting invalid ones
+/// Register all shortcuts for a specific implementation, validating and resetting invalid ones.
+/// Returns the ids reset to their defaults, and those left unbound because
+/// another binding has their default's keys.
 fn register_all_shortcuts_for_implementation(
     app: &AppHandle,
     implementation: KeyboardImplementation,
-) -> Vec<String> {
+) -> (Vec<String>, Vec<String>) {
     let mut reset_bindings = Vec::new();
+    let mut unbound_bindings = Vec::new();
     let default_bindings = settings::get_default_settings().bindings;
     let mut current_settings = settings::get_settings(app);
 
@@ -388,6 +449,9 @@ fn register_all_shortcuts_for_implementation(
             .get(id)
             .cloned()
             .unwrap_or_else(|| default_binding.clone());
+        if binding.is_unbound() {
+            continue;
+        }
 
         // Validate the shortcut for the target implementation
         if let Err(e) =
@@ -398,12 +462,22 @@ fn register_all_shortcuts_for_implementation(
                 id, binding.current_binding, implementation, e
             );
 
-            // Reset to default
+            // Reset to default, or to unbound if another binding has its keys
             binding.current_binding = default_binding.current_binding.clone();
+            let taken = binding_with_keys(&current_settings.bindings, &binding.current_binding, id)
+                .is_some();
+            if taken {
+                binding.current_binding.clear();
+                unbound_bindings.push(id.clone());
+            } else {
+                reset_bindings.push(id.clone());
+            }
             current_settings
                 .bindings
                 .insert(id.clone(), binding.clone());
-            reset_bindings.push(id.clone());
+            if taken {
+                continue;
+            }
         }
 
         // Register with the appropriate implementation
@@ -421,11 +495,11 @@ fn register_all_shortcuts_for_implementation(
     }
 
     // Save settings if any bindings were reset
-    if !reset_bindings.is_empty() {
+    if !reset_bindings.is_empty() || !unbound_bindings.is_empty() {
         settings::write_settings(app, current_settings);
     }
 
-    reset_bindings
+    (reset_bindings, unbound_bindings)
 }
 
 /// Initialize HandyKeys if not already initialized, with rollback on failure
@@ -736,8 +810,68 @@ pub fn change_tts_volume_setting(app: AppHandle, volume: f32) -> Result<(), Stri
 
 #[cfg(test)]
 mod tests {
+    use super::{ensure_keys_free, keys_collide};
+    use crate::settings::ShortcutBinding;
     use handy_keys::Hotkey;
+    use std::collections::HashMap;
     use tauri_plugin_global_shortcut::Shortcut;
+
+    fn bindings(pairs: &[(&str, &str)]) -> HashMap<String, ShortcutBinding> {
+        pairs
+            .iter()
+            .map(|&(id, keys)| {
+                let binding = ShortcutBinding {
+                    id: id.to_string(),
+                    name: format!("{id} name"),
+                    description: String::new(),
+                    default_binding: keys.to_string(),
+                    current_binding: keys.to_string(),
+                };
+                (id.to_string(), binding)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn keys_collide_whatever_the_spelling_case_and_modifier_order() {
+        assert!(keys_collide("alt+shift+escape", "option+shift+escape"));
+        assert!(keys_collide("shift+option+escape", "Option+Shift+Escape"));
+        assert!(!keys_collide("option+escape", "option+shift+escape"));
+        assert!(!keys_collide("option+escape", "option+space"));
+        assert!(!keys_collide("", ""), "unbound bindings never collide");
+    }
+
+    #[test]
+    fn a_side_specific_modifier_collides_with_either_side() {
+        assert!(keys_collide("option_left+escape", "option+escape"));
+        assert!(keys_collide("option+escape", "option_left+escape"));
+        assert!(keys_collide(
+            "option_left+shift_left+escape",
+            "option+shift+escape"
+        ));
+        assert!(!keys_collide("option_left+escape", "option_right+escape"));
+    }
+
+    #[test]
+    fn keys_another_binding_uses_are_refused() {
+        let map = bindings(&[("speak", "option+escape"), ("read", "f13")]);
+
+        assert_eq!(
+            ensure_keys_free(&map, "read", "alt+escape"),
+            Err("Shortcut 'alt+escape' is already used by speak name".to_string())
+        );
+        assert_eq!(ensure_keys_free(&map, "speak", "option+escape"), Ok(()));
+        assert_eq!(
+            ensure_keys_free(&map, "read", "option+shift+escape"),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn an_unbound_binding_blocks_no_keys() {
+        let map = bindings(&[("speak", "option+escape"), ("read", "")]);
+        assert_eq!(ensure_keys_free(&map, "speak", "f13"), Ok(()));
+    }
 
     #[test]
     fn compound_shortcut_keys_parse_on_both_backends() {

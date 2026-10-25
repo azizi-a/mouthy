@@ -10,6 +10,8 @@ import { syncLanguageFromSettings } from "@/i18n";
 type OverlayView =
   | { kind: "speaking" }
   | { kind: "nothing-selected" }
+  | { kind: "clipboard-empty" }
+  | { kind: "clipboard-secret" }
   | { kind: "error"; message: string }
   | { kind: "model-missing" };
 
@@ -45,7 +47,11 @@ const SpeakingOverlay: React.FC = () => {
       ? `${t("overlay.error")}: ${view.message}`
       : view.kind === "model-missing"
         ? t("overlay.modelMissing")
-        : t("overlay.nothingSelected");
+        : view.kind === "clipboard-empty"
+          ? t("overlay.clipboardEmpty")
+          : view.kind === "clipboard-secret"
+            ? t("overlay.clipboardSecret")
+            : t("overlay.nothingSelected");
   const opensSettings = view.kind === "error" || view.kind === "model-missing";
   const openSettings = async () => {
     if (view.kind === "model-missing") {

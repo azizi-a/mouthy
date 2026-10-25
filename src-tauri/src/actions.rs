@@ -1,5 +1,5 @@
 use crate::audio_out;
-use crate::clipboard;
+use crate::clipboard::{self, ClipboardText};
 use crate::overlay::{self, OverlayView};
 use crate::settings::{self, AppSettings, TtsBackend};
 use crate::tray::{self, TrayIconState};
@@ -32,6 +32,9 @@ const SAMPLE_RATE: NonZero<u32> = NonZero::new(tts::SAMPLE_RATE).unwrap();
 /// A hotkey release this soon after a ⌘C sent with the hotkey still held is
 /// the hotkey listener taking our synthetic ⌘-up for the user letting go.
 const COPY_ECHO_WINDOW: Duration = Duration::from_millis(150);
+/// Most clipboard characters read aloud. Normalising and splitting run on the
+/// main thread, which a huge clipboard would stall.
+const CLIPBOARD_CHAR_CAP: usize = 20_000;
 
 type Chunk = Result<Vec<i16>, String>;
 
@@ -43,14 +46,17 @@ struct Session {
     /// When the capture's ⌘C went out with ⌥, ⌃ or ⇧ still down: the only
     /// time a hotkey listener can echo it as a release.
     copied_while_held_at: Option<Instant>,
+    /// What it reads, for the notice when none of it was speakable.
+    input: Input,
 }
 
 impl Session {
-    fn new(stop: Arc<AtomicBool>, copied_while_held_at: Option<Instant>) -> Self {
+    fn new(stop: Arc<AtomicBool>, copied_while_held_at: Option<Instant>, input: Input) -> Self {
         Self {
             stop,
             released_since_start: false,
             copied_while_held_at,
+            input,
         }
     }
 
@@ -72,6 +78,49 @@ enum Trigger {
     Hotkey,
     /// Tray, CLI or signal.
     Other,
+}
+
+/// Where the text to speak comes from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Input {
+    /// Copied from the frontmost app with ⌘C, leaving the clipboard as it was.
+    Selection,
+    /// The clipboard as it is; nothing is copied.
+    Clipboard,
+}
+
+impl Input {
+    fn name(self) -> &'static str {
+        match self {
+            Input::Selection => "selection",
+            Input::Clipboard => "clipboard",
+        }
+    }
+
+    /// The notice when there was nothing to speak.
+    fn empty_notice(self) -> OverlayView {
+        match self {
+            Input::Selection => OverlayView::NothingSelected,
+            Input::Clipboard => OverlayView::ClipboardEmpty,
+        }
+    }
+}
+
+/// `text` cut to its first `cap` characters.
+fn truncate_chars(mut text: String, cap: usize) -> String {
+    if let Some((end, _)) = text.char_indices().nth(cap) {
+        text.truncate(end);
+    }
+    text
+}
+
+fn cap_clipboard_text(text: String) -> String {
+    let full_len = text.len();
+    let text = truncate_chars(text, CLIPBOARD_CHAR_CAP);
+    if text.len() < full_len {
+        info!("Reading the first {CLIPBOARD_CHAR_CAP} characters of the clipboard");
+    }
+    text
 }
 
 /// Whether a press while speaking stops the speech. A hotkey press does only
@@ -111,16 +160,21 @@ impl TtsState {
 /// Speaks the current selection, or stops if already speaking. A press during
 /// the capture runs after it, so it stops the speech that capture started.
 pub fn speak_selection(app: &AppHandle, source: &str) {
-    request_speech(app, source, Trigger::Other);
+    request_speech(app, source, Trigger::Other, Input::Selection);
 }
 
-fn request_speech(app: &AppHandle, source: &str, trigger: Trigger) {
+/// Speaks the clipboard text, or stops if already speaking.
+pub fn speak_clipboard(app: &AppHandle, source: &str) {
+    request_speech(app, source, Trigger::Other, Input::Clipboard);
+}
+
+fn request_speech(app: &AppHandle, source: &str, trigger: Trigger, input: Input) {
     let handle = app.clone();
     let source = source.to_string();
     // Never wait for this: the handy-keys thread calling it is the one the
     // main thread's shortcut commands wait on.
     if let Err(e) =
-        app.run_on_main_thread(move || speak_selection_on_main(&handle, &source, trigger))
+        app.run_on_main_thread(move || speak_selection_on_main(&handle, &source, trigger, input))
     {
         error!("Failed to schedule speech: {e}");
     }
@@ -145,7 +199,7 @@ pub fn stop_speaking(app: &AppHandle, source: &str) {
     }
 }
 
-fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
+fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, input: Input) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
@@ -163,7 +217,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
         return;
     }
 
-    info!("Speaking selection ({source})");
+    info!("Speaking the {} ({source})", input.name());
     let settings = settings::get_settings(app);
     // Checked before the copy: without its files the local voice cannot speak.
     let backend = match speech_backend(app, &settings) {
@@ -174,16 +228,29 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
         }
     };
     let capture_started = Instant::now();
-    let selection = match clipboard::capture_selection(app) {
-        Ok(selection) => selection,
+    let captured = match input {
+        Input::Selection => clipboard::capture_selection(app)
+            .map(|selection| (selection.text, selection.copied_while_held_at)),
+        // No ⌘C goes out, so there is no copy echo to ignore.
+        Input::Clipboard => match clipboard::read_text() {
+            Ok(ClipboardText::Text(text)) => Ok((Some(cap_clipboard_text(text)), None)),
+            Ok(ClipboardText::Empty) => Ok((None, None)),
+            Ok(ClipboardText::Secret) => {
+                overlay::show_overlay(app, OverlayView::ClipboardSecret);
+                return;
+            }
+            Err(e) => Err(e),
+        },
+    };
+    let (text, copied_while_held_at) = match captured {
+        Ok(captured) => captured,
         Err(e) => {
-            error!("Failed to capture the selection: {e}");
+            error!("Failed to read the {}: {e}", input.name());
             overlay::show_overlay(app, OverlayView::Error { message: e });
             return;
         }
     };
-    let text = selection
-        .text
+    let text = text
         .map(|text| tts::text::normalize(&text))
         .unwrap_or_default();
     let mut sentences = tts::text::split_sentences(&text, backend.max_chunk_chars());
@@ -198,7 +265,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
         (captured_at - capture_started).as_millis()
     );
     if sentences.is_empty() {
-        overlay::show_overlay(app, OverlayView::NothingSelected);
+        overlay::show_overlay(app, input.empty_notice());
         return;
     }
 
@@ -215,7 +282,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger) {
         overlay::show_overlay(app, OverlayView::Error { message });
         return;
     }
-    *state.lock() = Some(Session::new(stop, selection.copied_while_held_at));
+    *state.lock() = Some(Session::new(stop, copied_while_held_at, input));
     overlay::show_overlay(app, OverlayView::Speaking);
     tray::set_tray_state(app, TrayIconState::Speaking);
 }
@@ -249,21 +316,23 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
-    {
+    let input = {
         let mut current = state.lock();
-        let owns = current
+        let owner = current
             .as_ref()
-            .is_some_and(|session| Arc::ptr_eq(&session.stop, stop));
-        if !owns {
+            .filter(|session| Arc::ptr_eq(&session.stop, stop))
+            .map(|session| session.input);
+        let Some(input) = owner else {
             return;
-        }
+        };
         *current = None;
-    }
+        input
+    };
     match end {
         PlaybackEnd::Done => overlay::hide_overlay(app),
         PlaybackEnd::NothingSpoken => {
             info!("No sentence had speakable text");
-            overlay::show_overlay(app, OverlayView::NothingSelected);
+            overlay::show_overlay(app, input.empty_notice());
         }
         PlaybackEnd::Failed(message) => overlay::show_overlay(app, OverlayView::Error { message }),
     }
@@ -594,7 +663,20 @@ struct SpeakAction;
 
 impl ShortcutAction for SpeakAction {
     fn start(&self, app: &AppHandle, _binding_id: &str, shortcut_str: &str) {
-        request_speech(app, shortcut_str, Trigger::Hotkey);
+        request_speech(app, shortcut_str, Trigger::Hotkey, Input::Selection);
+    }
+
+    fn stop(&self, app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {
+        hotkey_released(app);
+    }
+}
+
+/// Toggle like `SpeakAction`, reading the clipboard instead of the selection.
+struct SpeakClipboardAction;
+
+impl ShortcutAction for SpeakClipboardAction {
+    fn start(&self, app: &AppHandle, _binding_id: &str, shortcut_str: &str) {
+        request_speech(app, shortcut_str, Trigger::Hotkey, Input::Clipboard);
     }
 
     fn stop(&self, app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {
@@ -608,6 +690,10 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
     map.insert(
         "speak".to_string(),
         Arc::new(SpeakAction) as Arc<dyn ShortcutAction>,
+    );
+    map.insert(
+        "speak_clipboard".to_string(),
+        Arc::new(SpeakClipboardAction) as Arc<dyn ShortcutAction>,
     );
     map
 });
@@ -630,6 +716,27 @@ mod tests {
         for id in settings::get_default_settings().bindings.keys() {
             assert!(ACTION_MAP.contains_key(id), "no action for binding '{id}'");
         }
+    }
+
+    #[test]
+    fn an_empty_clipboard_has_its_own_notice() {
+        assert!(matches!(
+            Input::Selection.empty_notice(),
+            OverlayView::NothingSelected
+        ));
+        assert!(matches!(
+            Input::Clipboard.empty_notice(),
+            OverlayView::ClipboardEmpty
+        ));
+    }
+
+    #[test]
+    fn truncation_keeps_whole_characters() {
+        assert_eq!(truncate_chars("héllo wörld".into(), 7), "héllo w");
+        assert_eq!(truncate_chars("ab".into(), 5), "ab");
+        assert_eq!(truncate_chars("日本語".into(), 2), "日本");
+        let long = "é".repeat(CLIPBOARD_CHAR_CAP + 10);
+        assert_eq!(cap_clipboard_text(long).chars().count(), CLIPBOARD_CHAR_CAP);
     }
 
     #[test]
@@ -663,7 +770,11 @@ mod tests {
         let pressed_at = Instant::now();
         let after = |ms| pressed_at + Duration::from_millis(ms);
         // Modifiers still down when the wait gave up and ⌘C went out.
-        let mut session = Session::new(Arc::new(AtomicBool::new(false)), Some(after(300)));
+        let mut session = Session::new(
+            Arc::new(AtomicBool::new(false)),
+            Some(after(300)),
+            Input::Selection,
+        );
 
         assert!(
             !session.note_release(after(340)),
@@ -684,7 +795,7 @@ mod tests {
     fn a_quick_tap_counts_its_release_however_close_to_the_copy() {
         let copied_at = Instant::now();
         // Modifiers were up by the copy, so there is no echo window.
-        let mut session = Session::new(Arc::new(AtomicBool::new(false)), None);
+        let mut session = Session::new(Arc::new(AtomicBool::new(false)), None, Input::Selection);
         assert!(session.note_release(copied_at + Duration::from_millis(20)));
         assert!(should_toggle_stop(
             session.released_since_start,

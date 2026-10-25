@@ -35,15 +35,20 @@
       "title": "Algemeen",
       "shortcut": {
         "title": "Sneltoetsen",
-        "description": "Configure the keyboard shortcut that reads your selection aloud",
+        "description": "Configure the keyboard shortcuts that read your selection or clipboard aloud",
         "loading": "Sneltoetsen laden...",
         "none": "Geen sneltoetsen geconfigureerd",
         "notFound": "Sneltoets niet gevonden",
         "pressKeys": "Druk op toetsen...",
+        "unbound": "Not set",
         "bindings": {
           "speak": {
             "name": "Speak Selection",
             "description": "Reads the selected text aloud. Press again to stop."
+          },
+          "speak_clipboard": {
+            "name": "Speak Clipboard",
+            "description": "Reads the text you copied aloud. Press again to stop."
           }
         },
         "errors": {
@@ -219,7 +224,8 @@
       "keyboardImplementation": {
         "title": "Toetsenbord-implementatie",
         "description": "Kies de backend voor sneltoetsen.",
-        "bindingsReset": "Sneltoetsen waren incompatibel en zijn teruggezet naar de standaardwaarden"
+        "bindingsReset": "Sneltoetsen waren incompatibel en zijn teruggezet naar de standaardwaarden",
+        "bindingsUnbound": "Some keyboard shortcuts were incompatible and are now unset, because another shortcut uses their default keys"
       },
       "paths": {
         "appData": "App-data:",
@@ -315,6 +321,8 @@
   "overlay": {
     "speaking": "Speaking…",
     "nothingSelected": "Nothing selected",
+    "clipboardEmpty": "Clipboard is empty",
+    "clipboardSecret": "Clipboard holds a secret and was not read",
     "error": "Speech failed",
     "modelMissing": "Offline voice files are missing",
     "openSettings": "Open Settings",

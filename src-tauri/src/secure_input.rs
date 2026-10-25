@@ -462,7 +462,7 @@ mod imp {
         let mut immune = 0usize;
         let mut wanted: Vec<(String, ShortcutBinding, bool)> = Vec::new();
         if eligible {
-            for (id, binding) in &settings.bindings {
+            for (id, binding) in settings.bindings.iter().filter(|(_, b)| !b.is_unbound()) {
                 match plan_fallback_binding(id, binding) {
                     ShadowPlan::Immune => immune += 1,
                     ShadowPlan::Uncovered => next.uncovered.push(id.clone()),
