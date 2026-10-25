@@ -293,6 +293,7 @@ pub fn run(cli_args: CliArgs) {
         secure_input::run_keyboard_diagnostic,
         show_main_window_command,
         commands::stop_speaking,
+        commands::preview_voice,
         commands::fetch_tts_voices,
         commands::find_espeak_ng,
         commands::get_app_dir_path,

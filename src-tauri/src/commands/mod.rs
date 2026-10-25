@@ -12,6 +12,13 @@ pub fn stop_speaking(app: AppHandle) {
     crate::actions::stop_speaking(&app, "app");
 }
 
+/// Reads a fixed sentence in `voice`, stopping any speech first.
+#[tauri::command]
+#[specta::specta]
+pub fn preview_voice(app: AppHandle, voice: String) -> Result<(), String> {
+    crate::actions::preview_voice(&app, &voice)
+}
+
 /// Voice ids the selected backend offers: the server's list, or the voice
 /// files in the models folder.
 #[tauri::command]
