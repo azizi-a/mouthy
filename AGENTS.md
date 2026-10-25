@@ -97,6 +97,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 
 - One ONNX Runtime `Environment` per process (`tts::local::ENVIRONMENT`, a `OnceLock`, never dropped); a second `ort::init().build()` errors.
 - `tts::local::LOADED` is locked only by the synth and preload threads, never the main thread; a session holds it until its synth thread ends, and a stop interrupts the running inference.
+- `tts_voice` may be a blend such as `bm_lewis(70)+bm_george(30)` (`tts::voice::VoiceSpec`: `+` only, at most 4 voices): Local averages the voices' style tables by weight, reads with the first voice's dialect and reloads on any file or weight change; HTTP passes the string through, and only Local validates it on save.
 - A preload records its outcome in `tts::local::PRELOAD_ERROR`, a separate lock, so the async `list_model_files` can read it while a session holds `LOADED`; then it sends `model-files-changed`. Missing files unload the model.
 - A chunk is one inference of up to `PIECE_TOKENS` (510) ids, so its intonation spans the sentence; splitting it gives each piece sentence-final intonation. ONNX Runtime keeps the memory of its longest run (~1 GB at 510 ids), and sessions turn its memory pattern off, without which the arena grows ~40% past that. `tts::local::MAX_CHUNK_CHARS` (450) keeps a chunk of prose within 510 ids; `split_tokens` cuts the rare longer one.
 - Sessions use `AutoDevicePolicy::PreferCPU`; rc.14's default routes to CoreML, which is slower here.

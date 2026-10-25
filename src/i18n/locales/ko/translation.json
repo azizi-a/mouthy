@@ -74,7 +74,7 @@
       },
       "voice": {
         "title": "Voice",
-        "description": "Voice name, such as af_alloy. Type one, or pick from your downloaded voices (Local) or the server's list (HTTP).",
+        "description": "Voice name, such as af_alloy, or a blend such as bm_lewis(70)+bm_george(30). Type one, or pick from your downloaded voices (Local) or the server's list (HTTP).",
         "choose": "Choose a voice..."
       },
       "espeak": {
@@ -121,11 +121,20 @@
       },
       "voices": {
         "title": "Voices",
-        "description": "Voices starting with b speak British English, the rest American English.",
-        "british": "British",
-        "american": "American",
+        "description": "Mouthy reads all text as English, with British pronunciation for British voices and American for the rest. Voices for other languages cannot read their own language.",
         "female": "Female",
-        "male": "Male"
+        "male": "Male",
+        "language": {
+          "americanEnglish": "American English",
+          "britishEnglish": "British English",
+          "japanese": "Japanese",
+          "mandarin": "Mandarin Chinese",
+          "spanish": "Spanish",
+          "french": "French",
+          "hindi": "Hindi",
+          "italian": "Italian",
+          "brazilianPortuguese": "Brazilian Portuguese"
+        }
       },
       "files": {
         "title": "Files",
@@ -148,7 +157,9 @@
       "confirmDelete": "Delete?",
       "use": "Use",
       "inUse": "In use",
+      "inUseShare": "In use · {{percent}}%",
       "selected": "Selected",
+      "selectedShare": "Selected · {{percent}}%",
       "downloading": "Downloading… {{percent}}%",
       "checking": "Checking…",
       "paused": "Paused at {{percent}}%",

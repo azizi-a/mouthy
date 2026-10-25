@@ -6,6 +6,7 @@ pub mod espeak;
 pub mod http;
 pub mod local;
 pub mod text;
+pub mod voice;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;

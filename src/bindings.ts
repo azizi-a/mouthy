@@ -494,7 +494,11 @@ partial: number; downloading: boolean;
 /**
  * Why the last download failed, until the next one starts.
  */
-error: string | null }
+error: string | null; 
+/**
+ * A voice's language; `None` for a model.
+ */
+language: VoiceLanguage | null }
 export type ModelFileKind = "model" | "voice"
 export type ModelFileList = { 
 /**
@@ -506,9 +510,14 @@ dir: string; files: ModelFile[];
  */
 missing_model: ModelVariant | null; 
 /**
- * The selected voice, if the local backend finds no file for it.
+ * The selected voices the local backend finds no file for, or the whole
+ * setting when it is not a voice or blend.
  */
-missing_voice: string | null; 
+missing_voices: string[]; 
+/**
+ * The selected voice, or each voice of the selected blend.
+ */
+voice_parts: VoicePart[]; 
 /**
  * Why the local voice last failed to load, if it did.
  */
@@ -566,6 +575,15 @@ export type Theme = "system" | "light" | "dark"
  * `tts_base_url`, or Kokoro in-process from the files in the models folder.
  */
 export type TtsBackend = "http" | "local"
+/**
+ * The language a voice was trained on.
+ */
+export type VoiceLanguage = "americanEnglish" | "britishEnglish" | "japanese" | "mandarin" | "spanish" | "french" | "hindi" | "italian" | "brazilianPortuguese"
+export type VoicePart = { id: string; 
+/**
+ * Its share of the blend, from 0 to 1.
+ */
+share: number }
 
 /** tauri-specta globals **/
 

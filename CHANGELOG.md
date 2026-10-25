@@ -9,6 +9,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Speak clipboard: press ⌥⇧⎋ (Alt+Shift+Esc on Windows/Linux) to read the clipboard text aloud without copying the selection, for terminal programs such as Claude Code and nvim that leave no selection to copy. Clipboard text a password manager marked as secret is not read. Also available as `--speak-clipboard`.
 - Settings refuses a shortcut that another one already uses. After an update, a new shortcut whose keys you already use starts unset.
 - The app ships the licences of Mouthy and the software it includes, ONNX Runtime's third-party notices among them; Settings → About → Third-party licences opens them.
+- The voice can be a blend of up to four voices, written as Kokoro-FastAPI writes it: `bm_lewis(70)+bm_george(30)`, where each weight is a share of their sum and a voice without one counts as 1. Both engines speak blends; the offline voice reads with the first voice's pronunciation, refuses a name or blend it cannot read with a message, and the Models page shows each voice's share and downloads any that are missing.
+- Settings → Models offers all 54 Kokoro v1.0 voices, labelled by language. Mouthy reads every text as English, so the Japanese, Mandarin, Spanish, French, Hindi, Italian and Brazilian Portuguese voices read English, not their own language.
 
 ### Changed
 

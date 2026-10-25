@@ -25,18 +25,23 @@ export const ModelsSettings: React.FC = () => {
   const voice = getSetting("tts_voice");
   const models = list.files.filter((file) => file.kind === "model");
   const voices = list.files.filter((file) => file.kind === "voice");
+  const shares = new Map<string, number>();
+  for (const { id, share } of list.voice_parts) {
+    shares.set(id, (shares.get(id) ?? 0) + share);
+  }
+  const blended = shares.size > 1;
   const activeFiles = [
     models.find((file) => file.id === variant),
-    voices.find((file) => file.id === voice),
+    ...voices.filter((file) => shares.has(file.id)),
   ].filter((file): file is ModelFile => file !== undefined);
   // What the backend found missing, so voices outside the list count too.
   const needed = [
     models.find((file) => file.id === list.missing_model),
-    voices.find((file) => file.id === list.missing_voice),
+    ...voices.filter((file) => list.missing_voices.includes(file.id)),
   ].filter((file): file is ModelFile => file !== undefined);
-  const unlistedVoice =
-    list.missing_voice !== null &&
-    !voices.some((file) => file.id === list.missing_voice);
+  const unlistedVoices = list.missing_voices.filter(
+    (id) => !voices.some((file) => file.id === id),
+  );
 
   const megabytes = (bytes: number) =>
     t("settings.models.size", {
@@ -65,9 +70,9 @@ export const ModelsSettings: React.FC = () => {
         t("settings.models.status.missing", {
           files: needed.map((file) => file.id).join(", "),
         }),
-      unlistedVoice &&
+      unlistedVoices.length > 0 &&
         t("settings.models.status.unlistedVoice", {
-          voice: list.missing_voice,
+          voice: unlistedVoices.join(", "),
         }),
       list.load_error &&
         t("settings.models.status.failed", { error: list.load_error }),
@@ -100,20 +105,23 @@ export const ModelsSettings: React.FC = () => {
   };
   const { text, action } = status();
 
-  const voiceDescription = ({ id, size }: ModelFile) =>
+  const voiceDescription = ({ id, size, language }: ModelFile) =>
     [
-      t(
-        id.startsWith("b")
-          ? "settings.models.voices.british"
-          : "settings.models.voices.american",
-      ),
+      language && t(`settings.models.voices.language.${language}`),
       t(
         id[1] === "f"
           ? "settings.models.voices.female"
           : "settings.models.voices.male",
       ),
       megabytes(size),
-    ].join(" · ");
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+  const shareOf = (file: ModelFile) => {
+    const share = shares.get(file.id);
+    return blended && share !== undefined ? Math.round(share * 100) : undefined;
+  };
 
   const row = (file: ModelFile, description: string, onUse: () => void) => (
     <FileRow
@@ -121,6 +129,7 @@ export const ModelsSettings: React.FC = () => {
       file={file}
       description={description}
       active={activeFiles.includes(file)}
+      share={shareOf(file)}
       downloaded={downloaded(file.id)}
       onUse={onUse}
       onDownload={() => download(file.id)}
@@ -209,6 +218,8 @@ interface FileRowProps {
   file: ModelFile;
   description: string;
   active: boolean;
+  /** Percent of the selected blend this voice makes up; unset for one voice. */
+  share?: number;
   downloaded: number;
   onUse: () => void;
   onDownload: () => void;
@@ -220,6 +231,7 @@ const FileRow: React.FC<FileRowProps> = ({
   file,
   description,
   active,
+  share,
   downloaded,
   onUse,
   onDownload,
@@ -237,6 +249,18 @@ const FileRow: React.FC<FileRowProps> = ({
   } else if (!file.installed && file.partial > 0) {
     progress = t("settings.models.paused", { percent });
   }
+  let badge: string;
+  if (file.installed) {
+    badge =
+      share === undefined
+        ? t("settings.models.inUse")
+        : t("settings.models.inUseShare", { percent: share });
+  } else {
+    badge =
+      share === undefined
+        ? t("settings.models.selected")
+        : t("settings.models.selectedShare", { percent: share });
+  }
 
   return (
     <div className="px-4 p-2 min-h-12 flex flex-col justify-center gap-1">
@@ -248,20 +272,20 @@ const FileRow: React.FC<FileRowProps> = ({
               <span
                 className={`text-xs px-1.5 rounded ${file.installed ? "bg-logo-primary/20" : "bg-mid-gray/20"}`}
               >
-                {file.installed
-                  ? t("settings.models.inUse")
-                  : t("settings.models.selected")}
+                {badge}
               </span>
             )}
           </div>
           <p className="text-xs text-mid-gray">{description}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {file.installed && !active && !file.downloading && (
-            <Button variant="secondary" size="sm" onClick={onUse}>
-              {t("settings.models.use")}
-            </Button>
-          )}
+          {file.installed &&
+            (!active || share !== undefined) &&
+            !file.downloading && (
+              <Button variant="secondary" size="sm" onClick={onUse}>
+                {t("settings.models.use")}
+              </Button>
+            )}
           {file.downloading ? (
             <Button variant="secondary" size="sm" onClick={onCancel}>
               {t("settings.models.cancel")}

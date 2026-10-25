@@ -1,6 +1,9 @@
 //! The Kokoro v1.0 files Mouthy can download: onnx-community's ONNX export of
 //! Kokoro-82M (Apache-2.0), pinned to one revision so the sizes and sha256
 //! below (the repo's LFS metadata) always describe what the URL serves.
+//!
+//! misaki-rs phonemises English only, so every voice reads English text: a
+//! voice trained on another language reads English, never its own language.
 
 use super::local;
 use crate::settings::ModelVariant;
@@ -31,8 +34,8 @@ const MODELS: &[(&str, ModelVariant, &str, u64, &str)] = &[
 /// Every voice file is 510 style rows of 256 f32.
 const VOICE_SIZE: u64 = 522_240;
 
-/// The v1.0 voices for the two dialects misaki-rs reads: British (`b*`) and
-/// American (`a*`). The repo's other voices expect other languages' phonemes.
+/// Every v1.0 voice. The first letter of an id names the voice's language,
+/// the second its gender.
 #[rustfmt::skip]
 const VOICES: &[(&str, &str)] = &[
     ("bf_alice", "08afa6ba24da61ea5e8efa139e5aadc938d83f0a6da5a900adaf763ac1da5573"),
@@ -63,6 +66,32 @@ const VOICES: &[(&str, &str)] = &[
     ("am_onyx", "da5d135b424164916d75a68ffb4c2abce3d7d5ccc82dd1ee6cf447ce286145e6"),
     ("am_puck", "fcf73c989033e9233e0b98713eca600c8c74dcc1614b37009d5450ff4a2274a0"),
     ("am_santa", "61150cf726ab6c5ed7a99f90a304f91f5a72c00c592e89ec94e5df11c319227a"),
+    ("jf_alpha", "56b479360aad9f367aeb8cef908f9201cf48b4555e488c5f4590c9dfcd978bb6"),
+    ("jf_gongitsune", "0f1181f3772d27b7c12aaf4bcd71e31b186c4146e330d074a3dc64ee392af396"),
+    ("jf_nezumi", "13cb71eebb0b48739d444558322aa35a8c9a489b80e1e631f14d2e6aea93026b"),
+    ("jf_tebukuro", "29c6c0561b4288d59639677bebe7533c919743d5ea68d0d2ae992644beea6696"),
+    ("jm_kumo", "09e959d239724c734d65661f06f14cdabcddfd476bfaaad905a937099ae9e64f"),
+    ("zf_xiaobei", "5dde6e1c9c4f12c8b327bc29c0cee361a23b52b952c04636858ba637ec66e640"),
+    ("zf_xiaoni", "08892b62a39af0a615cd0581238db7e19e44c578e8fa0bfd0e586e93327d9cba"),
+    ("zf_xiaoxiao", "03adb5d5e3ddd88b047954e974e651cb0a4b524c985057e5d872e962c7be1169"),
+    ("zf_xiaoyi", "bc1555c5c486099196ac254bae5e0bb543c121952a3092f50b7d8724f1bc36b3"),
+    ("zm_yunjian", "de48a00bdbf3649f07162269a2b6e0513604389bfac8a2e6c75cb34b323ad6fa"),
+    ("zm_yunxi", "7243892fb4e560d47014090ddf010f8b8b790f3c6b029ff82b2ac06aa4e27c8b"),
+    ("zm_yunxia", "6b2b8fc15b3df19a368daebe5c581c7fabf433ee5b8a17ffd6b3d723cff8936d"),
+    ("zm_yunyang", "261e2c89470534dbbcb8fd98b8fdc495ec94063d9bb6c8277f7be43cccba3f42"),
+    ("ef_dora", "f66ec66bd295acb18372e37008533a9a3228483ccd294e7538d5d9294ac9a532"),
+    ("em_alex", "27809e9eafdcbcfff90a3016c697568676531de2a2c39cee29c96c7bd6b83e95"),
+    ("em_santa", "ad43b774e1ca24d05c6161297d8aeb770ac3d29bb95daf516727af5f7d543683"),
+    ("ff_siwis", "a35f5675ad08948e326ae75fd0ea16ba5d0042e4f76b5f3d1df77d0a48c54861"),
+    ("hf_alpha", "040be6a4425411cc01fda5fd06693c76bfa78572632852bc8cda9c99232ffb56"),
+    ("hf_beta", "cd83ae0bb9b2e4e4fb92b4973bd8d1822ca0036d3c498bf4fc89aa8e33917cc7"),
+    ("hm_omega", "b02d9222d9ed00ce26b302173a862c2c93f96cc40b5c422b8d14910b9ff34137"),
+    ("hm_psi", "644daf88ba8aeb7bd08950bbdcd4453bb280864e49dc4df93fabc6be32e03f37"),
+    ("if_sara", "409b69248798fcdc2542330c76953d230710f19b057e59cb82fdc3c4cf71265c"),
+    ("im_nicola", "bc578e510d52a96d6940d46f12e96d7b3df00905dbea075113226d100e6e1ab0"),
+    ("pf_dora", "3da7b5b2d91847ebf5646f57631af6ececae3c29a89cd300f06edf9aa6cfe9ee"),
+    ("pm_alex", "0175c753f59c54e7fd5a995bedef0c5ff2fb67e0043dd3dcb2ae74ec2acbeb2a"),
+    ("pm_santa", "8b012db3185778afe2e45a62cbad69db73021774fe68dda634bcc748a982eede"),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Type)]
@@ -70,6 +99,39 @@ const VOICES: &[(&str, &str)] = &[
 pub enum ModelFileKind {
     Model,
     Voice,
+}
+
+/// The language a voice was trained on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum VoiceLanguage {
+    AmericanEnglish,
+    BritishEnglish,
+    Japanese,
+    Mandarin,
+    Spanish,
+    French,
+    Hindi,
+    Italian,
+    BrazilianPortuguese,
+}
+
+impl VoiceLanguage {
+    /// From the id's first letter, as Kokoro names its voices.
+    fn of(voice: &str) -> Option<Self> {
+        Some(match voice.chars().next()? {
+            'a' => Self::AmericanEnglish,
+            'b' => Self::BritishEnglish,
+            'j' => Self::Japanese,
+            'z' => Self::Mandarin,
+            'e' => Self::Spanish,
+            'f' => Self::French,
+            'h' => Self::Hindi,
+            'i' => Self::Italian,
+            'p' => Self::BrazilianPortuguese,
+            _ => return None,
+        })
+    }
 }
 
 /// One downloadable file: where it comes from, how to check it, where it goes.
@@ -82,6 +144,8 @@ pub struct CatalogFile {
     pub size: u64,
     pub sha256: &'static str,
     pub path: PathBuf,
+    /// A voice's language; `None` for a model.
+    pub language: Option<VoiceLanguage>,
 }
 
 /// Every file, models first.
@@ -95,6 +159,7 @@ pub fn all(models_dir: &Path) -> Vec<CatalogFile> {
             size,
             sha256,
             path: local::model_path(models_dir, variant),
+            language: None,
         });
     let voices = VOICES.iter().filter_map(|&(id, sha256)| {
         Some(CatalogFile {
@@ -104,6 +169,7 @@ pub fn all(models_dir: &Path) -> Vec<CatalogFile> {
             size: VOICE_SIZE,
             sha256,
             path: local::voice_path(models_dir, id)?,
+            language: VoiceLanguage::of(id),
         })
     });
     models.chain(voices).collect()
@@ -121,9 +187,12 @@ mod tests {
     #[test]
     fn every_voice_is_listed_and_ids_are_unique() {
         let files = all(Path::new("/models"));
+        assert_eq!(VOICES.len(), 54);
         assert_eq!(files.len(), MODELS.len() + VOICES.len());
         let ids: HashSet<_> = files.iter().map(|file| file.id.as_str()).collect();
         assert_eq!(ids.len(), files.len());
+        let hashes: HashSet<_> = files.iter().map(|file| file.sha256).collect();
+        assert_eq!(hashes.len(), files.len());
         for id in [
             "bm_lewis",
             "bf_emma",
@@ -173,6 +242,29 @@ mod tests {
             .unwrap()
             .url
             .ends_with("/voices/bm_lewis.bin"));
+    }
+
+    #[test]
+    fn every_voice_has_the_language_its_id_names() {
+        for file in all(Path::new("/models")) {
+            match file.kind {
+                ModelFileKind::Model => assert_eq!(file.language, None, "{}", file.id),
+                ModelFileKind::Voice => assert!(file.language.is_some(), "{}", file.id),
+            }
+        }
+        for (id, language) in [
+            ("bm_lewis", VoiceLanguage::BritishEnglish),
+            ("af_alloy", VoiceLanguage::AmericanEnglish),
+            ("jf_alpha", VoiceLanguage::Japanese),
+            ("zm_yunyang", VoiceLanguage::Mandarin),
+            ("ef_dora", VoiceLanguage::Spanish),
+            ("ff_siwis", VoiceLanguage::French),
+            ("hm_psi", VoiceLanguage::Hindi),
+            ("im_nicola", VoiceLanguage::Italian),
+            ("pf_dora", VoiceLanguage::BrazilianPortuguese),
+        ] {
+            assert_eq!(find(Path::new("/m"), id).unwrap().language, Some(language));
+        }
     }
 
     #[test]
