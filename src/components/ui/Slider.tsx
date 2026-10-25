@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { SettingContainer } from "./SettingContainer";
 import { ResetButton } from "./ResetButton";
 
@@ -22,7 +22,7 @@ interface SliderProps {
 interface RangeInputProps {
   value: number;
   onChange: (value: number) => void;
-  /** Called once the user lets go, not at every step on the way. */
+  /** Called once the value has changed and the user let go, not per step. */
   onCommit?: (value: number) => void;
   min: number;
   max: number;
@@ -42,18 +42,30 @@ export const RangeInput: React.FC<RangeInputProps> = ({
   className = "",
 }) => {
   const fill = ((value - min) / (max - min)) * 100;
-  const commit = (e: React.SyntheticEvent<HTMLInputElement>) =>
-    onCommit?.(parseFloat(e.currentTarget.value));
+  const input = useRef<HTMLInputElement>(null);
+  const latestCommit = useRef(onCommit);
+  latestCommit.current = onCommit;
+
+  // React's onChange is the per-step `input` event. The native `change` event
+  // fires only for a new value, once released (even outside the control), so
+  // focusing the slider or clicking its thumb commits nothing.
+  useEffect(() => {
+    const element = input.current;
+    if (!element) return;
+    const commit = () => latestCommit.current?.(parseFloat(element.value));
+    element.addEventListener("change", commit);
+    return () => element.removeEventListener("change", commit);
+  }, []);
+
   return (
     <input
+      ref={input}
       type="range"
       min={min}
       max={max}
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      onPointerUp={commit}
-      onKeyUp={commit}
       disabled={disabled}
       className={`flex-grow h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-logo-primary disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       style={{

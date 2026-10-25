@@ -69,19 +69,16 @@ const onSpeechState = ({ state, preview, error }: SpeechStateChange) => {
     }
   } else {
     clearServerWait();
+    const { problem } = useStore.getState();
+    let next = problem;
+    if (playing && error) {
+      next = { voice: playing, problem: { kind: "failed", message: error } };
+    } else if (problem?.problem.kind === "serverSlow") {
+      // A wait that ended without an error is no longer worth showing.
+      next = null;
+    }
     // A preview replacing another ends it first, so `pending` stays.
-    useStore.setState({
-      playing: null,
-      speaking: false,
-      ...(playing && error
-        ? {
-            problem: {
-              voice: playing,
-              problem: { kind: "failed", message: error },
-            },
-          }
-        : {}),
-    });
+    useStore.setState({ playing: null, speaking: false, problem: next });
   }
 };
 

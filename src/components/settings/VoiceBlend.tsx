@@ -117,7 +117,15 @@ export const VoiceBlend: React.FC<VoiceBlendProps> = ({
           <RangeInput
             value={weight}
             onChange={setWeight}
-            onCommit={(w) => second && write(specFor(w, second))}
+            onCommit={(w) => {
+              // A stored 75/25 shows as 80; committing the shown weight
+              // unchanged must not round the typed blend.
+              const unchanged =
+                live &&
+                second === parts[1].id &&
+                w === toWeight(parts[0].share);
+              if (second && !unchanged) write(specFor(w, second));
+            }}
             min={10}
             max={90}
             step={10}
