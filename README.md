@@ -50,6 +50,8 @@ After that Mouthy needs no network. If the permission misbehaves:
 
 Select text in any app and press **⌥⎋** (Option+Escape). Mouthy reads it aloud and shows a small overlay while speaking. Press ⌥⎋ again, or click × on the overlay, to stop. If nothing is selected the overlay says so; if the offline voice's files are missing or the server cannot be reached, it says so with an Open Settings button.
 
+Press **⌥⇧⎋** (Option+Shift+Escape) to read the clipboard instead: the text you last copied, with nothing copied from the selection. Either hotkey stops speech. Clipboard text that a password manager marked as secret is not read; the overlay says the clipboard is empty.
+
 The tray menu has Speak Selection, Stop, Settings and Quit.
 
 ### Command line and signals
@@ -58,12 +60,13 @@ A running Mouthy can be controlled from scripts or other hotkey tools:
 
 ```bash
 /Applications/Mouthy.app/Contents/MacOS/mouthy --speak-selection   # speak, or stop if speaking
+/Applications/Mouthy.app/Contents/MacOS/mouthy --speak-clipboard   # speak the clipboard, or stop if speaking
 /Applications/Mouthy.app/Contents/MacOS/mouthy --stop
 pkill -USR2 -x mouthy   # speak selection
 pkill -USR1 -x mouthy   # stop
 ```
 
-Call the binary directly: `open -a Mouthy --args …` drops the arguments. With no running instance, `--speak-selection` and `--stop` just launch the app. Launch flags: `--start-hidden` (no main window; tray icon only) and `--no-tray` (no tray icon; closing the window quits).
+Call the binary directly: `open -a Mouthy --args …` drops the arguments. With no running instance, `--speak-selection`, `--speak-clipboard` and `--stop` just launch the app. Launch flags: `--start-hidden` (no main window; tray icon only) and `--no-tray` (no tray icon; closing the window quits).
 
 ## Offline voice
 
@@ -97,7 +100,7 @@ Installs from before the offline voice existed keep using the server until you s
 
 Open Settings from the tray. The General page has three groups:
 
-- **General:** hotkey, launch at login, start hidden, overlay style and position
+- **General:** hotkeys, launch at login, start hidden, overlay style and position
 - **Speech:** engine (Local or HTTP server), server URL (HTTP only), voice (a list when the server offers `/v1/audio/voices` or voice files are installed, otherwise free text), espeak-ng for unknown words (Local only), speed (0.5×–2×), volume
 - **Sound:** output device
 - **Models page:** offline voice downloads, model and voice choice
@@ -111,10 +114,10 @@ With the HTTP engine, Mouthy sends the selected text to the server URL you set; 
 - **⌥⎋ clashes with macOS "Speak selection",** which uses the same key by default. If it is on in System Settings → Accessibility → Spoken Content, turn it off or change either hotkey.
 - **Kokoro-FastAPI can hang.** Some input, such as Chinese text with an English voice, leaves the server listening but never replying, so speech fails with a timeout. Restart the server.
 - **VS Code copies the current line when nothing is selected,** so ⌥⎋ with no selection reads that line.
-- **Nothing is selected after a drag in Claude Code, nvim and other terminal programs** that turn on mouse reporting, which takes the drag from the terminal. Hold Option while dragging in iTerm2, or Shift in Zed and most other terminals. Lines the program wrapped are joined again before reading, so a sentence is not cut at each line end.
+- **Nothing is selected after a drag in Claude Code, nvim and other terminal programs** that turn on mouse reporting, which takes the drag from the terminal. Hold Option while dragging in iTerm2, or Shift in Zed and most other terminals, or copy inside the program (in nvim, yank to `+`) and press ⌥⇧⎋. Lines the program wrapped are joined again before reading, so a sentence is not cut at each line end.
 - **The offline voice spells unknown words letter by letter** unless [espeak-ng is on](#better-pronunciation-of-unknown-words), which affects many names, brands and technical terms. Its first words take longer when the first sentence has no early comma.
 - **Clipboard:** rich content (images, files, formatted text) is restored after each copy. A clipboard larger than 16 MB is not restored; it keeps the copied selection instead.
-- **Windows and Linux are untested,** and `Alt+Escape` may already be taken by the window manager there.
+- **Windows and Linux are untested,** and `Alt+Escape` or `Alt+Shift+Escape` may already be taken by the window manager there.
 
 ### The hotkey pauses (macOS Secure Input)
 
