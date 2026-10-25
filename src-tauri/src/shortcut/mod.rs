@@ -23,6 +23,7 @@ use crate::settings::{
     ShortcutBinding, Theme, TtsBackend,
 };
 use crate::tray;
+use crate::tts::voice::VoiceSpec;
 
 // Note: Commands are accessed via shortcut::handy_keys:: in lib.rs
 
@@ -666,7 +667,11 @@ pub fn change_tts_base_url_setting(app: AppHandle, url: String) -> Result<(), St
 #[specta::specta]
 pub fn change_tts_voice_setting(app: AppHandle, voice: String) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
-    settings.tts_voice = voice.trim().to_string();
+    settings.tts_voice = match settings.tts_backend {
+        TtsBackend::Local => VoiceSpec::parse(&voice)?.to_string(),
+        // Other OpenAI-compatible servers name voices with hyphens.
+        TtsBackend::Http => voice.trim().to_string(),
+    };
     settings::write_settings(&app, settings);
     crate::actions::preload_local_voice(&app);
     Ok(())

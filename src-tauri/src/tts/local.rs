@@ -6,6 +6,7 @@
 
 use super::espeak;
 use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out};
+use super::voice::is_voice_name;
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
@@ -212,13 +213,6 @@ pub fn voice_path(models_dir: &Path, voice: &str) -> Option<PathBuf> {
 
 fn voices_dir(models_dir: &Path) -> PathBuf {
     kokoro_dir(models_dir).join("voices")
-}
-
-fn is_voice_name(name: &str) -> bool {
-    !name.is_empty()
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
 /// Voice ids with a `.bin` file in the voices folder, sorted.
