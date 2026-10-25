@@ -50,7 +50,7 @@ After that Mouthy needs no network. If the permission misbehaves:
 
 Select text in any app and press **⌥⎋** (Option+Escape). Mouthy reads it aloud and shows a small overlay while speaking. Press ⌥⎋ again, or click × on the overlay, to stop. If nothing is selected the overlay says so; if the offline voice's files are missing or the server cannot be reached, it says so with an Open Settings button.
 
-Press **⌥⇧⎋** (Option+Shift+Escape) to read the clipboard instead: the text you last copied, with nothing copied from the selection. Either hotkey stops speech. Clipboard text that a password manager marked as secret is not read; the overlay says the clipboard is empty.
+Press **⌥⇧⎋** (Option+Shift+Escape) to read the clipboard instead: the text you last copied, with nothing copied from the selection. Either hotkey stops speech. Clipboard text that a password manager marked as secret is not read, and the overlay says so.
 
 The tray menu has Speak Selection, Stop, Settings and Quit.
 

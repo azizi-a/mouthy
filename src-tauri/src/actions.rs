@@ -1,5 +1,5 @@
 use crate::audio_out;
-use crate::clipboard;
+use crate::clipboard::{self, ClipboardText};
 use crate::overlay::{self, OverlayView};
 use crate::settings::{self, AppSettings, TtsBackend};
 use crate::tray::{self, TrayIconState};
@@ -232,7 +232,15 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
         Input::Selection => clipboard::capture_selection(app)
             .map(|selection| (selection.text, selection.copied_while_held_at)),
         // No ⌘C goes out, so there is no copy echo to ignore.
-        Input::Clipboard => clipboard::read_text().map(|text| (text.map(cap_clipboard_text), None)),
+        Input::Clipboard => match clipboard::read_text() {
+            Ok(ClipboardText::Text(text)) => Ok((Some(cap_clipboard_text(text)), None)),
+            Ok(ClipboardText::Empty) => Ok((None, None)),
+            Ok(ClipboardText::Secret) => {
+                overlay::show_overlay(app, OverlayView::ClipboardSecret);
+                return;
+            }
+            Err(e) => Err(e),
+        },
     };
     let (text, copied_while_held_at) = match captured {
         Ok(captured) => captured,

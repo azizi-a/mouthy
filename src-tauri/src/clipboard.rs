@@ -116,15 +116,24 @@ pub fn capture_selection(_app_handle: &AppHandle) -> Result<Selection, String> {
     Err("selection capture is macOS-only".into())
 }
 
-/// The clipboard's plain text, read without changing the clipboard. `None`
-/// when it holds no text, or text a password manager marked as secret.
+/// What the clipboard holds, as far as reading it aloud goes.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ClipboardText {
+    Text(String),
+    /// No plain text.
+    Empty,
+    /// Text a password manager marked as secret, so it is not read.
+    Secret,
+}
+
+/// The clipboard's plain text, read without changing the clipboard.
 #[cfg(target_os = "macos")]
-pub fn read_text() -> Result<Option<String>, String> {
+pub fn read_text() -> Result<ClipboardText, String> {
     Ok(pasteboard::read_text())
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn read_text() -> Result<Option<String>, String> {
+pub fn read_text() -> Result<ClipboardText, String> {
     Err("clipboard reading is macOS-only".into())
 }
 
@@ -193,7 +202,8 @@ fn restore_decision(before: isize, observed_copy: Option<isize>, now: isize) -> 
 #[cfg(target_os = "macos")]
 mod pasteboard {
     use super::{
-        marks_secret, poll, restore_decision, RestoreAction, COPY_POLL_INTERVAL, COPY_TIMEOUT,
+        marks_secret, poll, restore_decision, ClipboardText, RestoreAction, COPY_POLL_INTERVAL,
+        COPY_TIMEOUT,
     };
     use log::{debug, info, warn};
     use objc2::rc::{autoreleasepool, Retained};
@@ -293,7 +303,7 @@ mod pasteboard {
         }
     }
 
-    pub(super) fn read_text() -> Option<String> {
+    pub(super) fn read_text() -> ClipboardText {
         autoreleasepool(|_| {
             let pasteboard = NSPasteboard::generalPasteboard();
             let mut types = Vec::new();
@@ -304,11 +314,13 @@ mod pasteboard {
             }
             if marks_secret(&types) {
                 info!("The clipboard holds a password manager's secret; not reading it");
-                return None;
+                return ClipboardText::Secret;
             }
             // SAFETY: NSPasteboardTypeString is a read-only framework static.
-            let text = pasteboard.stringForType(unsafe { NSPasteboardTypeString })?;
-            Some(text.to_string())
+            match pasteboard.stringForType(unsafe { NSPasteboardTypeString }) {
+                Some(text) => ClipboardText::Text(text.to_string()),
+                None => ClipboardText::Empty,
+            }
         })
     }
 
@@ -455,12 +467,14 @@ mod tests {
         write("The clipboard hotkey works.", false);
         assert_eq!(
             read_text(),
-            Ok(Some("The clipboard hotkey works.".to_string()))
+            Ok(ClipboardText::Text(
+                "The clipboard hotkey works.".to_string()
+            ))
         );
         write("hunter2", true);
-        assert_eq!(read_text(), Ok(None));
+        assert_eq!(read_text(), Ok(ClipboardText::Secret));
         pasteboard.clearContents();
-        assert_eq!(read_text(), Ok(None));
+        assert_eq!(read_text(), Ok(ClipboardText::Empty));
     }
 
     #[cfg(target_os = "macos")]
