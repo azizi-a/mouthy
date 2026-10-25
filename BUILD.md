@@ -51,7 +51,7 @@ Tag with a signed annotated tag whose message is the version's changelog block, 
 
 ```bash
 git tag -d v0.4.0                          # only if a Handy tag of that name exists
-git tag -s v0.4.0 -F changelog-block.md
+git tag -s --cleanup=whitespace v0.4.0 -F changelog-block.md   # keeps the ### headings
 git push origin v0.4.0
 ```
 
