@@ -2,20 +2,27 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.4.0 — 2026-10-25
+
+Choosing a voice by ear: Settings lists all 54 Kokoro voices with Preview, and blends the voice in use with a second one. Also new: ⌥⇧⎋ reads the clipboard, skipping text a password manager marked secret; Settings refuses a shortcut another one already uses; a new icon; and the licences of the software Mouthy includes. Mouthy is still not signed or notarised and does not update itself.
 
 ### Added
 
+- Voice picker in Settings → General → Speech: the voice in use at the top, then every voice by language, each with Download, Preview and Use, and an Installed only filter. With the HTTP server it lists the server's voices and says when the server has not answered a preview in 10 seconds. The Models page previews voices too, and a hotkey press stops a preview.
+- Voice blends: the picker's Blend row mixes the voice in use with a second one on a slider, and Other… takes any blend of up to four voices written as Kokoro-FastAPI writes it, `bm_lewis(70)+bm_george(30)`, where each weight is a share of their sum and a voice without one counts as 1. Both engines speak blends; the offline voice reads with the first voice's pronunciation, refuses a name or blend it cannot read with a message, and the Models page shows each voice's share and downloads any that are missing.
+- All 54 Kokoro v1.0 voices, labelled by language: Japanese, Mandarin, Spanish, French, Hindi, Italian and Brazilian Portuguese join British and American English.
 - Speak clipboard: press ⌥⇧⎋ (Alt+Shift+Esc on Windows/Linux) to read the clipboard text aloud without copying the selection, for terminal programs such as Claude Code and nvim that leave no selection to copy. Clipboard text a password manager marked as secret is not read. Also available as `--speak-clipboard`.
 - Settings refuses a shortcut that another one already uses. After an update, a new shortcut whose keys you already use starts unset.
 - The app ships the licences of Mouthy and the software it includes, ONNX Runtime's third-party notices among them; Settings → About → Third-party licences opens them.
-- The voice can be a blend of up to four voices, written as Kokoro-FastAPI writes it: `bm_lewis(70)+bm_george(30)`, where each weight is a share of their sum and a voice without one counts as 1. Both engines speak blends; the offline voice reads with the first voice's pronunciation, refuses a name or blend it cannot read with a message, and the Models page shows each voice's share and downloads any that are missing.
-- Settings → Models offers all 54 Kokoro v1.0 voices, labelled by language. Mouthy reads every text as English, so the Japanese, Mandarin, Spanish, French, Hindi, Italian and Brazilian Portuguese voices read English, not their own language.
-- Voice picker with preview and blending in Settings: the Speech group lists every voice by language, each with Download, Preview and Use, and blends the voice in use with a second one on a slider; the Models page previews voices too. With the HTTP server it lists the server's voices and says when the server has not answered a preview in 10 seconds. A hotkey press stops a preview.
 
 ### Changed
 
 - New app icon and menu-bar icons: a pair of lips, open while Mouthy is speaking.
+
+### Notes
+
+- Mouthy reads every text as English, so the non-English voices read English with their language's accent, not their own language.
+- Going back to 0.3.0 with a blend selected: 0.3.0 reports the blend as a missing voice until you pick a single voice.
 
 ## 0.3.0 — 2026-10-24
 

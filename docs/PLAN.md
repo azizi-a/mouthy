@@ -10,7 +10,8 @@ Design lane: not applicable · Intent-critical: yes
 <!-- Fresh agents read this first. Keep it current. -->
 
 - **Phase 3 planned (2026-10-25, PR from `docs/phase3-plan`):** stages P3.2–P3.7 and Release R3 (v0.4.0, unsigned, with the Homebrew cask as its tail). The user declined Apple signing (H13), so there is no updater and no notarisation in Phase 3; the design mockup and icon are approved (H18, H21); the catalog grows to all 54 Kokoro v1.0 voices (H20). No stage blocks on the user before R3. Panel round 1 is in Review History.
-- **Phase 3 progress (2026-10-25):** P3.7 (#13), P3.3 (#14), P3.2 (#15), P3.5 + P3.5b (#16) and P3.4 (#17) squash-merged; P3.6 in progress on `feat/voice-picker`; Release R3 next. Live hotkey and UI checks for these stages were not run and fold into H22.
+- **Phase 3 progress (2026-10-25):** P3.7 (#13), P3.3 (#14), P3.2 (#15), P3.5 + P3.5b (#16), P3.4 (#17) and P3.6 (#19, `87ba488`) squash-merged. Live hotkey and UI checks for these stages were not run and fold into H22 (`docs/phase3-checklist.md`).
+- **v0.4.0 release in progress (2026-10-25):** bump PR from `chore/release-0.4.0`; build, tag, draft release and the cask PR follow (Release R3).
 
 - **v0.3.0 released as a draft (2026-10-24):** unsigned dmg on a draft GitHub release, signed tag `v0.3.0` on `9fc3135` pushed; the user publishes it. See Release R2.
 - **v0.2.0 published (2026-10-15):** unsigned dmg, tag `v0.2.0`. See Release R1.
@@ -18,7 +19,7 @@ Design lane: not applicable · Intent-critical: yes
 - **Default voice `af_alloy` (2026-10-21, PR from `chore/default-voice-alloy`):** fresh stores get `af_alloy` (American English); stored voices are never migrated; the dev store keeps its stored voice.
 - **Reflow of wrapped lines (P3.0, 2026-10-21, PR from `feat/reflow-wrapped-lines`):** `text::reflow` is the first step of `normalize`, so both engines and the HTTP path get it; it joins hard-wrapped lines and keeps structural breaks. `split_sentences` is unchanged. Nobody has listened to it yet. See Stage P3.0.
 - **Initialisms, capital-start wraps, dotted names (P3.1, 2026-10-24, PR from `fix/initialisms-and-dotted-names`):** the local voice spells initialisms through misaki phoneme overrides, splits camel case and reads a stop inside a name as "dot" (`text::spell_out`, Local only); a wrapped line starting with a capitalised word joins on the fit test alone (both engines). Adversary review fixes are in; titles and common abbreviations ("Dr.", "Mr.", "etc.") are said in full without a stop (`text::expand_abbreviations`, follow-up in Stage P3.1). Nobody has listened yet. See Stage P3.1.
-- **Completed stages:** 0, S1a, S1b, R1, R2, R-snd, R3, R4, R5, T1, T2, T1b, T2b, R6, T3, T3b, T3c, T4, T5 (R-keys skipped, H8); Phase 2: P2.1, P2.2, P2.3, P2.4, P2.3b, P2.5, P2.4b, P2.6, P2.7, P2.8; Release R1; Phase 3: P3.0, P3.1, P3.D; Release R2; P3.7, P3.3, P3.2, P3.5, P3.5b, P3.4. Details live in each stage's Implementation Notes.
+- **Completed stages:** 0, S1a, S1b, R1, R2, R-snd, R3, R4, R5, T1, T2, T1b, T2b, R6, T3, T3b, T3c, T4, T5 (R-keys skipped, H8); Phase 2: P2.1, P2.2, P2.3, P2.4, P2.3b, P2.5, P2.4b, P2.6, P2.7, P2.8; Release R1; Phase 3: P3.0, P3.1, P3.D; Release R2; P3.7, P3.3, P3.2, P3.5, P3.5b, P3.4, P3.6. Details live in each stage's Implementation Notes.
 - **Phase 1 complete (2026-10-13):** the user ran the Phase 1 checklist on the built app on a second MacBook Pro; every step behaved as expected (H7 resolved).
 - **Local engine for every store (2026-10-21, PR from `fix/local-engine-default-everywhere`):** `keep_server_backend_for_older_stores` is gone; a store with no or an unreadable `tts_backend` loads as `local`, and a stored `http` is kept. A Phase 1 store now opens on the local engine.
 - **Verified at P2.6** (fresh clone, own `target/`): lint, translations, format, frontend build, `cargo build` (0 compiler warnings), clippy, `cargo test` 194 pass / 4 ignored, `tauri build --bundles app` all green. Baseline before Phase 2: Handy 0.9.8 fork, debug binary 152 MB.
@@ -838,9 +839,14 @@ Common rules for every Phase 3 stage: one branch + PR per stage, squash-merged; 
 
 ### Stage P3.6 — voice picker UI `[feat]`
 
-- Status: pending · Implementer: chief-implementer · Blocked by: P3.4, P3.5, P3.5b merged (H21 resolved)
+- Status: **done** (PR #19, merged `87ba488`) · Implementer: chief-implementer
 - Files: new `src/components/settings/VoiceRow.tsx` (name, language, installed/downloading/missing state, Download with remaining MB, Preview ↔ Stop driven by `speech-state`, Use) used by a new `VoicePicker.tsx` in the Speech group (replacing and deleting `VoiceSelector.tsx`; `GeneralSettings.tsx:32`) and by `ModelsSettings.tsx` (gains Preview, keeps Delete); the blend row: first voice fixed to the voice in use, second voice from installed voices, one slider 10–90 step 10 committing on release, the UI formatting `${a}(${w})+${b}(${100 - w})` and showing it; HTTP mode: server list from `fetchTtsVoices`, Preview with a 10 s inline timeout, no Download; "Other…" free-text entry kept for ids outside the list; empty, loading, download-error and model-missing states per the mockup; i18n × 26; CHANGELOG.
 - Verify: `bun run lint`, `bun run build`, `check:translations`; dev run: Download → Preview → Use; the blend row writes the canonical spec and the Models page marks both parts; HTTP mode lists the user's server's voices if it is up (never start or restart it).
+- Implementation Notes:
+  - **Decisions:** components `VoicePicker` (Speech group), `VoiceRow` on a shared `FileRow` (also the Models page), `VoiceBlend`, `OtherVoice`; hook `useVoicePreview` keeps one preview state for every row. `speech-state` is now `{state: started|speaking|ended, preview, error?}`: `speaking` is posted from the playback thread when its first chunk is queued and emitted only for the current session; `error` comes only from `PlaybackEnd::Failed`. `play_chunks` takes a `first_audio` callback. `RangeInput` (split out of `Slider`) has `onCommit` on the native `change` event.
+  - **Blend writes:** the slider writes on commit only when a two-voice blend is in use and the weight really changed, so a stored 75/25 shows 80 and is not rewritten; a draft blend writes on Use. Focus writes nothing.
+  - **Deviations:** `VoiceSelector.tsx` deleted.
+  - **Verification:** review 86 %, fix applied (the commit-on-real-change rule above). `cargo test` 289 pass, clippy, lint, format, translations, `bun run build`, a browser render with mocked IPC. Not run live: the click list, now steps 14–30 of `docs/phase3-checklist.md` (H22).
 
 ### Stage P3.7 — app icon and tray glyphs `[chore]`
 
@@ -855,7 +861,7 @@ Common rules for every Phase 3 stage: one branch + PR per stage, squash-merged; 
 
 ### Release R3 — v0.4.0, unsigned, with the Homebrew cask `[chore]`
 
-- Status: pending · Implementer: chief-implementer · Blocked by: P3.2–P3.7 merged; the user publishes the draft and merges the tap PR (H17)
+- Status: in progress (Part 1 done) · Implementer: chief-implementer · Blocked by: the user publishes the draft and merges the tap PR (H17)
 - Part 1 as R2: one signed commit `chore(release): v0.4.0` on `chore/release-0.4.0` (versions in `package.json`, `tauri.conf.json`, `Cargo.toml`, `Cargo.lock` via `cargo update -p mouthy --offline`; `## Unreleased` → `## 0.4.0 — <date>` with an intro line; README dmg name), plus `BUILD.md` "Release" section (the exact commands, `SHA256SUMS`, the cask update) and `docs/phase3-checklist.md` (H22 items, below); PR, squash.
 - Checklist contents (`docs/phase3-checklist.md`; P3.2–P3.5 and P3.7 had no live run, so these are their only end-to-end checks):
   - Menu-bar glyphs on light and dark, idle, speaking and warning.
@@ -868,6 +874,9 @@ Common rules for every Phase 3 stage: one branch + PR per stage, squash-merged; 
 - Build from `main`: `CI=true bun run tauri build` as R1/R2 (ad-hoc, `signingIdentity: "-"` unchanged); `hdiutil verify`, mounted bundle identical, `codesign -dv` shows adhoc as before; `SHA256SUMS`; signed annotated tag `v0.4.0` pushed by name (delete any upstream `v0.4.0` first, as R1/R2); draft release with R2's install notes (Open Anyway / `xattr`). The user publishes (H17); then confirm `gh api repos/azizi-a/mouthy/releases/latest` returns `v0.4.0` (livecheck depends on it).
 - Cask tail (after publishing): clone `azizi-a/homebrew-mouthy`, write `Casks/mouthy.rb`: `version "0.4.0"`, `sha256` of the published dmg, `url "https://github.com/azizi-a/mouthy/releases/download/v#{version}/Mouthy_#{version}_aarch64.dmg"`, `name "Mouthy"`, `desc "Reads selected text aloud with an offline Kokoro voice"`, `homepage`, `livecheck` (`url :url`, `strategy :github_latest`), `depends_on arch: :arm64`, `depends_on macos: ">= :ventura"` with a comment that the bundle's floor is 13.4, `app "Mouthy.app"`, `zap trash:` the five verified paths (Application Support, Logs, WebKit, Caches, Preferences plist), `caveats` (unsigned: Open Anyway or `xattr -dr com.apple.quarantine /Applications/Mouthy.app`; zap deletes the downloaded models); no `auto_updates`. `brew style` and `brew audit --cask --online` on the real file; `brew install --cask` from it installs `/Applications/Mouthy.app` (quit the release app first; `brew uninstall --cask mouthy` after, **never** `--zap`); `brew livecheck` reports 0.4.0. Open a PR to the tap; the user merges it (H17). Only then add the `brew install --cask azizi-a/mouthy/mouthy` line to the release notes and README.
 - Not verifiable by agents: install on a clean Mac; H22 listening.
+- Implementation Notes:
+  - **Part 1:** one signed commit `chore(release): v0.4.0` on `chore/release-0.4.0`, PR to main: version 0.4.0 in `package.json`, `tauri.conf.json`, `Cargo.toml` and `Cargo.lock`; the changelog's Unreleased block becomes `0.4.0 — 2026-10-25` with an intro paragraph, the picker and blend bullets merged so blending and Models previews are said once, and a Notes block (non-English voices read English only; 0.3.0 reports a stored blend as a missing voice). README: dmg name, the stale "0.2.0 is the first release" status line, a link to the new checklist beside `docs/listening-test.md`. `BUILD.md` gains "Release" (build, `SHA256SUMS`, tag by name, draft release, latest check, cask bump). `docs/phase3-checklist.md`: 30 steps (install, menu bar, ⌥⇧⎋, clash toast, licences, picker, Models page, HTTP, dark theme). Nothing built or tagged.
+  - **Deviations:** P3.6's numbered click list was not in this file, so the picker steps were derived from the picker code. The README had no existing link to `docs/listening-test.md`; both now sit under Build from source.
 
 ## Risks & Assumptions
 
