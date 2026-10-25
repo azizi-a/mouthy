@@ -261,6 +261,11 @@
         "description": "Переглянути вихідний код та зробити внесок",
         "button": "Переглянути на GitHub"
       },
+      "thirdPartyNotices": {
+        "title": "Third-party licences",
+        "description": "Licences of the software Mouthy includes",
+        "button": "Open"
+      },
       "acknowledgments": {
         "title": "Подяки",
         "handy": {

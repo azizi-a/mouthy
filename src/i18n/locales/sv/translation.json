@@ -261,6 +261,11 @@
         "description": "Visa källkod och bidra",
         "button": "Visa på GitHub"
       },
+      "thirdPartyNotices": {
+        "title": "Third-party licences",
+        "description": "Licences of the software Mouthy includes",
+        "button": "Open"
+      },
       "acknowledgments": {
         "title": "Tack till",
         "handy": {
