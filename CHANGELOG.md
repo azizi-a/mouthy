@@ -11,7 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The app ships the licences of Mouthy and the software it includes, ONNX Runtime's third-party notices among them; Settings → About → Third-party licences opens them.
 - The voice can be a blend of up to four voices, written as Kokoro-FastAPI writes it: `bm_lewis(70)+bm_george(30)`, where each weight is a share of their sum and a voice without one counts as 1. Both engines speak blends; the offline voice reads with the first voice's pronunciation, refuses a name or blend it cannot read with a message, and the Models page shows each voice's share and downloads any that are missing.
 - Settings → Models offers all 54 Kokoro v1.0 voices, labelled by language. Mouthy reads every text as English, so the Japanese, Mandarin, Spanish, French, Hindi, Italian and Brazilian Portuguese voices read English, not their own language.
-- For the voice picker: a `preview_voice` command reads a fixed sentence in any voice or blend, stopping whatever was being read, and a `speech-state` event reports when speech starts and ends. A hotkey press stops a preview.
+- Voice picker with preview and blending in Settings: the Speech group lists every voice by language, each with Download, Preview and Use, and blends the voice in use with a second one on a slider; the Models page previews voices too. With the HTTP server it lists the server's voices and says when the server has not answered a preview in 10 seconds. A hotkey press stops a preview.
 
 ### Changed
 

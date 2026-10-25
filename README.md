@@ -72,7 +72,7 @@ Call the binary directly: `open -a Mouthy --args …` drops the arguments. With 
 
 Mouthy runs the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. The files are not bundled: download them from Settings → Models (see [First run](#first-run)).
 
-On the Models page you can also download the fp32 model (326 MB; about twice as slow as int8) and any of 28 English voices (0.5 MB each), choose which model and voice to use, and delete files. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256 before Mouthy uses it. The files live in:
+On the Models page you can also download the fp32 model (326 MB; about twice as slow as int8) and any of the 54 Kokoro voices (0.5 MB each; 28 are English, and the rest read English with their language's accent), choose which model and voice to use, and delete files. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256 before Mouthy uses it. The files live in:
 
 ```text
 ~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/
@@ -101,9 +101,9 @@ Installs from before the offline voice existed keep using the server until you s
 Open Settings from the tray. The General page has three groups:
 
 - **General:** hotkeys, launch at login, start hidden, overlay style and position
-- **Speech:** engine (Local or HTTP server), server URL (HTTP only), voice (a list when the server offers `/v1/audio/voices` or voice files are installed, otherwise free text), espeak-ng for unknown words (Local only), speed (0.5×–2×), volume
+- **Speech:** engine (Local or HTTP server), server URL (HTTP only), voice (every offline voice by language, or the server's `/v1/audio/voices` list, each with Download, Preview and Use; a blend of the voice in use with a second voice; free text for any other id or blend), espeak-ng for unknown words (Local only), speed (0.5×–2×), volume
 - **Sound:** output device
-- **Models page:** offline voice downloads, model and voice choice
+- **Models page:** offline voice downloads, model and voice choice, voice previews
 - **Advanced page:** tray icon, experimental features (shortcut backend)
 - **About page:** language, theme, app data and log folders, third-party licences
 

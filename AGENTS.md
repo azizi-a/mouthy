@@ -75,7 +75,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 ### Frontend Structure (src/)
 
 - `App.tsx` - Main component with onboarding (Accessibility permission)
-- `components/settings/` - Settings UI: `general/`, `models/`, `advanced/`, `debug/`, `about/`
+- `components/settings/` - Settings UI: `general/`, `models/`, `advanced/`, `debug/`, `about/`; `VoicePicker` (Speech group) and the Models page share `VoiceRow` (on `FileRow`), whose Preview/Stop state comes from `hooks/useVoicePreview.ts` (`speech-state`)
 - `components/onboarding/`, `ui/`, `icons/`, `footer/`
 - `overlay/` - Overlay window entry point and `SpeakingOverlay` UI
 - `hooks/useSettings.ts`, `stores/settingsStore.ts` - Settings state (Zustand)
@@ -85,7 +85,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 
 **Speak loop:** hotkey, tray, CLI or signal → `actions::speak_selection` (or `speak_clipboard`) → main thread: if speaking, stop (a hotkey press only once the hotkey was released since the speech started, so a held key's repeats never stop it); else capture the selection (or read the clipboard, capped at 20,000 characters) → normalise → split → synth thread (`block_on` per sentence, bounded channel) → playback thread (sole owner of the rodio `Player`). Every session change runs on the main thread, the only thread that locks `TtsState`, so a press during the capture queues behind it and then stops. A session's stop flag is its identity: a finished playback thread ends only its own session.
 
-**Voice preview:** the `preview_voice` command checks the voice and its files before posting, so the UI gets the error; then the main thread stops any session and starts one reading `PREVIEW_TEXT` in that voice. The first hotkey press stops a preview, and when one ends the settings voice is preloaded again. The main thread sends `speech-state` (`{ state: "started" | "ended", preview }`) as each session starts and ends, so a replaced session's end always arrives first.
+**Voice preview:** the `preview_voice` command checks the voice and its files before posting, so the UI gets the error; then the main thread stops any session and starts one reading `PREVIEW_TEXT` in that voice. The first hotkey press stops a preview, and when one ends the settings voice is preloaded again. The main thread sends `speech-state` (`{ state: "started" | "speaking" | "ended", preview, error? }`) as each session starts, plays its first audio and ends (`error` only when it failed), so a replaced session's end always arrives first and a replaced session never reports `speaking`.
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 

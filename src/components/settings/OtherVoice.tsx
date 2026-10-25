@@ -2,44 +2,24 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dropdown } from "../ui/Dropdown";
 import { Input } from "../ui/Input";
-import { ResetButton } from "../ui/ResetButton";
 import { SettingContainer } from "../ui/SettingContainer";
 import { useSettings } from "../../hooks/useSettings";
-import { commands } from "@/bindings";
 
-interface VoiceSelectorProps {
-  descriptionMode?: "inline" | "tooltip";
-  grouped?: boolean;
+interface OtherVoiceProps {
+  /** What the backend offers: voice files here, or the server's list. */
+  voices: string[];
+  /** Why the server's list could not be fetched, if it could not. */
+  error?: string;
 }
 
-export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
-  descriptionMode = "tooltip",
-  grouped = false,
-}) => {
+/** Free-text entry for a voice id or blend the list does not offer. */
+export const OtherVoice: React.FC<OtherVoiceProps> = ({ voices, error }) => {
   const { t } = useTranslation();
-  const { getSetting, updateSetting, resetSetting, isUpdating } = useSettings();
+  const { getSetting, updateSetting, isUpdating } = useSettings();
   const voice = getSetting("tts_voice") ?? "";
-  const baseUrl = getSetting("tts_base_url");
-  const backend = getSetting("tts_backend") ?? "local";
   const [draft, setDraft] = useState(voice);
-  const [voices, setVoices] = useState<string[]>([]);
 
   useEffect(() => setDraft(voice), [voice]);
-
-  // A server without a voice list, or no voice files yet, leaves the free-text field only.
-  useEffect(() => {
-    let current = true;
-    setVoices([]);
-    commands
-      .fetchTtsVoices()
-      .then((result) => {
-        if (current && result.status === "ok") setVoices(result.data);
-      })
-      .catch(() => {});
-    return () => {
-      current = false;
-    };
-  }, [baseUrl, backend]);
 
   const commit = (value: string) => {
     const next = value.trim();
@@ -49,12 +29,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   return (
     <SettingContainer
-      title={t("settings.speech.voice.title")}
-      description={t("settings.speech.voice.description")}
-      descriptionMode={descriptionMode}
-      grouped={grouped}
+      title={t("settings.speech.voice.other.title")}
+      description={t("settings.speech.voice.other.description")}
+      descriptionMode="inline"
+      grouped={true}
+      layout="stacked"
     >
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center gap-1">
         <Input
           type="text"
           value={draft}
@@ -65,7 +46,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           }}
           spellCheck={false}
           variant="compact"
-          className="w-36"
+          className="flex-1 min-w-0 font-mono"
           disabled={isUpdating("tts_voice")}
         />
         {voices.length > 0 && (
@@ -77,11 +58,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             disabled={isUpdating("tts_voice")}
           />
         )}
-        <ResetButton
-          onClick={() => resetSetting("tts_voice")}
-          disabled={isUpdating("tts_voice")}
-        />
       </div>
+      {error && (
+        <p className="mt-1 text-xs text-red-500">
+          {t("settings.speech.voice.serverUnreachable", { error })}
+        </p>
+      )}
     </SettingContainer>
   );
 };

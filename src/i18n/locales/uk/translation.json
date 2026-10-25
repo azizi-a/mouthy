@@ -74,8 +74,40 @@
       },
       "voice": {
         "title": "Voice",
-        "description": "Voice name, such as af_alloy, or a blend such as bm_lewis(70)+bm_george(30). Type one, or pick from your downloaded voices (Local) or the server's list (HTTP).",
-        "choose": "Choose a voice..."
+        "description": "Pick a voice, preview it, or blend it with a second one. Offline voices download from the list or the Models page; with the HTTP server, the list is the server's.",
+        "choose": "Choose a voice...",
+        "reset": "Reset to the default voice",
+        "preview": "Preview",
+        "stop": "Stop",
+        "previewFailed": "Preview failed: {{error}}",
+        "waitingForServer": "Waiting for the server…",
+        "serverSlow": "The server has not answered in 10 seconds.",
+        "serverUnreachable": "Could not get the server's voices: {{error}}",
+        "serverEmpty": "The server lists no voices. Type one under Other.",
+        "noneListed": "No voice is downloaded yet.",
+        "noneInstalled": "No voice is downloaded yet. Download one below, or manage files on the Models page.",
+        "modelMissing": "The offline model is not downloaded yet, so voices cannot speak or preview.",
+        "openModels": "Open Models",
+        "installedOnly": {
+          "title": "Installed only",
+          "description": "Show only the voices downloaded to this Mac."
+        },
+        "otherGroup": "Other",
+        "englishOnly": "Reads English text only, with this language's accent.",
+        "other": {
+          "show": "Other…",
+          "title": "Other voice or blend",
+          "description": "Any voice id the list lacks, or a blend such as bm_lewis(70)+bm_george(30)."
+        },
+        "blend": {
+          "title": "Blend",
+          "description": "Mix the voice in use with a second voice; the slider sets each one's share.",
+          "with": "{{voice}} with",
+          "choose": "Choose a voice...",
+          "none": "No other voice to blend with",
+          "accent": "Blends read with the first voice's accent.",
+          "editInOther": "Edit in Other…"
+        }
       },
       "espeak": {
         "title": "Pronounce unknown words with espeak-ng",
@@ -134,7 +166,9 @@
           "hindi": "Hindi",
           "italian": "Italian",
           "brazilianPortuguese": "Brazilian Portuguese"
-        }
+        },
+        "installed": "Installed",
+        "notInstalled": "Not installed · {{size}}"
       },
       "files": {
         "title": "Files",
@@ -163,7 +197,8 @@
       "downloading": "Downloading… {{percent}}%",
       "checking": "Checking…",
       "paused": "Paused at {{percent}}%",
-      "failed": "Download failed: {{error}}"
+      "failed": "Download failed: {{error}}",
+      "left": "{{size}} left"
     },
     "advanced": {
       "groups": {
