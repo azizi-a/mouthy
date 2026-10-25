@@ -161,8 +161,9 @@ fn is_copy_echo(released_at: Instant, copied_while_held_at: Option<Instant>) -> 
 
 /// The current speak session, if any. Only the main thread locks it, so
 /// nothing the main thread waits on can be holding it. The `*_on_main` fns
-/// must never call the public entry points: on the main thread those run
-/// inline and would lock it again.
+/// must never call the public entry points (`speak_selection`,
+/// `speak_clipboard`, `preview_voice`, `stop_speaking`): on the main thread
+/// those run inline and would lock it again.
 #[derive(Default)]
 pub struct TtsState {
     current: Mutex<Option<Session>>,
@@ -209,9 +210,16 @@ pub fn preview_voice(app: &AppHandle, voice: &str) -> Result<(), String> {
         backend,
         captured_at: Instant::now(),
     };
+    let (send_started, started) = mpsc::channel();
     let handle = app.clone();
-    app.run_on_main_thread(move || preview_on_main(&handle, settings, speech))
-        .map_err(|e| format!("Failed to schedule the voice preview: {e}"))
+    app.run_on_main_thread(move || {
+        let _ = send_started.send(preview_on_main(&handle, settings, speech));
+    })
+    .map_err(|e| format!("Failed to schedule the voice preview: {e}"))?;
+    // Called on the main thread, as the synchronous command is, the preview
+    // has started inline by now. From another thread it starts later, and a
+    // failure to start shows only on the overlay.
+    started.try_recv().unwrap_or(Ok(()))
 }
 
 /// The message for a notice `speech_backend` gave instead of a backend.
@@ -328,44 +336,51 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
     };
     let stop = Arc::new(AtomicBool::new(false));
     let session = Session::new(stop, copied_while_held_at, input);
-    start_session_on_main(app, &state, settings, speech, session);
+    // A failure to start is on the overlay already.
+    let _ = start_session_on_main(app, &state, settings, speech, session);
 }
 
-fn preview_on_main(app: &AppHandle, settings: AppSettings, speech: Speech) {
+fn preview_on_main(app: &AppHandle, settings: AppSettings, speech: Speech) -> Result<(), String> {
     let Some(state) = app.try_state::<TtsState>() else {
-        return;
+        return Err("Speech is not ready yet".into());
     };
     // No preload for a replaced preview: this one loads its own voice next.
     if stop_session_on_main(app, &state).is_some() {
         info!("Stopping speech for a voice preview");
     }
     let session = Session::preview(Arc::new(AtomicBool::new(false)));
-    start_session_on_main(app, &state, settings, speech, session);
+    start_session_on_main(app, &state, settings, speech, session)
 }
 
 /// Starts the threads for `speech` and makes `session` current, or shows why
-/// they could not start.
+/// they could not start and returns it.
 fn start_session_on_main(
     app: &AppHandle,
     state: &TtsState,
     settings: AppSettings,
     speech: Speech,
     session: Session,
-) {
+) -> Result<(), String> {
     if let Err(e) = start_speech(app, settings, speech, &session.stop) {
         error!("Failed to start speech threads: {e}");
         session.stop.store(true, Ordering::SeqCst);
         let message = e.to_string();
-        overlay::show_overlay(app, OverlayView::Error { message });
+        overlay::show_overlay(
+            app,
+            OverlayView::Error {
+                message: message.clone(),
+            },
+        );
         // A preview may have stopped the session that set it to speaking.
         tray::set_tray_state(app, TrayIconState::Idle);
-        return;
+        return Err(message);
     }
     let input = session.input;
     *state.lock() = Some(session);
     overlay::show_overlay(app, OverlayView::Speaking);
     tray::set_tray_state(app, TrayIconState::Speaking);
     emit_speech_state(app, SessionPhase::Started, input);
+    Ok(())
 }
 
 fn hotkey_released_on_main(app: &AppHandle, released_at: Instant) {
