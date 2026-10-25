@@ -19,6 +19,50 @@ interface SliderProps {
   isResetting?: boolean;
 }
 
+interface RangeInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  /** Called once the user lets go, not at every step on the way. */
+  onCommit?: (value: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  disabled?: boolean;
+  className?: string;
+}
+
+export const RangeInput: React.FC<RangeInputProps> = ({
+  value,
+  onChange,
+  onCommit,
+  min,
+  max,
+  step,
+  disabled = false,
+  className = "",
+}) => {
+  const fill = ((value - min) / (max - min)) * 100;
+  const commit = (e: React.SyntheticEvent<HTMLInputElement>) =>
+    onCommit?.(parseFloat(e.currentTarget.value));
+  return (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+      onPointerUp={commit}
+      onKeyUp={commit}
+      disabled={disabled}
+      className={`flex-grow h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-logo-primary disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      style={{
+        background: `linear-gradient(to right, var(--color-background-ui) ${fill}%, rgba(128, 128, 128, 0.2) ${fill}%)`,
+      }}
+    />
+  );
+};
+
 export const Slider: React.FC<SliderProps> = ({
   value,
   onChange,
@@ -35,10 +79,6 @@ export const Slider: React.FC<SliderProps> = ({
   onReset,
   isResetting = false,
 }) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(parseFloat(e.target.value));
-  };
-
   return (
     <SettingContainer
       title={label}
@@ -50,22 +90,13 @@ export const Slider: React.FC<SliderProps> = ({
     >
       <div className="w-full">
         <div className="flex items-center space-x-1 h-6">
-          <input
-            type="range"
+          <RangeInput
+            value={value}
+            onChange={onChange}
             min={min}
             max={max}
             step={step}
-            value={value}
-            onChange={handleChange}
             disabled={disabled}
-            className="flex-grow h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-logo-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: `linear-gradient(to right, var(--color-background-ui) ${
-                ((value - min) / (max - min)) * 100
-              }%, rgba(128, 128, 128, 0.2) ${
-                ((value - min) / (max - min)) * 100
-              }%)`,
-            }}
           />
           {showValue && (
             <span className="text-sm font-medium text-text/90 w-12 text-end">
