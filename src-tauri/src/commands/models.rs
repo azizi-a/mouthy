@@ -7,7 +7,7 @@
 
 use super::models_dir;
 use crate::settings::{self, ModelVariant};
-use crate::tts::catalog::{self, CatalogFile, ModelFileKind};
+use crate::tts::catalog::{self, CatalogFile, ModelFileKind, VoiceLanguage};
 use crate::tts::download;
 use crate::tts::local::{self, ModelFiles};
 use crate::tts::voice::VoiceSpec;
@@ -82,6 +82,8 @@ pub struct ModelFile {
     pub downloading: bool,
     /// Why the last download failed, until the next one starts.
     pub error: Option<String>,
+    /// A voice's language; `None` for a model.
+    pub language: Option<VoiceLanguage>,
 }
 
 #[derive(Clone, Serialize)]
@@ -117,6 +119,7 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
             error: failed.get(&file.id).cloned(),
             size: file.size,
             kind: file.kind,
+            language: file.language,
             id: file.id,
         })
         .collect();
