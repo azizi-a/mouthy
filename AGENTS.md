@@ -52,7 +52,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 ### Backend Structure (src-tauri/src/)
 
 - `lib.rs` - Entry point, Tauri setup, plugin and command registration
-- `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction`, `SpeakClipboardAction` are thin wrappers); `speak_selection`/`speak_clipboard`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
+- `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction`, `SpeakClipboardAction` are thin wrappers); `speak_selection`/`speak_clipboard`/`preview_voice`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
 - `tts/mod.rs` - `Backend` (chosen per request from settings) and `Synth` (opened on the synth thread)
 - `tts/text.rs` - `normalize` (`reflow` of hard-wrapped lines, then URLs, markdown, whitespace) and `split_sentences` (cuts a sentence longer than `Backend::max_chunk_chars`: 300 for HTTP, 450 for Local); for the local backend only, `split_first_clause`, `expand_abbreviations` (titles and abbreviations such as "Dr." and "etc." in full, sharing `ABBREVIATIONS` with `split_sentences`), `expand_numbers` and `spell_out` (initialisms, camel case, a full stop inside a name; queries misaki's gold lexicon through the `text::Lexicon` trait) (the HTTP path speaks `normalize` + `split_sentences` output)
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
@@ -84,6 +84,8 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 ### Key Architecture Patterns
 
 **Speak loop:** hotkey, tray, CLI or signal → `actions::speak_selection` (or `speak_clipboard`) → main thread: if speaking, stop (a hotkey press only once the hotkey was released since the speech started, so a held key's repeats never stop it); else capture the selection (or read the clipboard, capped at 20,000 characters) → normalise → split → synth thread (`block_on` per sentence, bounded channel) → playback thread (sole owner of the rodio `Player`). Every session change runs on the main thread, the only thread that locks `TtsState`, so a press during the capture queues behind it and then stops. A session's stop flag is its identity: a finished playback thread ends only its own session.
+
+**Voice preview:** the `preview_voice` command checks the voice and its files before posting, so the UI gets the error; then the main thread stops any session and starts one reading `PREVIEW_TEXT` in that voice. The first hotkey press stops a preview, and when one ends the settings voice is preloaded again. The main thread sends `speech-state` (`{ state: "started" | "ended", preview }`) as each session starts and ends, so a replaced session's end always arrives first.
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 

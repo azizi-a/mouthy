@@ -245,6 +245,17 @@ async stopSpeaking() : Promise<void> {
     await TAURI_INVOKE("stop_speaking");
 },
 /**
+ * Reads a fixed sentence in `voice`, stopping any speech first.
+ */
+async previewVoice(voice: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("preview_voice", { voice }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Voice ids the selected backend offers: the server's list, or the voice
  * files in the models folder.
  */

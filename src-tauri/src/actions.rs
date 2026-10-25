@@ -8,6 +8,7 @@ use log::{debug, error, info, warn};
 use once_cell::sync::Lazy;
 use rodio::buffer::SamplesBuffer;
 use rodio::Player;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::num::NonZero;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -15,7 +16,7 @@ use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 // Shortcut Action Trait
 pub trait ShortcutAction: Send + Sync {
@@ -35,6 +36,9 @@ const COPY_ECHO_WINDOW: Duration = Duration::from_millis(150);
 /// Most clipboard characters read aloud. Normalising and splitting run on the
 /// main thread, which a huge clipboard would stall.
 const CLIPBOARD_CHAR_CAP: usize = 20_000;
+/// What a voice preview reads. English in every app language, since every
+/// voice reads English.
+const PREVIEW_TEXT: &str = "Hi. This is how I sound when I read your text aloud.";
 
 type Chunk = Result<Vec<i16>, String>;
 
@@ -57,6 +61,16 @@ impl Session {
             released_since_start: false,
             copied_while_held_at,
             input,
+        }
+    }
+
+    /// A voice preview. No hotkey started it, so the first press stops it.
+    fn preview(stop: Arc<AtomicBool>) -> Self {
+        Self {
+            stop,
+            released_since_start: true,
+            copied_while_held_at: None,
+            input: Input::Preview,
         }
     }
 
@@ -87,6 +101,8 @@ enum Input {
     Selection,
     /// The clipboard as it is; nothing is copied.
     Clipboard,
+    /// `PREVIEW_TEXT`, in the voice being previewed.
+    Preview,
 }
 
 impl Input {
@@ -94,6 +110,7 @@ impl Input {
         match self {
             Input::Selection => "selection",
             Input::Clipboard => "clipboard",
+            Input::Preview => "voice preview",
         }
     }
 
@@ -102,6 +119,9 @@ impl Input {
         match self {
             Input::Selection => OverlayView::NothingSelected,
             Input::Clipboard => OverlayView::ClipboardEmpty,
+            Input::Preview => OverlayView::Error {
+                message: "The voice preview had nothing to speak".into(),
+            },
         }
     }
 }
@@ -141,8 +161,9 @@ fn is_copy_echo(released_at: Instant, copied_while_held_at: Option<Instant>) -> 
 
 /// The current speak session, if any. Only the main thread locks it, so
 /// nothing the main thread waits on can be holding it. The `*_on_main` fns
-/// must never call the public entry points: on the main thread those run
-/// inline and would lock it again.
+/// must never call the public entry points (`speak_selection`,
+/// `speak_clipboard`, `preview_voice`, `stop_speaking`): on the main thread
+/// those run inline and would lock it again.
 #[derive(Default)]
 pub struct TtsState {
     current: Mutex<Option<Session>>,
@@ -166,6 +187,47 @@ pub fn speak_selection(app: &AppHandle, source: &str) {
 /// Speaks the clipboard text, or stops if already speaking.
 pub fn speak_clipboard(app: &AppHandle, source: &str) {
     request_speech(app, source, Trigger::Other, Input::Clipboard);
+}
+
+/// Reads `PREVIEW_TEXT` in `voice`, stopping any speech first. Fails, stopping
+/// nothing, when the voice is not valid or the local engine lacks a file it
+/// needs.
+pub fn preview_voice(app: &AppHandle, voice: &str) -> Result<(), String> {
+    let settings = settings::get_settings(app);
+    // Checked as `change_tts_voice_setting` checks a voice before storing it.
+    let voice = match settings.tts_backend {
+        TtsBackend::Local => tts::voice::VoiceSpec::parse(voice)?.to_string(),
+        TtsBackend::Http => voice.trim().to_string(),
+    };
+    if voice.is_empty() {
+        return Err("No voice to preview".into());
+    }
+    let backend =
+        speech_backend(app, &settings, &voice).map_err(|view| preview_error(view, &voice))?;
+    info!("Previewing the voice {voice}");
+    let speech = Speech {
+        sentences: sentences_for(&tts::text::normalize(PREVIEW_TEXT), &backend),
+        backend,
+        captured_at: Instant::now(),
+    };
+    let (send_started, started) = mpsc::channel();
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        let _ = send_started.send(preview_on_main(&handle, settings, speech));
+    })
+    .map_err(|e| format!("Failed to schedule the voice preview: {e}"))?;
+    // Called on the main thread, as the synchronous command is, the preview
+    // has started inline by now. From another thread it starts later, and a
+    // failure to start shows only on the overlay.
+    started.try_recv().unwrap_or(Ok(()))
+}
+
+/// The message for a notice `speech_backend` gave instead of a backend.
+fn preview_error(view: OverlayView, voice: &str) -> String {
+    match view {
+        OverlayView::Error { message } => message,
+        _ => format!("Offline voice files for '{voice}' are missing"),
+    }
 }
 
 fn request_speech(app: &AppHandle, source: &str, trigger: Trigger, input: Input) {
@@ -220,7 +282,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
     info!("Speaking the {} ({source})", input.name());
     let settings = settings::get_settings(app);
     // Checked before the copy: without its files the local voice cannot speak.
-    let backend = match speech_backend(app, &settings) {
+    let backend = match speech_backend(app, &settings, &settings.tts_voice) {
         Ok(backend) => backend,
         Err(view) => {
             overlay::show_overlay(app, view);
@@ -241,6 +303,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
             }
             Err(e) => Err(e),
         },
+        Input::Preview => Ok((Some(PREVIEW_TEXT.to_string()), None)),
     };
     let (text, copied_while_held_at) = match captured {
         Ok(captured) => captured,
@@ -253,10 +316,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
     let text = text
         .map(|text| tts::text::normalize(&text))
         .unwrap_or_default();
-    let mut sentences = tts::text::split_sentences(&text, backend.max_chunk_chars());
-    if matches!(backend, tts::Backend::Local(_)) {
-        sentences = tts::text::split_first_clause(sentences);
-    }
+    let sentences = sentences_for(&text, &backend);
     let captured_at = Instant::now();
     info!(
         "Captured {} chars, {} sentences in {} ms",
@@ -269,22 +329,58 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
         return;
     }
 
-    let stop = Arc::new(AtomicBool::new(false));
     let speech = Speech {
         sentences,
         backend,
         captured_at,
     };
-    if let Err(e) = start_speech(app, settings, speech, &stop) {
-        error!("Failed to start speech threads: {e}");
-        stop.store(true, Ordering::SeqCst);
-        let message = e.to_string();
-        overlay::show_overlay(app, OverlayView::Error { message });
-        return;
+    let stop = Arc::new(AtomicBool::new(false));
+    let session = Session::new(stop, copied_while_held_at, input);
+    // A failure to start is on the overlay already.
+    let _ = start_session_on_main(app, &state, settings, speech, session);
+}
+
+fn preview_on_main(app: &AppHandle, settings: AppSettings, speech: Speech) -> Result<(), String> {
+    let Some(state) = app.try_state::<TtsState>() else {
+        return Err("Speech is not ready yet".into());
+    };
+    // No preload for a replaced preview: this one loads its own voice next.
+    if stop_session_on_main(app, &state).is_some() {
+        info!("Stopping speech for a voice preview");
     }
-    *state.lock() = Some(Session::new(stop, copied_while_held_at, input));
+    let session = Session::preview(Arc::new(AtomicBool::new(false)));
+    start_session_on_main(app, &state, settings, speech, session)
+}
+
+/// Starts the threads for `speech` and makes `session` current, or shows why
+/// they could not start and returns it.
+fn start_session_on_main(
+    app: &AppHandle,
+    state: &TtsState,
+    settings: AppSettings,
+    speech: Speech,
+    session: Session,
+) -> Result<(), String> {
+    if let Err(e) = start_speech(app, settings, speech, &session.stop) {
+        error!("Failed to start speech threads: {e}");
+        session.stop.store(true, Ordering::SeqCst);
+        let message = e.to_string();
+        overlay::show_overlay(
+            app,
+            OverlayView::Error {
+                message: message.clone(),
+            },
+        );
+        // A preview may have stopped the session that set it to speaking.
+        tray::set_tray_state(app, TrayIconState::Idle);
+        return Err(message);
+    }
+    let input = session.input;
+    *state.lock() = Some(session);
     overlay::show_overlay(app, OverlayView::Speaking);
     tray::set_tray_state(app, TrayIconState::Speaking);
+    emit_speech_state(app, SessionPhase::Started, input);
+    Ok(())
 }
 
 fn hotkey_released_on_main(app: &AppHandle, released_at: Instant) {
@@ -304,11 +400,20 @@ fn stop_speaking_on_main(app: &AppHandle) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
-    if let Some(session) = state.lock().take() {
-        session.stop.store(true, Ordering::SeqCst);
+    if stop_session_on_main(app, &state) == Some(Input::Preview) {
+        // So the next hotkey finds the settings voice loaded, not the preview's.
+        preload_local_voice(app);
     }
     overlay::hide_overlay(app);
     tray::set_tray_state(app, TrayIconState::Idle);
+}
+
+/// Stops and forgets the current session. Returns what it was reading.
+fn stop_session_on_main(app: &AppHandle, state: &TtsState) -> Option<Input> {
+    let session = state.lock().take()?;
+    session.stop.store(true, Ordering::SeqCst);
+    emit_speech_state(app, SessionPhase::Ended, session.input);
+    Some(session.input)
 }
 
 /// Ends the session that owns `stop`, unless it already ended.
@@ -337,17 +442,60 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
         PlaybackEnd::Failed(message) => overlay::show_overlay(app, OverlayView::Error { message }),
     }
     tray::set_tray_state(app, TrayIconState::Idle);
+    emit_speech_state(app, SessionPhase::Ended, input);
+    if input == Input::Preview {
+        // So the next hotkey finds the settings voice loaded, not the preview's.
+        preload_local_voice(app);
+    }
+}
+
+/// The `speech-state` event's payload.
+#[derive(Clone, Debug, Serialize)]
+struct SpeechStateChange {
+    state: SessionPhase,
+    /// Whether the session is a voice preview.
+    preview: bool,
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum SessionPhase {
+    Started,
+    Ended,
+}
+
+/// Sent from the main thread, so a session's end always reaches the UI before
+/// the start of the session that replaced it.
+fn emit_speech_state(app: &AppHandle, state: SessionPhase, input: Input) {
+    let change = SpeechStateChange {
+        state,
+        preview: input == Input::Preview,
+    };
+    if let Err(e) = app.emit("speech-state", change) {
+        warn!("Failed to report the speech state: {e}");
+    }
+}
+
+/// Normalised `text` cut into the requests `backend` gets.
+fn sentences_for(text: &str, backend: &tts::Backend) -> Vec<tts::text::Chunk> {
+    let sentences = tts::text::split_sentences(text, backend.max_chunk_chars());
+    if matches!(backend, tts::Backend::Local(_)) {
+        tts::text::split_first_clause(sentences)
+    } else {
+        sentences
+    }
 }
 
 /// The backend a request will use, or the notice to show instead.
-fn speech_backend(app: &AppHandle, settings: &AppSettings) -> Result<tts::Backend, OverlayView> {
+fn speech_backend(
+    app: &AppHandle,
+    settings: &AppSettings,
+    voice: &str,
+) -> Result<tts::Backend, OverlayView> {
     match settings.tts_backend {
-        TtsBackend::Http => Ok(tts::Backend::Http {
-            base_url: settings.tts_base_url.clone(),
-            voice: settings.tts_voice.clone(),
-        }),
+        TtsBackend::Http => Ok(http_backend(settings, voice)),
         TtsBackend::Local => {
-            let files = local_model_files(app, settings)
+            let files = local_model_files(app, settings, voice)
                 .map_err(|message| OverlayView::Error { message })?;
             match files.missing() {
                 Some(missing) => {
@@ -360,13 +508,21 @@ fn speech_backend(app: &AppHandle, settings: &AppSettings) -> Result<tts::Backen
     }
 }
 
+fn http_backend(settings: &AppSettings, voice: &str) -> tts::Backend {
+    tts::Backend::Http {
+        base_url: settings.tts_base_url.clone(),
+        voice: voice.to_string(),
+    }
+}
+
 fn local_model_files(
     app: &AppHandle,
     settings: &AppSettings,
+    voice: &str,
 ) -> Result<tts::local::ModelFiles, String> {
     let models_dir = crate::commands::models_dir(app)?;
     Ok(
-        tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, &settings.tts_voice)
+        tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, voice)
             .with_espeak(tts::espeak::find_if_enabled(settings.tts_espeak_fallback)),
     )
 }
@@ -384,7 +540,7 @@ pub fn preload_local_voice(app: &AppHandle) {
                 if settings.tts_backend != TtsBackend::Local {
                     return None;
                 }
-                let files = local_model_files(&app, &settings)
+                let files = local_model_files(&app, &settings, &settings.tts_voice)
                     .inspect_err(|e| warn!("Cannot find the local voice: {e}"))
                     .ok()?;
                 match files.missing() {
@@ -410,7 +566,7 @@ pub fn preload_local_voice(app: &AppHandle) {
 struct Speech {
     sentences: Vec<tts::text::Chunk>,
     backend: tts::Backend,
-    /// When the selection was ready, for the first-audio timing.
+    /// When the text was ready, for the first-audio timing.
     captured_at: Instant,
 }
 
@@ -801,6 +957,76 @@ mod tests {
             session.released_since_start,
             Trigger::Hotkey
         ));
+    }
+
+    #[test]
+    fn the_first_hotkey_press_stops_a_voice_preview() {
+        let session = Session::preview(Arc::new(AtomicBool::new(false)));
+        assert_eq!(session.input, Input::Preview);
+        assert!(should_toggle_stop(
+            session.released_since_start,
+            Trigger::Hotkey
+        ));
+    }
+
+    #[test]
+    fn both_engines_speak_the_preview_sentence() {
+        let text = tts::text::normalize(PREVIEW_TEXT);
+        let http = http_backend(&settings::get_default_settings(), "af_alloy");
+        let local = tts::Backend::Local(tts::local::ModelFiles::new(
+            std::path::Path::new("models"),
+            settings::ModelVariant::Int8,
+            "af_alloy",
+        ));
+        for backend in [http, local] {
+            let sentences = sentences_for(&text, &backend);
+            assert!(!sentences.is_empty());
+            assert!(sentences
+                .iter()
+                .all(|s| s.text.chars().count() <= backend.max_chunk_chars()));
+        }
+    }
+
+    #[test]
+    fn the_server_gets_the_voice_asked_for_not_the_settings_voice() {
+        let settings = AppSettings {
+            tts_voice: "bm_lewis".into(),
+            ..settings::get_default_settings()
+        };
+        let tts::Backend::Http { base_url, voice } = http_backend(&settings, "af_heart") else {
+            panic!("expected the HTTP backend");
+        };
+        assert_eq!(voice, "af_heart");
+        assert_eq!(base_url, settings.tts_base_url);
+    }
+
+    #[test]
+    fn a_preview_error_names_the_missing_voice() {
+        assert!(preview_error(OverlayView::ModelMissing, "af_alloy").contains("'af_alloy'"));
+        let message = "Failed to get app data directory".to_string();
+        assert_eq!(
+            preview_error(
+                OverlayView::Error {
+                    message: message.clone()
+                },
+                "af_alloy"
+            ),
+            message
+        );
+    }
+
+    #[test]
+    fn speech_state_payload_names_the_phase_and_whether_it_is_a_preview() {
+        let payload =
+            |state, preview| serde_json::to_value(SpeechStateChange { state, preview }).unwrap();
+        assert_eq!(
+            payload(SessionPhase::Started, true),
+            serde_json::json!({ "state": "started", "preview": true })
+        );
+        assert_eq!(
+            payload(SessionPhase::Ended, false),
+            serde_json::json!({ "state": "ended", "preview": false })
+        );
     }
 
     #[test]
