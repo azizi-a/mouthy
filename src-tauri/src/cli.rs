@@ -21,7 +21,11 @@ pub struct CliArgs {
     pub speak_clipboard: bool,
 
     /// Speak a UTF-8 text file, cutting off any speech (sent to running instance, or spoken once launched)
-    #[arg(long, value_name = "PATH")]
+    #[arg(
+        long,
+        value_name = "PATH",
+        conflicts_with_all = ["speak_selection", "speak_clipboard", "stop"]
+    )]
     pub speak_file: Option<PathBuf>,
 
     /// Stop speaking (sent to running instance)
@@ -75,6 +79,20 @@ mod tests {
             CliArgs::try_parse_from(["mouthy"]).unwrap().speak_file,
             None
         );
+    }
+
+    #[test]
+    fn speak_file_refuses_the_other_speak_flags() {
+        for other in ["--speak-selection", "--speak-clipboard", "--stop"] {
+            assert!(
+                CliArgs::try_parse_from(["mouthy", "--speak-file", "/tmp/m.txt", other]).is_err(),
+                "--speak-file with {other}"
+            );
+        }
+        let args =
+            CliArgs::try_parse_from(["mouthy", "--start-hidden", "--speak-file", "/tmp/m.txt"])
+                .unwrap();
+        assert!(args.start_hidden);
     }
 
     #[test]

@@ -162,9 +162,13 @@ fn cap_text(text: String, input: Input) -> String {
 /// The text of the file at `path`, cut to `TEXT_CHAR_CAP` characters, with
 /// invalid UTF-8 replaced.
 fn read_text_file(path: &Path) -> Result<String, String> {
-    // A relative path would resolve against Mouthy's own working directory.
+    // Still relative only when the caller's working directory was unknown, and
+    // Mouthy's own is the wrong one to read from.
     if !path.is_absolute() {
-        return Err("the path is not absolute".into());
+        return Err(
+            "the caller's working directory could not be determined; an absolute path is needed"
+                .into(),
+        );
     }
     // Opening a pipe waits for a writer, holding up every later CLI request.
     let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
@@ -225,10 +229,11 @@ pub fn speak_clipboard(app: &AppHandle, source: &str) {
     request_speech(app, source, Trigger::Other, Input::Clipboard);
 }
 
-/// Speaks the text file at `path`, an absolute path, cutting off any speech.
+/// Speaks the text file at absolute `path`, cutting off any speech.
 /// A file that cannot be spoken still stops the speech, then says why.
 pub fn speak_file(app: &AppHandle, path: &Path, source: &str) {
-    // Read before posting, so a slow disk never holds up the main thread.
+    // Read before posting, so a handed-over file is read off the main thread. A
+    // first launch reads on it, bounded by the regular-file check and byte cap.
     let text = read_text_file(path).map_err(|e| {
         warn!("Cannot read {}: {e}", path.display());
         let name = path.file_name().unwrap_or(path.as_os_str());
