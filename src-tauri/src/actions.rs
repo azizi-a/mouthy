@@ -489,12 +489,25 @@ fn preview_on_main(app: &AppHandle, settings: AppSettings, speech: Speech) -> Re
     let Some(state) = app.try_state::<TtsState>() else {
         return Err("Speech is not ready yet".into());
     };
-    // No preload for a replaced session: this one loads its own voice next.
-    if stop_session_on_main(app, &state).is_some() {
+    let replaced = stop_session_on_main(app, &state);
+    if replaced.is_some() {
         info!("Stopping speech for a voice preview");
     }
     let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::Preview, true);
-    start_session_on_main(app, &state, settings, speech, session)
+    // No preload for a replaced session unless this one fails to load its own voice.
+    let started = start_session_on_main(app, &state, settings, speech, session);
+    if started.is_err() {
+        preload_after(app, replaced.as_ref());
+    }
+    started
+}
+
+/// Loads the settings voice again when `replaced` read in another voice and
+/// no session took over to load its own.
+fn preload_after(app: &AppHandle, replaced: Option<&Session>) {
+    if replaced.is_some_and(|session| session.other_voice) {
+        preload_local_voice(app);
+    }
 }
 
 fn speak_file_on_main(
@@ -511,19 +524,19 @@ fn speak_file_on_main(
         info!("Stopping speech for a file ({source})");
     }
     match file_speech(app, text, voice.as_deref()) {
-        // No preload for a replaced session: this one loads its own voice next.
+        // No preload for a replaced session unless this one fails to load its own voice.
         Ok((settings, speech, voice)) => {
             info!("Speaking the file in {voice} ({source})");
             let other_voice = voice != settings.tts_voice;
             let session =
                 Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::File, other_voice);
             // A failure to start is on the overlay already.
-            let _ = start_session_on_main(app, &state, settings, speech, session);
+            if start_session_on_main(app, &state, settings, speech, session).is_err() {
+                preload_after(app, replaced.as_ref());
+            }
         }
         Err(view) => {
-            if replaced.is_some_and(|session| session.other_voice) {
-                preload_local_voice(app);
-            }
+            preload_after(app, replaced.as_ref());
             tray::set_tray_state(app, TrayIconState::Idle);
             overlay::show_overlay(app, view);
         }
