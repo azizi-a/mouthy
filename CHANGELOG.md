@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 For scripts: a tool such as a Claude Code skill can have Mouthy read each of its replies aloud, each new one cutting off the last. Mouthy is still not signed or notarised and does not update itself.
 
 - `--speak-file <path>` reads a text file aloud and cuts off whatever Mouthy was saying, so a script can have each new message replace the last; it also speaks when it launches Mouthy.
+- `--voice <voice>` with `--speak-file` reads that file in another voice or blend, such as `bm_lewis(70)+bm_george(30)`, so each script or session can sound different; a voice that is not downloaded falls back to the Settings voice.
 - Lock-file updates for rustls, rustls-webpki, serde_with and openssl that close the advisories Dependabot opened (#8–#11).
 
 ## 0.4.1 — 2026-10-25

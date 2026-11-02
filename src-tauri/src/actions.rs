@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::num::NonZero;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -58,6 +58,9 @@ struct Session {
     copied_while_held_at: Option<Instant>,
     /// What it reads, for the notice when none of it was speakable.
     input: Input,
+    /// Reads in a voice other than the settings voice, which is loaded again
+    /// when it ends so the next hotkey does not wait for it.
+    other_voice: bool,
 }
 
 impl Session {
@@ -67,17 +70,19 @@ impl Session {
             released_since_start: false,
             copied_while_held_at,
             input,
+            other_voice: false,
         }
     }
 
     /// A voice preview or a file. No hotkey started it, so the first press
     /// stops it.
-    fn without_hotkey(stop: Arc<AtomicBool>, input: Input) -> Self {
+    fn without_hotkey(stop: Arc<AtomicBool>, input: Input, other_voice: bool) -> Self {
         Self {
             stop,
             released_since_start: true,
             copied_while_held_at: None,
             input,
+            other_voice,
         }
     }
 
@@ -229,9 +234,10 @@ pub fn speak_clipboard(app: &AppHandle, source: &str) {
     request_speech(app, source, Trigger::Other, Input::Clipboard);
 }
 
-/// Speaks the text file at absolute `path`, cutting off any speech.
-/// A file that cannot be spoken still stops the speech, then says why.
-pub fn speak_file(app: &AppHandle, path: &Path, source: &str) {
+/// Speaks the text file at absolute `path` in `voice`, or the settings voice,
+/// cutting off any speech. A file that cannot be spoken still stops the
+/// speech, then says why.
+pub fn speak_file(app: &AppHandle, path: &Path, voice: Option<String>, source: &str) {
     // Read before posting, so a handed-over file is read off the main thread. A
     // first launch reads on it, bounded by the regular-file check and byte cap.
     let text = read_text_file(path).map_err(|e| {
@@ -243,19 +249,27 @@ pub fn speak_file(app: &AppHandle, path: &Path, source: &str) {
     });
     let handle = app.clone();
     let source = source.to_string();
-    if let Err(e) = app.run_on_main_thread(move || speak_file_on_main(&handle, &source, text)) {
+    if let Err(e) =
+        app.run_on_main_thread(move || speak_file_on_main(&handle, &source, text, voice))
+    {
         error!("Failed to schedule speech: {e}");
     }
 }
 
-/// What speaking a file's text needs, or the notice to show instead.
+/// What speaking a file's text needs and the voice it is read in, or the
+/// notice to show instead.
 fn file_speech(
     app: &AppHandle,
     text: Result<String, OverlayView>,
-) -> Result<(AppSettings, Speech), OverlayView> {
+    voice: Option<&str>,
+) -> Result<(AppSettings, Speech, String), OverlayView> {
     let text = text?;
     let settings = settings::get_settings(app);
-    let backend = speech_backend(app, &settings, &settings.tts_voice)?;
+    let voice = match voice {
+        Some(requested) => file_voice(app, &settings, requested),
+        None => settings.tts_voice.clone(),
+    };
+    let backend = speech_backend(app, &settings, &voice)?;
     let split_started = Instant::now();
     let text = tts::text::normalize(&text);
     let sentences = sentences_for(&text, &backend);
@@ -274,7 +288,48 @@ fn file_speech(
         backend,
         captured_at,
     };
-    Ok((settings, speech))
+    Ok((settings, speech, voice))
+}
+
+/// The voice `--voice` asked for, written as the voice setting would be, or
+/// the settings voice when that one cannot read the file.
+fn file_voice(app: &AppHandle, settings: &AppSettings, requested: &str) -> String {
+    usable_voice(settings, || crate::commands::models_dir(app), requested).unwrap_or_else(
+        |reason| {
+            warn!(
+                "Cannot read the file in the voice '{requested}' ({reason}); using the settings voice {}",
+                settings.tts_voice
+            );
+            settings.tts_voice.clone()
+        },
+    )
+}
+
+/// `requested` as the voice setting would store it, or why it cannot read: for
+/// Local, it must be a voice or blend whose every voice is downloaded.
+fn usable_voice(
+    settings: &AppSettings,
+    models_dir: impl FnOnce() -> Result<PathBuf, String>,
+    requested: &str,
+) -> Result<String, String> {
+    match settings.tts_backend {
+        // As the voice setting: only the server knows its voices.
+        TtsBackend::Http => Some(requested.trim())
+            .filter(|voice| !voice.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| "no voice given".to_string()),
+        TtsBackend::Local => {
+            let voice = tts::voice::VoiceSpec::parse(requested)?.to_string();
+            let missing =
+                tts::local::ModelFiles::new(&models_dir()?, settings.tts_model_variant, &voice)
+                    .missing_voices();
+            if missing.is_empty() {
+                Ok(voice)
+            } else {
+                Err(format!("not downloaded: {}", missing.join(", ")))
+            }
+        }
+    }
 }
 
 /// Reads `PREVIEW_TEXT` in `voice`, stopping any speech first. Fails, stopping
@@ -434,15 +489,33 @@ fn preview_on_main(app: &AppHandle, settings: AppSettings, speech: Speech) -> Re
     let Some(state) = app.try_state::<TtsState>() else {
         return Err("Speech is not ready yet".into());
     };
-    // No preload for a replaced preview: this one loads its own voice next.
-    if stop_session_on_main(app, &state).is_some() {
+    let replaced = stop_session_on_main(app, &state);
+    if replaced.is_some() {
         info!("Stopping speech for a voice preview");
     }
-    let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::Preview);
-    start_session_on_main(app, &state, settings, speech, session)
+    let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::Preview, true);
+    // No preload for a replaced session unless this one fails to load its own voice.
+    let started = start_session_on_main(app, &state, settings, speech, session);
+    if started.is_err() {
+        preload_after(app, replaced.as_ref());
+    }
+    started
 }
 
-fn speak_file_on_main(app: &AppHandle, source: &str, text: Result<String, OverlayView>) {
+/// Loads the settings voice again when `replaced` read in another voice and
+/// no session took over to load its own.
+fn preload_after(app: &AppHandle, replaced: Option<&Session>) {
+    if replaced.is_some_and(|session| session.other_voice) {
+        preload_local_voice(app);
+    }
+}
+
+fn speak_file_on_main(
+    app: &AppHandle,
+    source: &str,
+    text: Result<String, OverlayView>,
+    voice: Option<String>,
+) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
@@ -450,19 +523,20 @@ fn speak_file_on_main(app: &AppHandle, source: &str, text: Result<String, Overla
     if replaced.is_some() {
         info!("Stopping speech for a file ({source})");
     }
-    match file_speech(app, text) {
-        // In the settings voice, so a replaced preview needs no preload.
-        Ok((settings, speech)) => {
-            info!("Speaking the file ({source})");
-            let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::File);
+    match file_speech(app, text, voice.as_deref()) {
+        // No preload for a replaced session unless this one fails to load its own voice.
+        Ok((settings, speech, voice)) => {
+            info!("Speaking the file in {voice} ({source})");
+            let other_voice = voice != settings.tts_voice;
+            let session =
+                Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::File, other_voice);
             // A failure to start is on the overlay already.
-            let _ = start_session_on_main(app, &state, settings, speech, session);
+            if start_session_on_main(app, &state, settings, speech, session).is_err() {
+                preload_after(app, replaced.as_ref());
+            }
         }
         Err(view) => {
-            if replaced == Some(Input::Preview) {
-                // So the next hotkey finds the settings voice loaded, not the preview's.
-                preload_local_voice(app);
-            }
+            preload_after(app, replaced.as_ref());
             tray::set_tray_state(app, TrayIconState::Idle);
             overlay::show_overlay(app, view);
         }
@@ -517,20 +591,19 @@ fn stop_speaking_on_main(app: &AppHandle) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
-    if stop_session_on_main(app, &state) == Some(Input::Preview) {
-        // So the next hotkey finds the settings voice loaded, not the preview's.
+    if stop_session_on_main(app, &state).is_some_and(|session| session.other_voice) {
         preload_local_voice(app);
     }
     overlay::hide_overlay(app);
     tray::set_tray_state(app, TrayIconState::Idle);
 }
 
-/// Stops and forgets the current session. Returns what it was reading.
-fn stop_session_on_main(app: &AppHandle, state: &TtsState) -> Option<Input> {
+/// Stops and forgets the current session, returning it.
+fn stop_session_on_main(app: &AppHandle, state: &TtsState) -> Option<Session> {
     let session = state.lock().take()?;
     session.stop.store(true, Ordering::SeqCst);
     emit_speech_state(app, SessionPhase::Ended, session.input, None);
-    Some(session.input)
+    Some(session)
 }
 
 /// Ends the session that owns `stop`, unless it already ended.
@@ -538,13 +611,13 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
-    let input = {
-        let mut current = state.lock();
-        let Some(input) = owner_input(&current, stop) else {
-            return;
-        };
-        *current = None;
-        input
+    let Some(Session {
+        input, other_voice, ..
+    }) = state
+        .lock()
+        .take_if(|session| Arc::ptr_eq(&session.stop, stop))
+    else {
+        return;
     };
     let error = match end {
         PlaybackEnd::Done => {
@@ -568,8 +641,7 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
     };
     tray::set_tray_state(app, TrayIconState::Idle);
     emit_speech_state(app, SessionPhase::Ended, input, error);
-    if input == Input::Preview {
-        // So the next hotkey finds the settings voice loaded, not the preview's.
+    if other_voice {
         preload_local_voice(app);
     }
 }
@@ -1190,13 +1262,79 @@ mod tests {
     #[test]
     fn the_first_hotkey_press_stops_a_voice_preview_or_a_file() {
         for input in [Input::Preview, Input::File] {
-            let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), input);
+            let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), input, true);
             assert_eq!(session.input, input);
             assert!(should_toggle_stop(
                 session.released_since_start,
                 Trigger::Hotkey
             ));
         }
+    }
+
+    fn local_settings(voice: &str) -> AppSettings {
+        AppSettings {
+            tts_backend: TtsBackend::Local,
+            tts_voice: voice.into(),
+            ..settings::get_default_settings()
+        }
+    }
+
+    fn install_voices(models_dir: &Path, voices: &[&str]) {
+        for voice in voices {
+            let path = tts::local::voice_path(models_dir, voice).unwrap();
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, b"voice").unwrap();
+        }
+    }
+
+    #[test]
+    fn a_downloaded_voice_or_blend_reads_the_file_in_canonical_form() {
+        let dir = tempfile::tempdir().unwrap();
+        install_voices(dir.path(), &["bm_lewis", "bm_george"]);
+        let settings = local_settings("af_alloy");
+        let usable =
+            |requested| usable_voice(&settings, || Ok(dir.path().to_path_buf()), requested);
+        assert_eq!(usable(" bm_lewis ").unwrap(), "bm_lewis");
+        assert_eq!(
+            usable("bm_lewis ( 70 ) + bm_george(30)").unwrap(),
+            "bm_lewis(70)+bm_george(30)"
+        );
+    }
+
+    #[test]
+    fn a_voice_that_cannot_read_locally_says_why() {
+        let dir = tempfile::tempdir().unwrap();
+        install_voices(dir.path(), &["bm_lewis"]);
+        let settings = local_settings("bm_lewis");
+        let usable =
+            |requested| usable_voice(&settings, || Ok(dir.path().to_path_buf()), requested);
+        assert_eq!(usable("bf_emma").unwrap_err(), "not downloaded: bf_emma");
+        assert_eq!(
+            usable("bm_lewis(70)+bf_emma(30)").unwrap_err(),
+            "not downloaded: bf_emma",
+            "one missing voice is enough to fall back"
+        );
+        for requested in ["", "bm_lewis-bm_george", "../secret", "bm_lewis(0)"] {
+            assert!(usable(requested).is_err(), "{requested:?}");
+        }
+        assert_eq!(
+            usable_voice(&settings, || Err("no app data".into()), "bm_lewis").unwrap_err(),
+            "no app data"
+        );
+    }
+
+    #[test]
+    fn the_server_gets_any_voice_asked_for_trimmed() {
+        let settings = AppSettings {
+            tts_backend: TtsBackend::Http,
+            ..settings::get_default_settings()
+        };
+        let no_models = || -> Result<PathBuf, String> { panic!("HTTP never looks for files") };
+        assert_eq!(
+            usable_voice(&settings, no_models, " my_server_voice ").unwrap(),
+            "my_server_voice"
+        );
+        assert!(usable_voice(&settings, no_models, "  ").is_err());
     }
 
     #[test]
@@ -1276,7 +1414,7 @@ mod tests {
     #[test]
     fn only_the_current_session_reports_its_state() {
         let stop = Arc::new(AtomicBool::new(false));
-        let current = Some(Session::without_hotkey(stop.clone(), Input::Preview));
+        let current = Some(Session::without_hotkey(stop.clone(), Input::Preview, true));
         assert_eq!(owner_input(&current, &stop), Some(Input::Preview));
         assert_eq!(
             owner_input(&current, &Arc::new(AtomicBool::new(false))),
