@@ -10,7 +10,10 @@ use rodio::buffer::SamplesBuffer;
 use rodio::Player;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::num::NonZero;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -33,9 +36,12 @@ const SAMPLE_RATE: NonZero<u32> = NonZero::new(tts::SAMPLE_RATE).unwrap();
 /// A hotkey release this soon after a ⌘C sent with the hotkey still held is
 /// the hotkey listener taking our synthetic ⌘-up for the user letting go.
 const COPY_ECHO_WINDOW: Duration = Duration::from_millis(150);
-/// Most clipboard characters read aloud. Normalising and splitting run on the
-/// main thread, which a huge clipboard would stall.
-const CLIPBOARD_CHAR_CAP: usize = 20_000;
+/// Most characters read aloud from the clipboard or a file. Normalising and
+/// splitting the clipboard run on the main thread, which a huge one would stall.
+const TEXT_CHAR_CAP: usize = 20_000;
+/// Most bytes read from a file: a UTF-8 character is at most four bytes, so
+/// these always hold `TEXT_CHAR_CAP` whole characters when the file has them.
+const FILE_BYTE_CAP: u64 = TEXT_CHAR_CAP as u64 * 4;
 /// What a voice preview reads. English in every app language, since every
 /// voice reads English.
 const PREVIEW_TEXT: &str = "Hi. This is how I sound when I read your text aloud.";
@@ -64,13 +70,14 @@ impl Session {
         }
     }
 
-    /// A voice preview. No hotkey started it, so the first press stops it.
-    fn preview(stop: Arc<AtomicBool>) -> Self {
+    /// A voice preview or a file. No hotkey started it, so the first press
+    /// stops it.
+    fn without_hotkey(stop: Arc<AtomicBool>, input: Input) -> Self {
         Self {
             stop,
             released_since_start: true,
             copied_while_held_at: None,
-            input: Input::Preview,
+            input,
         }
     }
 
@@ -101,6 +108,8 @@ enum Input {
     Selection,
     /// The clipboard as it is; nothing is copied.
     Clipboard,
+    /// A text file named on the command line.
+    File,
     /// `PREVIEW_TEXT`, in the voice being previewed.
     Preview,
 }
@@ -110,6 +119,7 @@ impl Input {
         match self {
             Input::Selection => "selection",
             Input::Clipboard => "clipboard",
+            Input::File => "file",
             Input::Preview => "voice preview",
         }
     }
@@ -119,6 +129,9 @@ impl Input {
         match self {
             Input::Selection => OverlayView::NothingSelected,
             Input::Clipboard => OverlayView::ClipboardEmpty,
+            Input::File => OverlayView::Error {
+                message: "The file had nothing to speak".into(),
+            },
             Input::Preview => OverlayView::Error {
                 message: "The voice preview had nothing to speak".into(),
             },
@@ -134,13 +147,36 @@ fn truncate_chars(mut text: String, cap: usize) -> String {
     text
 }
 
-fn cap_clipboard_text(text: String) -> String {
+fn cap_text(text: String, input: Input) -> String {
     let full_len = text.len();
-    let text = truncate_chars(text, CLIPBOARD_CHAR_CAP);
+    let text = truncate_chars(text, TEXT_CHAR_CAP);
     if text.len() < full_len {
-        info!("Reading the first {CLIPBOARD_CHAR_CAP} characters of the clipboard");
+        info!(
+            "Reading the first {TEXT_CHAR_CAP} characters of the {}",
+            input.name()
+        );
     }
     text
+}
+
+/// The text of the file at `path`, cut to `TEXT_CHAR_CAP` characters, with
+/// invalid UTF-8 replaced.
+fn read_text_file(path: &Path) -> Result<String, String> {
+    // A relative path would resolve against Mouthy's own working directory.
+    if !path.is_absolute() {
+        return Err("the path is not absolute".into());
+    }
+    // Opening a pipe waits for a writer, holding up every later CLI request.
+    let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
+    if !metadata.is_file() {
+        return Err("not a regular file".into());
+    }
+    let mut bytes = Vec::new();
+    File::open(path)
+        .and_then(|file| file.take(FILE_BYTE_CAP).read_to_end(&mut bytes))
+        .map_err(|e| e.to_string())?;
+    let text = String::from_utf8_lossy(&bytes).into_owned();
+    Ok(cap_text(text, Input::File))
 }
 
 /// Whether a press while speaking stops the speech. A hotkey press does only
@@ -162,8 +198,8 @@ fn is_copy_echo(released_at: Instant, copied_while_held_at: Option<Instant>) -> 
 /// The current speak session, if any. Only the main thread locks it, so
 /// nothing the main thread waits on can be holding it. The `*_on_main` fns
 /// must never call the public entry points (`speak_selection`,
-/// `speak_clipboard`, `preview_voice`, `stop_speaking`): on the main thread
-/// those run inline and would lock it again.
+/// `speak_clipboard`, `speak_file`, `preview_voice`, `stop_speaking`): on the
+/// main thread those run inline and would lock it again.
 #[derive(Default)]
 pub struct TtsState {
     current: Mutex<Option<Session>>,
@@ -187,6 +223,53 @@ pub fn speak_selection(app: &AppHandle, source: &str) {
 /// Speaks the clipboard text, or stops if already speaking.
 pub fn speak_clipboard(app: &AppHandle, source: &str) {
     request_speech(app, source, Trigger::Other, Input::Clipboard);
+}
+
+/// Speaks the text file at `path`, an absolute path, cutting off any speech.
+/// A file that cannot be spoken still stops the speech, then says why.
+pub fn speak_file(app: &AppHandle, path: &Path, source: &str) {
+    // Read before posting, so a slow disk never holds up the main thread.
+    let text = read_text_file(path).map_err(|e| {
+        warn!("Cannot read {}: {e}", path.display());
+        let name = path.file_name().unwrap_or(path.as_os_str());
+        OverlayView::Error {
+            message: format!("Cannot read {}: {e}", name.to_string_lossy()),
+        }
+    });
+    let handle = app.clone();
+    let source = source.to_string();
+    if let Err(e) = app.run_on_main_thread(move || speak_file_on_main(&handle, &source, text)) {
+        error!("Failed to schedule speech: {e}");
+    }
+}
+
+/// What speaking a file's text needs, or the notice to show instead.
+fn file_speech(
+    app: &AppHandle,
+    text: Result<String, OverlayView>,
+) -> Result<(AppSettings, Speech), OverlayView> {
+    let text = text?;
+    let settings = settings::get_settings(app);
+    let backend = speech_backend(app, &settings, &settings.tts_voice)?;
+    let split_started = Instant::now();
+    let text = tts::text::normalize(&text);
+    let sentences = sentences_for(&text, &backend);
+    let captured_at = Instant::now();
+    info!(
+        "Split the file's {} chars into {} sentences in {} ms",
+        text.chars().count(),
+        sentences.len(),
+        (captured_at - split_started).as_millis()
+    );
+    if sentences.is_empty() {
+        return Err(Input::File.empty_notice());
+    }
+    let speech = Speech {
+        sentences,
+        backend,
+        captured_at,
+    };
+    Ok((settings, speech))
 }
 
 /// Reads `PREVIEW_TEXT` in `voice`, stopping any speech first. Fails, stopping
@@ -295,7 +378,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
             .map(|selection| (selection.text, selection.copied_while_held_at)),
         // No ⌘C goes out, so there is no copy echo to ignore.
         Input::Clipboard => match clipboard::read_text() {
-            Ok(ClipboardText::Text(text)) => Ok((Some(cap_clipboard_text(text)), None)),
+            Ok(ClipboardText::Text(text)) => Ok((Some(cap_text(text, input)), None)),
             Ok(ClipboardText::Empty) => Ok((None, None)),
             Ok(ClipboardText::Secret) => {
                 overlay::show_overlay(app, OverlayView::ClipboardSecret);
@@ -303,6 +386,8 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
             }
             Err(e) => Err(e),
         },
+        // `speak_file` reads a file before posting and never comes here.
+        Input::File => Ok((None, None)),
         Input::Preview => Ok((Some(PREVIEW_TEXT.to_string()), None)),
     };
     let (text, copied_while_held_at) = match captured {
@@ -348,8 +433,35 @@ fn preview_on_main(app: &AppHandle, settings: AppSettings, speech: Speech) -> Re
     if stop_session_on_main(app, &state).is_some() {
         info!("Stopping speech for a voice preview");
     }
-    let session = Session::preview(Arc::new(AtomicBool::new(false)));
+    let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::Preview);
     start_session_on_main(app, &state, settings, speech, session)
+}
+
+fn speak_file_on_main(app: &AppHandle, source: &str, text: Result<String, OverlayView>) {
+    let Some(state) = app.try_state::<TtsState>() else {
+        return;
+    };
+    let replaced = stop_session_on_main(app, &state);
+    if replaced.is_some() {
+        info!("Stopping speech for a file ({source})");
+    }
+    match file_speech(app, text) {
+        // In the settings voice, so a replaced preview needs no preload.
+        Ok((settings, speech)) => {
+            info!("Speaking the file ({source})");
+            let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::File);
+            // A failure to start is on the overlay already.
+            let _ = start_session_on_main(app, &state, settings, speech, session);
+        }
+        Err(view) => {
+            if replaced == Some(Input::Preview) {
+                // So the next hotkey finds the settings voice loaded, not the preview's.
+                preload_local_voice(app);
+            }
+            tray::set_tray_state(app, TrayIconState::Idle);
+            overlay::show_overlay(app, view);
+        }
+    }
 }
 
 /// Starts the threads for `speech` and makes `session` current, or shows why
@@ -935,8 +1047,75 @@ mod tests {
         assert_eq!(truncate_chars("héllo wörld".into(), 7), "héllo w");
         assert_eq!(truncate_chars("ab".into(), 5), "ab");
         assert_eq!(truncate_chars("日本語".into(), 2), "日本");
-        let long = "é".repeat(CLIPBOARD_CHAR_CAP + 10);
-        assert_eq!(cap_clipboard_text(long).chars().count(), CLIPBOARD_CHAR_CAP);
+        let long = "é".repeat(TEXT_CHAR_CAP + 10);
+        assert_eq!(
+            cap_text(long, Input::Clipboard).chars().count(),
+            TEXT_CHAR_CAP
+        );
+    }
+
+    #[test]
+    fn a_text_file_is_read_whole_up_to_the_cap() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("reply.txt");
+
+        std::fs::write(&path, "Hello there.\nSecond line.").unwrap();
+        assert_eq!(read_text_file(&path).unwrap(), "Hello there.\nSecond line.");
+
+        std::fs::write(&path, "a".repeat(FILE_BYTE_CAP as usize + 10)).unwrap();
+        assert_eq!(read_text_file(&path).unwrap(), "a".repeat(TEXT_CHAR_CAP));
+
+        // The byte cap cuts the last character in half; the cap must drop it whole.
+        let four_byte = "😀".repeat(TEXT_CHAR_CAP + 10);
+        std::fs::write(&path, format!("a{four_byte}")).unwrap();
+        let text = read_text_file(&path).unwrap();
+        assert_eq!(text.chars().count(), TEXT_CHAR_CAP);
+        assert!(!text.contains('\u{FFFD}'));
+
+        std::fs::write(&path, b"caf\xe9 au lait").unwrap();
+        assert_eq!(read_text_file(&path).unwrap(), "caf\u{FFFD} au lait");
+
+        std::fs::write(&path, "").unwrap();
+        assert_eq!(read_text_file(&path).unwrap(), "");
+    }
+
+    #[test]
+    fn a_text_file_that_cannot_be_read_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(read_text_file(&dir.path().join("missing.txt")).is_err());
+        assert!(read_text_file(dir.path()).is_err(), "a directory");
+        assert!(
+            read_text_file(Path::new("reply.txt")).is_err(),
+            "a relative path"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_pipe_is_refused_without_waiting_for_a_writer() {
+        let dir = tempfile::tempdir().unwrap();
+        let fifo = dir.path().join("reply.fifo");
+        let made = std::process::Command::new("mkfifo")
+            .arg(&fifo)
+            .status()
+            .unwrap();
+        assert!(made.success());
+        let (tx, rx) = mpsc::channel();
+        thread::spawn(move || {
+            let _ = tx.send(read_text_file(&fifo));
+        });
+        let result = rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("reading a pipe blocked");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn a_file_with_nothing_to_speak_says_so() {
+        let OverlayView::Error { message } = Input::File.empty_notice() else {
+            panic!("expected an error notice");
+        };
+        assert!(message.contains("file"));
     }
 
     #[test]
@@ -1004,13 +1183,15 @@ mod tests {
     }
 
     #[test]
-    fn the_first_hotkey_press_stops_a_voice_preview() {
-        let session = Session::preview(Arc::new(AtomicBool::new(false)));
-        assert_eq!(session.input, Input::Preview);
-        assert!(should_toggle_stop(
-            session.released_since_start,
-            Trigger::Hotkey
-        ));
+    fn the_first_hotkey_press_stops_a_voice_preview_or_a_file() {
+        for input in [Input::Preview, Input::File] {
+            let session = Session::without_hotkey(Arc::new(AtomicBool::new(false)), input);
+            assert_eq!(session.input, input);
+            assert!(should_toggle_stop(
+                session.released_since_start,
+                Trigger::Hotkey
+            ));
+        }
     }
 
     #[test]
@@ -1090,7 +1271,7 @@ mod tests {
     #[test]
     fn only_the_current_session_reports_its_state() {
         let stop = Arc::new(AtomicBool::new(false));
-        let current = Some(Session::preview(stop.clone()));
+        let current = Some(Session::without_hotkey(stop.clone(), Input::Preview));
         assert_eq!(owner_input(&current, &stop), Some(Input::Preview));
         assert_eq!(
             owner_input(&current, &Arc::new(AtomicBool::new(false))),

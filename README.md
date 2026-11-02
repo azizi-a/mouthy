@@ -48,12 +48,15 @@ A running Mouthy can be controlled from scripts or other hotkey tools:
 ```bash
 /Applications/Mouthy.app/Contents/MacOS/mouthy --speak-selection   # speak, or stop if speaking
 /Applications/Mouthy.app/Contents/MacOS/mouthy --speak-clipboard   # speak the clipboard, or stop if speaking
+/Applications/Mouthy.app/Contents/MacOS/mouthy --speak-file reply.txt   # speak a text file, cutting off any speech
 /Applications/Mouthy.app/Contents/MacOS/mouthy --stop
 pkill -USR2 -x mouthy   # speak selection
 pkill -USR1 -x mouthy   # stop
 ```
 
-Call the binary directly: `open -a Mouthy --args …` drops the arguments. With no running instance, `--speak-selection`, `--speak-clipboard` and `--stop` just launch the app. Launch flags: `--start-hidden` (no main window; tray icon only) and `--no-tray` (no tray icon; closing the window quits).
+`--speak-file` is for scripts that hand Mouthy each new message: the text goes in a UTF-8 file rather than an argument, so it needs no quoting, and each call cuts off what Mouthy is saying instead of toggling. It reads the first 20,000 characters, takes a relative path from the caller's directory, and stops at a hotkey press or `--stop`.
+
+Call the binary directly: `open -a Mouthy --args …` drops the arguments. With no running instance, `--speak-selection`, `--speak-clipboard` and `--stop` just launch the app, and `--speak-file` launches it and speaks the file. Launch flags: `--start-hidden` (no main window; tray icon only) and `--no-tray` (no tray icon; closing the window quits).
 
 ## Voices
 

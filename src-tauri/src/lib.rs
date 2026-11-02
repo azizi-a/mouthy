@@ -373,11 +373,13 @@ pub fn run(cli_args: CliArgs) {
     // The callback runs on an async runtime worker: hand off, never block.
     #[allow(unused_mut)]
     let mut app = builder
-        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             if args.iter().any(|a| a == "--speak-selection") {
                 actions::speak_selection(app, "CLI");
             } else if args.iter().any(|a| a == "--speak-clipboard") {
                 actions::speak_clipboard(app, "CLI");
+            } else if let Some(path) = CliArgs::handed_over_speak_file(&args, &cwd) {
+                actions::speak_file(app, &path, "CLI");
             } else if args.iter().any(|a| a == "--stop") {
                 actions::stop_speaking(app, "CLI");
             } else {
@@ -490,6 +492,13 @@ pub fn run(cli_args: CliArgs) {
             let tray_available = settings.show_tray_icon && !cli_args.no_tray;
             if !should_hide || !tray_available {
                 show_main_window(&app_handle);
+            }
+
+            // The other speak flags only reach a running instance, but a script
+            // handing over text expects it spoken even when it launched Mouthy.
+            let cwd = std::env::current_dir().unwrap_or_default();
+            if let Some(path) = cli_args.speak_file_in(&cwd) {
+                actions::speak_file(&app_handle, &path, "CLI");
             }
 
             Ok(())

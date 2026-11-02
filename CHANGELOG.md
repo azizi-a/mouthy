@@ -4,6 +4,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+- `--speak-file <path>` reads a text file aloud and cuts off whatever Mouthy was saying, so a script can have each new message replace the last; it also speaks when it launches Mouthy.
 - Lock-file updates for rustls, rustls-webpki, serde_with and openssl that close the advisories Dependabot opened (#8–#11).
 
 ## 0.4.1 — 2026-10-25
