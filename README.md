@@ -2,7 +2,7 @@
 
 Mouthy is a free, open-source text-to-speech app for macOS that works offline. Select text in any app, press a hotkey, and the Kokoro neural voice reads it aloud on your Mac; press the hotkey again to stop. Playback starts as soon as the first sentence is ready, and your clipboard is put back the way it was. A local OpenAI-compatible speech server can be used instead.
 
-**Status:** 0.4.1, for Apple Silicon Macs with macOS 13.4 or later. Mouthy is not signed with an Apple Developer ID or notarised, and does not update itself. Intel Macs are not supported, because ONNX Runtime, which runs the voice, has no prebuilt library for them. Windows and Linux builds compile but are untested.
+**Status:** 0.5.0, for Apple Silicon Macs with macOS 13.4 or later. Mouthy is not signed with an Apple Developer ID or notarised, and does not update itself. Intel Macs are not supported, because ONNX Runtime, which runs the voice, has no prebuilt library for them. Windows and Linux builds compile but are untested.
 
 ## Install
 
@@ -14,7 +14,7 @@ brew install --cask azizi-a/mouthy/mouthy
 
 The first time, Homebrew asks you to trust the third-party tap. It may ask for an administrator password to copy Mouthy into /Applications. `brew upgrade --cask mouthy` installs new releases, and `brew uninstall --zap --cask mouthy` also deletes the voices Mouthy downloaded and its settings.
 
-Or download `Mouthy_0.4.1_aarch64.dmg` from [GitHub Releases](https://github.com/azizi-a/mouthy/releases), open it and drag Mouthy to Applications.
+Or download `Mouthy_0.5.0_aarch64.dmg` from [GitHub Releases](https://github.com/azizi-a/mouthy/releases), open it and drag Mouthy to Applications.
 
 Either way, macOS blocks the first launch because Mouthy is not notarised. Click Done, then open System Settings → Privacy & Security and click **Open Anyway** (on macOS 14 and earlier you can instead right-click Mouthy and choose Open). Or clear the download flag before launching:
 
