@@ -378,8 +378,8 @@ pub fn run(cli_args: CliArgs) {
                 actions::speak_selection(app, "CLI");
             } else if args.iter().any(|a| a == "--speak-clipboard") {
                 actions::speak_clipboard(app, "CLI");
-            } else if let Some(path) = CliArgs::handed_over_speak_file(&args, &cwd) {
-                actions::speak_file(app, &path, "CLI");
+            } else if let Some(request) = CliArgs::handed_over_speak_file(&args, &cwd) {
+                actions::speak_file(app, &request.path, request.voice, "CLI");
             } else if args.iter().any(|a| a == "--stop") {
                 actions::stop_speaking(app, "CLI");
             } else {
@@ -497,8 +497,8 @@ pub fn run(cli_args: CliArgs) {
             // The other speak flags only reach a running instance, but a script
             // handing over text expects it spoken even when it launched Mouthy.
             let cwd = std::env::current_dir().unwrap_or_default();
-            if let Some(path) = cli_args.speak_file_in(&cwd) {
-                actions::speak_file(&app_handle, &path, "CLI");
+            if let Some(request) = cli_args.speak_file_in(&cwd) {
+                actions::speak_file(&app_handle, &request.path, request.voice, "CLI");
             }
 
             Ok(())
