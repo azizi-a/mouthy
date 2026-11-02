@@ -52,7 +52,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 ### Backend Structure (src-tauri/src/)
 
 - `lib.rs` - Entry point, Tauri setup, plugin and command registration
-- `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction`, `SpeakClipboardAction` are thin wrappers); `speak_selection`/`speak_clipboard`/`preview_voice`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
+- `actions.rs` - `ShortcutAction` trait + `ACTION_MAP` (`SpeakAction`, `SpeakClipboardAction` are thin wrappers); `speak_selection`/`speak_clipboard`/`speak_file`/`preview_voice`/`stop_speaking`, the app-managed `TtsState`, the synth thread and the playback thread
 - `tts/mod.rs` - `Backend` (chosen per request from settings) and `Synth` (opened on the synth thread)
 - `tts/text.rs` - `normalize` (`reflow` of hard-wrapped lines, then URLs, markdown, whitespace) and `split_sentences` (cuts a sentence longer than `Backend::max_chunk_chars`: 300 for HTTP, 450 for Local); for the local backend only, `split_first_clause`, `expand_abbreviations` (titles and abbreviations such as "Dr." and "etc." in full, sharing `ABBREVIATIONS` with `split_sentences`), `expand_numbers` and `spell_out` (initialisms, camel case, a full stop inside a name; queries misaki's gold lexicon through the `text::Lexicon` trait) (the HTTP path speaks `normalize` + `split_sentences` output)
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
@@ -86,6 +86,8 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 **Speak loop:** hotkey, tray, CLI or signal → `actions::speak_selection` (or `speak_clipboard`) → main thread: if speaking, stop (a hotkey press only once the hotkey was released since the speech started, so a held key's repeats never stop it); else capture the selection (or read the clipboard, capped at 20,000 characters) → normalise → split → synth thread (`block_on` per sentence, bounded channel) → playback thread (sole owner of the rodio `Player`). Every session change runs on the main thread, the only thread that locks `TtsState`, so a press during the capture queues behind it and then stops. A session's stop flag is its identity: a finished playback thread ends only its own session.
 
 **Voice preview:** the `preview_voice` command checks the voice and its files before posting, so the UI gets the error; then the main thread stops any session and starts one reading `PREVIEW_TEXT` in that voice. The first hotkey press stops a preview, and when one ends the settings voice is preloaded again. The main thread sends `speech-state` (`{ state: "started" | "speaking" | "ended", preview, error? }`) as each session starts, plays its first audio and ends (`error` only when it failed), so a replaced session's end always arrives first and a replaced session never reports `speaking`.
+
+**Speak file:** `--speak-file` replaces rather than toggles. `actions::speak_file` reads the file before posting (regular files only: opening a pipe would stall every later CLI request); the main thread then stops any session, normalises and splits as for the clipboard, and starts a session the first hotkey press stops. A file that cannot be spoken still stops the speech. The single-instance callback takes handoffs one at a time, so files are spoken in the order sent.
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 
@@ -148,16 +150,17 @@ Locales live in `src/i18n/locales/<lang>/translation.json`; `en` is the source.
 
 ## CLI Parameters
 
-**Implementation:** `cli.rs` (definitions), `main.rs` (parsing), `lib.rs` (applying), `signal_handle.rs` (signals); they call `actions::speak_selection` / `speak_clipboard` / `stop_speaking`
+**Implementation:** `cli.rs` (definitions), `main.rs` (parsing), `lib.rs` (applying), `signal_handle.rs` (signals); they call `actions::speak_selection` / `speak_clipboard` / `speak_file` / `stop_speaking`
 
-| Flag                | Description                                                |
-| ------------------- | ---------------------------------------------------------- |
-| `--speak-selection` | Speak the selection on a running instance, or stop speech  |
-| `--speak-clipboard` | Speak the clipboard on a running instance, or stop speech  |
-| `--stop`            | Stop playback on a running instance                        |
-| `--start-hidden`    | Launch without showing the main window (tray icon visible) |
-| `--no-tray`         | Launch without system tray (closing window quits the app)  |
-| `--debug`           | Enable debug mode with verbose (Trace) logging             |
+| Flag                  | Description                                                                   |
+| --------------------- | ----------------------------------------------------------------------------- |
+| `--speak-selection`   | Speak the selection on a running instance, or stop speech                     |
+| `--speak-clipboard`   | Speak the clipboard on a running instance, or stop speech                     |
+| `--speak-file <PATH>` | Speak a UTF-8 text file, cutting off any speech; a first launch speaks it too |
+| `--stop`              | Stop playback on a running instance                                           |
+| `--start-hidden`      | Launch without showing the main window (tray icon visible)                    |
+| `--no-tray`           | Launch without system tray (closing window quits the app)                     |
+| `--debug`             | Enable debug mode with verbose (Trace) logging                                |
 
 On macOS, `SIGUSR2` speaks the selection and `SIGUSR1` stops. Linux handles only `SIGUSR2` (WebKitGTK uses `SIGUSR1`).
 
