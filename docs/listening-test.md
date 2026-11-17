@@ -126,3 +126,11 @@ Select only this part's paragraph, with a Japanese voice such as `jf_alpha` or `
 きょうも、いいてんきですね。あさごはんをたべてから、こうえんまでさんぽにいきました。ベンチにすわって、コーヒーをのみながら、ちょっとだけほんをよみました。ラジオからきこえてくるおんがくが、とてもきもちよかったです。あしたもまた、いっしょにいきませんか？
 
 You should hear five Japanese sentences, the last one a question: the small っ in ちょっと and いっしょ as a short catch, ー in コーヒー as a long vowel, ん in さんぽ as "m". Words run together a little, since Mouthy has no dictionary to find word boundaries. A paragraph that is mostly kanji shows "Japanese text with kanji is not supported yet" instead.
+
+## Part 7: Mandarin
+
+Select only this part's paragraph, with a Chinese voice such as `zf_xiaobei` or `zm_yunjian`.
+
+今天天气很好，我们一起去公园散步吧。路上，我在银行门口遇到了一位老朋友，他说他重新开始学画画儿了。我们聊了一会儿，觉得时间过得真快：上次见面还是2019年！你明天有空吗？
+
+You should hear five Mandarin sentences, the last one a question, with the four tones distinct: 今天 level, 银 rising, 好 dipping, 在 falling. 银行 is "yínháng" and 重新 "chóngxīn"; 2019年 is read digit by digit, "èr líng yī jiǔ nián"; 了, the 得 of 觉得 and 吗 are light and unstressed.

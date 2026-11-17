@@ -10,6 +10,7 @@ pub mod text;
 #[cfg(test)]
 mod text_fuzz_tests;
 pub mod voice;
+mod zh;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
