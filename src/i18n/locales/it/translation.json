@@ -115,6 +115,14 @@
         "notFound": "espeak-ng is not installed. Install it with: brew install espeak-ng",
         "notFoundLinux": "espeak-ng is not installed. Install it with your distribution's package manager, or on an immutable one such as Bazzite with: brew install espeak-ng"
       },
+      "language": {
+        "title": "Reading Language",
+        "description": "Which language the offline voice reads text in. Choose English to have a voice of another language, such as Spanish or Japanese, read English text, with its own accent.",
+        "options": {
+          "voice": "The voice's language",
+          "en": "English"
+        }
+      },
       "speed": {
         "title": "Speed",
         "description": "How fast the voice speaks, from 0.5× to 2×."

@@ -124,7 +124,12 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
         })
         .collect();
     let settings = settings::get_settings(&app);
-    let selected = crate::actions::local_model_files(&app, &settings, &settings.tts_voice)?;
+    let selected = crate::actions::local_model_files(
+        &app,
+        &settings,
+        &settings.tts_voice,
+        settings.tts_language,
+    )?;
     let voice_parts = VoiceSpec::parse(&settings.tts_voice)
         .map(|spec| {
             spec.shares()

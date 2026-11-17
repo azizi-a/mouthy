@@ -22,7 +22,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::settings::{
     self, get_settings, KeyboardImplementation, ModelVariant, OverlayPosition, OverlayStyle,
-    ShortcutBinding, Theme, TtsBackend,
+    ReadingLanguage, ShortcutBinding, Theme, TtsBackend,
 };
 use crate::tray;
 use crate::tts::voice::VoiceSpec;
@@ -794,6 +794,24 @@ pub fn change_tts_espeak_fallback_setting(app: AppHandle, enabled: bool) -> Resu
     let mut settings = settings::get_settings(&app);
     settings.tts_espeak_fallback = enabled;
     settings::write_settings(&app, settings);
+    crate::actions::preload_local_voice(&app);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_tts_language_setting(app: AppHandle, language: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.tts_language = match language.as_str() {
+        "voice" => ReadingLanguage::Voice,
+        "en" => ReadingLanguage::English,
+        other => {
+            warn!("Invalid reading language '{}', defaulting to voice", other);
+            ReadingLanguage::Voice
+        }
+    };
+    settings::write_settings(&app, settings);
+    crate::commands::models::files_changed(&app);
     crate::actions::preload_local_voice(&app);
     Ok(())
 }
