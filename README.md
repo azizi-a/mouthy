@@ -84,7 +84,7 @@ Words the voice's dictionary lacks, such as many names and product terms, are sp
 
 English voices read English. Other voices read English for now, except:
 
-- **Japanese** (`jf_*`, `jm_*`): reads kana (hiragana and katakana) and numbers; Latin words are read as English. Mouthy cannot read kanji yet: they are skipped, and text where more than a fifth of the letters are kanji is not read at all. Without a dictionary, words run together, the particles は and へ are read "ha" and "he", and long vowels follow the spelling.
+- **Japanese** (`jf_*`, `jm_*`): reads kana (hiragana and katakana) and numbers. English inside Japanese text is read as English, and text with no Japanese in it is read as an American English voice reads it. Mouthy cannot read kanji yet: they are skipped, and text where more than a fifth of the letters are kanji is not read at all. Without a dictionary, words run together, the particles は and へ are read "ha" and "he", and long vowels follow the spelling.
 
 Settings → General → **Reading Language** matters only for a voice whose language Mouthy can read (see Voices); any other voice reads English either way. For such a voice it chooses between its own language (the default) and English, read with the voice's accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
 

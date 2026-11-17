@@ -25,11 +25,11 @@ pub enum Backend {
 }
 
 impl Backend {
-    /// The longest sentence one request gets before it is cut.
-    pub fn max_chunk_chars(&self) -> usize {
+    /// The longest sentence of `text` one request gets before it is cut.
+    pub fn max_chunk_chars(&self, text: &str) -> usize {
         match self {
             Backend::Http { .. } => http::MAX_CHUNK_CHARS,
-            Backend::Local(files) => files.max_chunk_chars(),
+            Backend::Local(files) => files.max_chunk_chars(text),
         }
     }
 

@@ -758,11 +758,11 @@ fn emit_speech_state(app: &AppHandle, state: SessionPhase, input: Input, error: 
 
 /// Normalised `text` cut into the requests `backend` gets.
 fn sentences_for(text: &str, backend: &tts::Backend) -> Vec<tts::text::Chunk> {
-    let max_chars = backend.max_chunk_chars();
+    let max_chars = backend.max_chunk_chars(text);
     match backend {
         tts::Backend::Http { .. } => tts::text::split_sentences(text, max_chars),
         tts::Backend::Local(files) => {
-            let marks = files.marks();
+            let marks = files.marks(text);
             let sentences = tts::text::split_sentences_with(text, max_chars, marks);
             tts::text::split_first_clause(sentences, marks)
         }
@@ -1645,7 +1645,7 @@ mod tests {
             assert!(!sentences.is_empty());
             assert!(sentences
                 .iter()
-                .all(|s| s.text.chars().count() <= backend.max_chunk_chars()));
+                .all(|s| s.text.chars().count() <= backend.max_chunk_chars(&text)));
         }
     }
 
@@ -1695,6 +1695,14 @@ mod tests {
     /// One `ends_sentence<TAB>phonemes` line per chunk `voice` reads the
     /// English pin's text as.
     fn english_reading(voice: &str) -> Vec<String> {
+        english_chunks(voice)
+            .into_iter()
+            .map(|(_, line)| line)
+            .collect()
+    }
+
+    /// Each chunk of the English pin's text, with its `english_reading` line.
+    fn english_chunks(voice: &str) -> Vec<(String, String)> {
         let backend = local_backend(voice);
         let chunks: Vec<tts::text::Chunk> = std::iter::once(ENGLISH_TEXT)
             .chain(ENGLISH_LINES.iter().copied())
@@ -1706,9 +1714,12 @@ mod tests {
         let texts: Vec<String> = chunks.iter().map(|chunk| chunk.text.clone()).collect();
         let phonemes = tts::local::phonemes_without_espeak(files, &texts);
         chunks
-            .iter()
+            .into_iter()
             .zip(phonemes)
-            .map(|(chunk, phonemes)| format!("{}\t{phonemes}", chunk.ends_sentence))
+            .map(|(chunk, phonemes)| {
+                let line = format!("{}\t{phonemes}", chunk.ends_sentence);
+                (chunk.text, line)
+            })
             .collect()
     }
 
@@ -1734,6 +1745,76 @@ mod tests {
                 assert_eq!(read, american, "{voice}");
             }
         }
+    }
+
+    #[test]
+    fn english_text_in_a_japanese_voice_reads_as_an_american_voice_does() {
+        let american = english_chunks("af_alloy");
+        let has_japanese = |text: &str| {
+            text.chars()
+                .any(|c| matches!(c, '\u{3000}'..='\u{30ff}' | '\u{4e00}'..='\u{9fff}'))
+        };
+        let kanji_line = "日本語 and emoji 🎉 pass through untouched.";
+        for voice in ["jm_kumo", "jf_alpha"] {
+            let read = english_chunks(voice);
+            assert_eq!(read.len(), american.len(), "{voice}");
+            let mut differing = Vec::new();
+            for ((text, line), (american_text, american_line)) in read.iter().zip(&american) {
+                assert_eq!(text, american_text, "{voice}: chunks differ");
+                if has_japanese(text) {
+                    differing.push(text.as_str());
+                } else {
+                    assert_eq!(line, american_line, "{voice}: {text}");
+                }
+            }
+            assert_eq!(differing, [kanji_line], "{voice}");
+        }
+        // The line with kanji is read, not refused, and its English as an
+        // American voice reads the same words.
+        let tts::Backend::Local(kumo) = local_backend("jm_kumo") else {
+            unreachable!()
+        };
+        assert_eq!(kumo.refuses(kanji_line), None);
+        let tts::Backend::Local(alloy) = local_backend("af_alloy") else {
+            unreachable!()
+        };
+        let english = "and emoji 🎉 pass through untouched.";
+        assert_eq!(
+            tts::local::phonemes_without_espeak(&kumo, &[kanji_line.to_string()]),
+            tts::local::phonemes_without_espeak(&alloy, &[english.to_string()])
+        );
+    }
+
+    #[test]
+    fn a_japanese_voice_set_to_read_english_takes_the_whole_english_path() {
+        let files = |voice| {
+            tts::local::ModelFiles::new(
+                std::path::Path::new("models"),
+                settings::ModelVariant::Int8,
+                voice,
+            )
+        };
+        let kumo = read_in(files("jm_kumo"), ReadingLanguage::English);
+        assert_eq!(kumo.language(), VoiceLanguage::AmericanEnglish);
+        let mixed = "東京に行きます。きょうはOKです。";
+        assert_eq!(kumo.refuses(mixed), None);
+        let backend = tts::Backend::Local(kumo);
+        assert_eq!(backend.max_chunk_chars(mixed), 450);
+        let text = format!("{mixed} The build passed, and 3 tests ran at 10:30.");
+        let tts::Backend::Local(kumo) = &backend else {
+            unreachable!()
+        };
+        let tts::Backend::Local(alloy) = local_backend("af_alloy") else {
+            unreachable!()
+        };
+        assert_eq!(
+            sentences_for(&text, &backend),
+            sentences_for(&text, &tts::Backend::Local(files("af_alloy")))
+        );
+        assert_eq!(
+            tts::local::phonemes_without_espeak(kumo, std::slice::from_ref(&text)),
+            tts::local::phonemes_without_espeak(&alloy, std::slice::from_ref(&text))
+        );
     }
 
     /// English as the local voice reads it must not move unless on purpose:

@@ -122,6 +122,16 @@ fn native(language: VoiceLanguage) -> bool {
     )
 }
 
+/// The language `text` is read in by a voice reading `language`: a Japanese
+/// voice reads text with no Japanese in it as an American voice does, so
+/// English in a Japanese voice is unchanged.
+fn language_for(language: VoiceLanguage, text: &str) -> VoiceLanguage {
+    match language {
+        VoiceLanguage::Japanese if !ja::has_japanese(text) => VoiceLanguage::AmericanEnglish,
+        language => language,
+    }
+}
+
 /// Which misaki lexicon English text is read with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Dialect {
@@ -242,18 +252,18 @@ impl ModelFiles {
         None
     }
 
-    /// Where this language's text is cut into sentences and clauses.
-    pub fn marks(&self) -> &'static Marks {
-        match self.language {
+    /// Where `text` is cut into sentences and clauses.
+    pub fn marks(&self, text: &str) -> &'static Marks {
+        match language_for(self.language, text) {
             VoiceLanguage::Japanese | VoiceLanguage::Mandarin => &Marks::CJK,
             VoiceLanguage::Hindi => &Marks::HINDI,
             _ => &Marks::DEFAULT,
         }
     }
 
-    /// The longest sentence one inference gets before it is cut.
-    pub fn max_chunk_chars(&self) -> usize {
-        match self.language {
+    /// The longest sentence of `text` one inference gets before it is cut.
+    pub fn max_chunk_chars(&self, text: &str) -> usize {
+        match language_for(self.language, text) {
             VoiceLanguage::Japanese => ja::MAX_CHUNK_CHARS,
             _ => MAX_CHUNK_CHARS,
         }
@@ -835,8 +845,9 @@ fn text_to_ids(
 
 /// Kokoro's symbols for `text`, before they become ids.
 fn text_to_phonemes(g2p: &G2P, language: VoiceLanguage, text: &str) -> Result<String, String> {
+    let language = language_for(language, text);
     if language == VoiceLanguage::Japanese {
-        // Latin letters in Japanese text are read as American English.
+        // English inside Japanese text is read as American English.
         let english = |latin: &str| text_to_phonemes(g2p, VoiceLanguage::AmericanEnglish, latin);
         let (phonemes, skipped) = ja::phonemes(&plain_text(text, language), english)?;
         if skipped > 0 {
@@ -1626,7 +1637,8 @@ mod tests {
         // One sentence of about 380 characters, cut at its commas.
         let long_sentence = KANA_PARAGRAPH.replace(['。', '？'], "、").repeat(3);
         let text = format!("{KANA_PARAGRAPH}{long_sentence}");
-        let chunks = text::split_sentences_with(&text, files.max_chunk_chars(), files.marks());
+        let chunks =
+            text::split_sentences_with(&text, files.max_chunk_chars(&text), files.marks(&text));
         assert!(chunks.iter().any(|chunk| chunk.text.chars().count() > 150));
         for chunk in &chunks {
             let (ids, dropped) = text_to_ids(&g2p, VoiceLanguage::Japanese, &chunk.text).unwrap();
@@ -1656,7 +1668,49 @@ mod tests {
     #[test]
     fn a_chinese_voice_has_its_text_cut_as_english_until_this_build_reads_chinese() {
         let xiaobei = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "zf_xiaobei");
-        assert_eq!(xiaobei.marks(), &Marks::DEFAULT);
+        assert_eq!(xiaobei.marks("今天的天气非常好。"), &Marks::DEFAULT);
+    }
+
+    #[test]
+    fn a_japanese_voice_cuts_text_with_no_japanese_as_english() {
+        let kumo = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "jm_kumo");
+        assert_eq!(kumo.marks("It works. Try it now."), &Marks::DEFAULT);
+        assert_eq!(
+            kumo.max_chunk_chars("It works. Try it now."),
+            MAX_CHUNK_CHARS
+        );
+        assert_eq!(kumo.marks("きょうはOKです。"), &Marks::CJK);
+        assert_eq!(
+            kumo.max_chunk_chars("きょうはOKです。"),
+            ja::MAX_CHUNK_CHARS
+        );
+    }
+
+    #[test]
+    fn english_inside_japanese_reads_as_an_american_voice_reads_it() {
+        let g2p = G2P::new(Language::EnglishUS);
+        let american =
+            |text: &str| text_to_phonemes(&g2p, VoiceLanguage::AmericanEnglish, text).unwrap();
+        let japanese = |text: &str| text_to_phonemes(&g2p, VoiceLanguage::Japanese, text).unwrap();
+        for english in [
+            "£4.99",
+            "10:30 a.m.",
+            "$3.2 billion",
+            "50% off",
+            "(1) Install it",
+            "naïve café",
+            "\"quoted\" words",
+            "Tom & Jerry",
+            "it’s the user’s fault",
+            "well-known",
+        ] {
+            assert_eq!(
+                japanese(&format!("これは{english}です。")),
+                format!("koɾeha {} desɨ.", american(english)),
+                "{english}"
+            );
+            assert_eq!(japanese(english), american(english), "{english}");
+        }
     }
 
     #[test]
