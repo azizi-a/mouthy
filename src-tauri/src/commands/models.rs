@@ -58,7 +58,8 @@ pub struct ModelFileList {
     pub missing_voices: Vec<String>,
     /// The selected voice, or each voice of the selected blend.
     pub voice_parts: Vec<VoicePart>,
-    /// Why the local voice last failed to load, if it did.
+    /// Why the local voice cannot load: what its reading language needs that
+    /// is not installed, else why the last load failed.
     pub load_error: Option<String>,
 }
 
@@ -150,7 +151,7 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
             .then_some(settings.tts_model_variant),
         missing_voices: selected.missing_voices(),
         voice_parts,
-        // Checked now, so installing espeak-ng clears it without a reload.
+        // Checked now, so installing espeak-ng clears it without a preload.
         load_error: selected.unmet_requirement().or_else(local::preload_error),
     })
 }

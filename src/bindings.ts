@@ -542,7 +542,8 @@ missing_voices: string[];
  */
 voice_parts: VoicePart[]; 
 /**
- * Why the local voice last failed to load, if it did.
+ * Why the local voice cannot load: what its reading language needs that
+ * is not installed, else why the last load failed.
  */
 load_error: string | null }
 /**
