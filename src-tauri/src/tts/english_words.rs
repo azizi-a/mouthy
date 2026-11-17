@@ -562,9 +562,11 @@ mod tests {
     }
 
     #[test]
-    fn english_in_a_japanese_voice_reads_unknown_words_too() {
+    fn english_in_japanese_and_chinese_reads_unknown_words_too() {
         let read = read_by("jm_kumo", &["changelogをよむ"]);
         assert!(read[0].starts_with("ʧˈAnʤlˌɔɡ"), "{read:?}");
+        let read = read_by("zf_xiaobei", &["看changelog"]);
+        assert!(read[0].ends_with("ʧˈAnʤlˌɔɡ"), "{read:?}");
     }
 
     /// Words misaki-rs looks up whole: letters, with apostrophes between.

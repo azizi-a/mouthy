@@ -943,7 +943,8 @@ pub(crate) fn phonemes_without_espeak(files: &ModelFiles, texts: &[String]) -> V
 }
 
 /// `text` as misaki-rs should get it: plain characters and, in English,
-/// abbreviations and numbers in words and initialisms spelled.
+/// abbreviations and numbers in words, initialisms spelled, and words its
+/// lexicons lack read from the words they are made of.
 fn reading(g2p: &G2P, text: &str, language: VoiceLanguage) -> String {
     let plain = plain_text(text, language);
     if !is_english(language) {
