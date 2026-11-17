@@ -3425,6 +3425,7 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-specta",
  "tempfile",
+ "unicode-normalization",
  "webview2-com",
  "windows 0.61.3",
  "winreg 0.55.0",

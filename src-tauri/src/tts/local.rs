@@ -27,6 +27,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
+use unicode_normalization::UnicodeNormalization;
 
 /// The folder under the models directory that one Kokoro release lives in.
 const KOKORO_DIR: &str = "kokoro-v1.0";
@@ -1130,9 +1131,17 @@ const FOLDS: &[(&str, &str)] = &[
 /// Text as misaki-rs reads it best. It splits a word at a curly apostrophe
 /// ("don’t" → "don", "❓", "t"), spells an unknown word letter by letter and
 /// reads a dash as a plain space. Only English loses its accents: other
-/// languages need their letters as written.
+/// languages need their letters as written, and espeak-ng misreads a letter
+/// followed by a separate accent mark ("e" + U+0301), as macOS often writes it.
 fn plain_text(text: &str, language: VoiceLanguage) -> String {
     let fold = is_english(language);
+    let composed: String;
+    let text = if espeak::voice(language).is_some() {
+        composed = text.nfc().collect();
+        &composed
+    } else {
+        text
+    };
     let mut out = String::with_capacity(text.len());
     for (i, c) in text.char_indices() {
         match c {
@@ -1424,7 +1433,7 @@ mod tests {
         let text = "Él dijo “sí” — mañana, cafe\u{301} y ça va.";
         assert_eq!(
             plain_text(text, VoiceLanguage::Spanish),
-            "Él dijo \"sí\", mañana, cafe\u{301} y ça va."
+            "Él dijo \"sí\", mañana, café y ça va."
         );
         assert_eq!(
             plain_text(text, VoiceLanguage::AmericanEnglish),
@@ -2764,6 +2773,74 @@ mod tests {
                 "{voice}: {:.2} ids per character",
                 ids as f32 / chars as f32
             );
+        }
+    }
+
+    /// What `voice` gets from espeak-ng for `text`, and how many symbols it dropped.
+    fn espeak_reads(program: &Path, voice: &str, text: &str) -> (String, usize) {
+        let language = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice).language();
+        let sentences =
+            espeak::Sentences::new(program.to_path_buf(), espeak::voice(language).unwrap());
+        sentences.read(&plain_text(text, language)).unwrap()
+    }
+
+    #[test]
+    fn decomposed_accents_read_as_composed_ones() {
+        let Some(program) = espeak::installed_for_test() else {
+            return;
+        };
+        for (voice, word, kokoro) in [
+            ("pf_dora", "coração", "kˌoɾasˈɐ̃ʊ̃"),
+            ("ff_siwis", "été", "etˈe"),
+            ("ff_siwis", "café", "kafˈe"),
+            ("ef_dora", "niño", "nˈiɲo"),
+            ("if_sara", "città", "ʧitːˈa"),
+        ] {
+            let composed: String = word.nfc().collect();
+            let decomposed: String = word.nfd().collect();
+            assert_ne!(composed, decomposed);
+            for form in [composed, decomposed] {
+                assert_eq!(
+                    espeak_reads(&program, voice, &form),
+                    (kokoro.to_string(), 0),
+                    "{voice} {form:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn hindi_reads_the_same_in_every_normal_form() {
+        let Some(program) = espeak::installed_for_test() else {
+            return;
+        };
+        // ड़ and ढ़ never compose under NFC, so it takes them apart.
+        let precomposed = "यह ब\u{95c}ा ल\u{95c}का प\u{95d}ता है।";
+        let decomposed = "यह ब\u{921}\u{93c}ा ल\u{921}\u{93c}का प\u{922}\u{93c}ता है।";
+        assert_eq!(precomposed.nfc().collect::<String>(), decomposed);
+        for form in [precomposed, decomposed] {
+            assert_eq!(
+                espeak_reads(&program, "hf_alpha", form),
+                ("jˌəh bˈʌr.aː lˈʌr.kˌaː pˈʌr.hətˌaː hɛː.".to_string(), 0),
+                "{form:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_nasal_vowel_keeps_its_tilde_as_a_symbol_of_its_own() {
+        let Some(program) = espeak::installed_for_test() else {
+            return;
+        };
+        for (voice, text, nasal) in [
+            ("ff_siwis", "Un bon vin blanc.", "ɔ\u{303}"),
+            ("pf_dora", "Tem um mundo.", "u\u{303}"),
+        ] {
+            let decomposed: String = text.nfd().collect();
+            let (phonemes, dropped) = espeak_reads(&program, voice, &decomposed);
+            assert_eq!(dropped, 0, "{phonemes}");
+            assert!(phonemes.contains(nasal), "{phonemes}");
+            assert!(token_ids(&phonemes).0.contains(&17), "{phonemes}");
         }
     }
 

@@ -66,6 +66,7 @@ flate2 = "1"
 # Model downloads: checksums, and cancelling a download mid-transfer.
 sha2 = "0.10"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
+unicode-normalization = "0.1"
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"

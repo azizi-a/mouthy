@@ -8,6 +8,7 @@
 //! read as they are spelled.
 
 use super::ja_dictionary::Tagger;
+use unicode_normalization::UnicodeNormalization;
 
 /// Longer sentences are cut before this. Prose mostly in kanji runs about
 /// three ids a character with the dictionary, so its chunks fit one
@@ -57,8 +58,8 @@ const KANA: &[(&str, &str)] = &[
     ("ゔゅ", "bʲɨ"), ("ゔょ", "bʲo"),
 ];
 
-/// Punctuation as cutlet maps it. Fullwidth `？！：；（），～` are folded to
-/// ASCII first, as cutlet's NFKC does, and pass through as written.
+/// Punctuation as cutlet maps it. NFKC folds fullwidth `？！：；（），～` to
+/// ASCII first, and those pass through as written.
 const SYMBOLS: &[(char, &str)] = &[
     ('。', "."),
     ('、', ","),
@@ -197,9 +198,9 @@ fn tidy_glottal_stops(text: &str) -> String {
     out
 }
 
-/// cutlet's `_normalize_text`, with the parts of NFKC that matter here: a wave
-/// dash before a number reads "から", and fullwidth ASCII, the ideographic
-/// space and the ellipses become ASCII.
+/// cutlet's `_normalize_text`: a wave dash before a number reads "から", the
+/// Ainu small katakana become full size, then NFKC folds fullwidth ASCII,
+/// half-width katakana and ellipses and joins a kana to a separate sound mark.
 fn normalize(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut chars = text.chars().peekable();
@@ -211,14 +212,10 @@ fn normalize(text: &str) -> String {
             '\u{31f0}'..='\u{31ff}' => {
                 out.extend(PHONETIC_EXTENSIONS.chars().nth(c as usize - 0x31f0))
             }
-            '\u{ff01}'..='\u{ff5e}' => out.extend(char::from_u32(c as u32 - 0xfee0)),
-            '\u{3000}' => out.push(' '),
-            '…' => out.push_str("..."),
-            '‥' => out.push_str(".."),
             c => out.push(c),
         }
     }
-    out
+    out.nfkc().collect()
 }
 
 fn is_digit(c: char) -> bool {
@@ -934,6 +931,24 @@ mod tests {
     fn ellipses_read_as_stops() {
         assert_eq!(reads("そうですね…"), "soɯdesɨne...");
         assert_eq!(reads("ええ‥"), "ee..");
+    }
+
+    #[test]
+    fn half_width_katakana_reads_as_full_width() {
+        assert_eq!(reads("ｶﾀｶﾅ"), reads("カタカナ"));
+        assert_eq!(reads("ｶﾀｶﾅ"), "katakana");
+        assert_eq!(reads("ｶﾞｲﾄﾞ"), "ɡaido");
+        assert_eq!(reads("ﾊﾟｰﾃｨｰ"), "paːtʲiː");
+        assert_eq!(reads("ｺｰﾋｰ｡"), "koːçiː.");
+    }
+
+    #[test]
+    fn a_kana_and_a_separate_sound_mark_read_as_one_kana() {
+        assert_eq!(reads("か\u{3099}っこう"), reads("がっこう"));
+        assert_eq!(reads("か\u{3099}っこう"), "ɡaʔkoɯ");
+        assert_eq!(reads("さんほ\u{309a}"), "sampo");
+        assert_eq!(reads("ハ\u{309a}ン"), "paɴ");
+        assert_eq!(reads("ふ\u{3099}た"), "bɯta");
     }
 
     #[test]
