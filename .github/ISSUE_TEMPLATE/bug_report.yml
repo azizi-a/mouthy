@@ -28,6 +28,14 @@ body:
         - rpm
         - deb
         - Built from source
+  - type: dropdown
+    id: linux-shortcut
+    attributes:
+      label: Linux shortcuts
+      description: Linux only.
+      options:
+        - Desktop shortcut running a mouthy command
+        - Event Tap (Settings → Advanced)
   - type: input
     id: version
     attributes:

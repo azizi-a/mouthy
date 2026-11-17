@@ -375,6 +375,13 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
     settings
 }
 
+/// Whether the store holds settings yet; a first launch has none.
+#[cfg(target_os = "linux")]
+pub fn is_stored(app: &AppHandle) -> bool {
+    app.store(SETTINGS_STORE_PATH)
+        .is_ok_and(|store| store.has("settings"))
+}
+
 pub fn get_settings(app: &AppHandle) -> AppSettings {
     let store = app
         .store(SETTINGS_STORE_PATH)
