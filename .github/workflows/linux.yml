@@ -14,11 +14,6 @@ on:
 permissions:
   contents: read
 
-env:
-  # The Mac's toolchain; bump by hand.
-  RUST_TOOLCHAIN: 1.99.1
-  BUN_VERSION: 1.4.4
-
 jobs:
   check:
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -41,23 +36,24 @@ jobs:
             libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
             patchelf libasound2-dev libgtk-layer-shell-dev libx11-dev \
             libxtst-dev libxrandr-dev libssl-dev pkg-config
+      # The Mac's toolchain; bump by hand.
       - &rust
-        name: Install Rust
-        run: |
-          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --component clippy
-          rustup default "$RUST_TOOLCHAIN"
+        uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: clippy
+      - &rust-cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
       - &bun
-        name: Install bun
-        run: |
-          export BUN_INSTALL="$HOME/.bun"
-          curl -fsSL https://bun.sh/install | bash -s "bun-v$BUN_VERSION"
-          echo "$BUN_INSTALL/bin" >> "$GITHUB_PATH"
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
       - &frontend
         name: Build frontend
         run: |
           bun install --frozen-lockfile
           bun run build
-      # No cargo cache: actions/cache is not on this repo's Actions allowlist.
       - name: Test
         working-directory: src-tauri
         run: cargo test
@@ -74,6 +70,7 @@ jobs:
       - *checkout
       - *apt
       - *rust
+      - *rust-cache
       - *bun
       - *frontend
       - name: Bundle deb, rpm and AppImage
