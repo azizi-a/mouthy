@@ -7,7 +7,7 @@ use std::ops::Range;
 const MIN_SENTENCE_CHARS: usize = 20;
 
 const TERMINATORS: &[char] = &['.', '!', '?', '…'];
-const CLOSERS: &[char] = &['"', '\'', '”', '’', ')', ']', '»'];
+pub(super) const CLOSERS: &[char] = &['"', '\'', '”', '’', ')', ']', '»'];
 const CLAUSE_BREAKS: &[char] = &[',', ';', ':'];
 const URL_PREFIXES: &[&str] = &["https://", "http://", "www."];
 /// Besides `ABBREVIATIONS`, words whose final "." does not end a sentence;

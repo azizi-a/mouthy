@@ -2,8 +2,9 @@
 //! Kokoro-82M (Apache-2.0), pinned to one revision so the sizes and sha256
 //! below (the repo's LFS metadata) always describe what the URL serves.
 //!
-//! A voice reads its own language when this build can (`local::native`); a
-//! voice of any other language reads English text.
+//! A voice reads text in the language it was trained on where the local
+//! backend can read that language (`local::native`), and as American English
+//! where it cannot.
 
 use super::local;
 use crate::settings::ModelVariant;
