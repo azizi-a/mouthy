@@ -6,6 +6,7 @@
 //! sessions; one session at a time holds it.
 
 use super::catalog::VoiceLanguage;
+use super::english_words;
 use super::espeak;
 use super::ja;
 use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out, Marks};
@@ -957,7 +958,7 @@ fn reading(g2p: &G2P, text: &str, language: VoiceLanguage) -> String {
         return plain;
     }
     let words = expand_numbers(&expand_abbreviations(&plain));
-    spell_out(&words, &g2p.lexicon)
+    english_words::read_unknown_words(&spell_out(&words, &g2p.lexicon), &g2p.lexicon)
 }
 
 fn is_english(language: VoiceLanguage) -> bool {

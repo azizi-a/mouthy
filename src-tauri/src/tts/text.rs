@@ -1985,16 +1985,27 @@ fn say_capitals(
     spell.then(|| lexicon.spell(capitals, plural))
 }
 
-/// A word in camel case cut where a lower-case letter meets a capital
-/// ("Git|Hub") and before the last capital of a run followed by two lower-case
-/// letters ("HTML|Parser", but not "IPv6" or "IDs"). It stays whole when the
-/// lexicon has it as written ("iOS", "YouTube"), for "Mc" names, and when a
-/// part is no word the lexicon has ("PostgreSQL"), since a fragment reads
-/// worse than the whole word spelled or read by espeak-ng.
+/// A word in camel case cut into its words. It stays whole when the lexicon
+/// has it as written ("iOS", "YouTube"), for "Mc" names, and when a part is no
+/// word the lexicon has ("PostgreSQL"), since a fragment reads worse than the
+/// whole word spelled or read by espeak-ng.
 fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
     if lexicon.has(word) || word.starts_with("Mc") {
         return vec![word];
     }
+    let parts = camel_cut(word);
+    let readable = |part: &str| part.len() == 1 || is_capitals(part) || knows(part, lexicon);
+    if parts.iter().all(|part| readable(part)) {
+        parts
+    } else {
+        vec![word]
+    }
+}
+
+/// `word` cut where a lower-case letter meets a capital ("Git|Hub") and before
+/// the last capital of a run followed by two lower-case letters
+/// ("HTML|Parser", but not "IPv6" or "IDs").
+pub(super) fn camel_cut(word: &str) -> Vec<&str> {
     let b = word.as_bytes();
     let mut parts = Vec::new();
     let mut start = 0;
@@ -2010,12 +2021,7 @@ fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
         }
     }
     parts.push(&word[start..]);
-    let readable = |part: &str| part.len() == 1 || is_capitals(part) || knows(part, lexicon);
-    if parts.iter().all(|part| readable(part)) {
-        parts
-    } else {
-        vec![word]
-    }
+    parts
 }
 
 #[cfg(test)]
