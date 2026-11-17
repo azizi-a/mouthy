@@ -55,11 +55,12 @@ fn dictionaries() -> &'static Dictionaries {
     })
 }
 
-/// Whether `text` has any Chinese writing in it: Han characters, CJK
-/// punctuation or fullwidth forms.
+/// Whether `text` has any Chinese writing in it: Han characters or CJK
+/// punctuation. Full-width forms alone, such as the ￥ in "It costs ￥500", do
+/// not count.
 pub(super) fn has_chinese(text: &str) -> bool {
     text.chars()
-        .any(|c| is_han(c) || matches!(c, '\u{3000}'..='\u{303f}' | '\u{ff00}'..='\u{ffef}'))
+        .any(|c| is_han(c) || ('\u{3000}'..='\u{303f}').contains(&c))
 }
 
 /// misaki reads only U+4E00–U+9FFF; the extensions, compatibility forms and
@@ -571,10 +572,12 @@ fn full_final_spelling(syllable: &str) -> String {
 /// other number, each pass over what the last one left.
 ///
 /// Departures, where cn2an would leave the digits for Kokoro to drop or read
-/// them wrongly: a number past 16 digits is read digit by digit; "1,500" is one
-/// number; and a hyphen after a letter or digit ("COVID-19") is not a minus.
+/// them wrongly: phone numbers and numbers past 16 digits are read digit by
+/// digit; "1,500" is one number; a hyphen between amounts with units is a range
+/// and one after a letter or digit ("COVID-19") is not a minus; and a
+/// temperature keeps its sign and decimals.
 fn numerals(text: &str) -> String {
-    let text = ungrouped(text);
+    let text = unit_ranges(&ungrouped(&phone_numbers(text)));
     let text = each_match(&text, range, |m| {
         let (start, end) = m.split_once('-').unwrap_or((m, ""));
         format!("{}到{}", low(start), low(end))
@@ -607,9 +610,74 @@ fn numerals(text: &str) -> String {
         format!("百分之{}", low(m.trim_end_matches('%')))
     });
     let text = each_match(&text, celsius, |m| {
-        format!("{}摄氏度", low(m.trim_end_matches('℃')))
+        let degrees = m.trim_end_matches('℃');
+        match degrees.strip_prefix('-') {
+            Some(below) => format!("零下{}摄氏度", low(below)),
+            None => format!("{}摄氏度", low(degrees)),
+        }
     });
     each_match(&text, number, low)
+}
+
+/// Phone numbers, read digit by digit with 一 for 1: an 11-digit mobile number
+/// (1, then 3 to 9) and a landline written `0xx-xxxxxxxx`, its hyphen a pause.
+fn phone_numbers(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() * 3);
+    let mut rest = text;
+    let mut prev: Option<char> = None;
+    while let Some(c) = rest.chars().next() {
+        let starts_here = !prev.is_some_and(|p| p.is_ascii_digit() || matches!(p, '.' | ','));
+        if let Some(len) = phone_number(rest).filter(|_| starts_here) {
+            let (number, tail) = rest.split_at(len);
+            let spoken: Vec<String> = number.split('-').map(direct).collect();
+            out.push_str(&spoken.join(" "));
+            prev = number.chars().next_back();
+            rest = tail;
+            continue;
+        }
+        out.push(c);
+        prev = Some(c);
+        rest = &rest[c.len_utf8()..];
+    }
+    out
+}
+
+/// How long the phone number `text` starts with is, if it starts with one.
+fn phone_number(text: &str) -> Option<usize> {
+    let ends_at = |len: usize| !text[len..].starts_with(|c: char| c.is_ascii_digit() || c == '.');
+    let bytes = text.as_bytes();
+    let run = digits(text);
+    if run == 11 && bytes[0] == b'1' && (b'3'..=b'9').contains(&bytes[1]) && ends_at(run) {
+        return Some(run);
+    }
+    if !(3..=4).contains(&run) || bytes[0] != b'0' {
+        return None;
+    }
+    let local = digits(text[run..].strip_prefix('-')?);
+    let len = run + 1 + local;
+    ((7..=8).contains(&local) && ends_at(len)).then_some(len)
+}
+
+/// A hyphen between two amounts is a range, read 到: after a number ending in
+/// `%`, `℃` or a measure word ("10%-20%", "5元-10元"), or before one ending in
+/// `%` or `℃` ("5-10℃"). cn2an's `range` already reads "3-5个".
+fn unit_ranges(text: &str) -> String {
+    let ends_in_digit = |text: &str| text.ends_with(|c: char| c.is_ascii_digit());
+    let mut out = String::with_capacity(text.len());
+    for (i, c) in text.char_indices() {
+        let (before, after) = (&text[..i], &text[i + c.len_utf8()..]);
+        let is_range = c == '-'
+            && decimal(after).is_some_and(|len| {
+                let unit_before = ["%", "℃"]
+                    .iter()
+                    .chain(MEASURE_WORDS)
+                    .any(|unit| before.strip_suffix(unit).is_some_and(ends_in_digit));
+                let unit_after = after[len..].starts_with(['%', '℃']);
+                unit_before || (unit_after && ends_in_digit(before))
+            });
+        out.push(if is_range { '到' } else { c });
+    }
+    out
 }
 
 /// Rewrites every leftmost match: `matcher` gives the length of a match
@@ -716,10 +784,12 @@ fn percent(before: &str, text: &str) -> Option<usize> {
         .then_some(sign + len + 1)
 }
 
-/// `\d+℃`.
-fn celsius(_: &str, text: &str) -> Option<usize> {
-    let len = digits(text);
-    (len > 0 && text[len..].starts_with('℃')).then_some(len + '℃'.len_utf8())
+/// `\d+℃`, and its sign and decimals: cn2an reads "-5℃" as -五摄氏度, the sign
+/// dropped by Kokoro, and "36.5℃" as 三十六.五摄氏度.
+fn celsius(before: &str, text: &str) -> Option<usize> {
+    let sign = minus(before, text);
+    let len = sign + decimal(&text[sign..])?;
+    text[len..].starts_with('℃').then_some(len + '℃'.len_utf8())
 }
 
 /// `-?(\d+\.)?\d+`.
@@ -729,7 +799,9 @@ fn number(before: &str, text: &str) -> Option<usize> {
 }
 
 /// Digits grouped by commas ("1,500", "10,000,000") without them: the first
-/// group one to three digits, each after it exactly three.
+/// group one to three digits, not after "digit," nor starting with 0, each
+/// group after it exactly three. A grouped number is never a year, so one
+/// before 年, 月 or 日 is read here ("1,000年" is 一千年).
 fn ungrouped(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
@@ -740,15 +812,23 @@ fn ungrouped(text: &str) -> String {
             rest = &rest[c.len_utf8()..];
             continue;
         }
-        out.push_str(&rest[..first]);
+        let after_group = out
+            .strip_suffix(',')
+            .is_some_and(|before| before.ends_with(|c: char| c.is_ascii_digit()));
+        let mut number = rest[..first].to_string();
         let mut len = first;
-        if first <= 3 {
+        if first <= 3 && !rest.starts_with('0') && !after_group {
             while rest[len..].starts_with(',') && digits(&rest[len + 1..]) == 3 {
-                out.push_str(&rest[len + 1..len + 4]);
+                number.push_str(&rest[len + 1..len + 4]);
                 len += 4;
             }
         }
         rest = &rest[len..];
+        if len > first && rest.starts_with(['年', '月', '日']) {
+            out.push_str(&low(&number));
+        } else {
+            out.push_str(&number);
+        }
     }
     out
 }
@@ -1012,8 +1092,13 @@ mod tests {
         assert_eq!(numerals("共1,500元"), "共一千五百元");
         assert_eq!(numerals("10,000,000"), "一千万");
         assert_eq!(numerals("1,234.5"), "一千二百三十四点五");
-        // A comma groups only exactly three digits.
+        // A comma groups only exactly three digits, after a first group that
+        // neither starts with 0 nor follows "digit,".
         assert_eq!(numerals("1,5000"), "一,五千");
+        assert_eq!(numerals("0,500"), "零,五百");
+        assert_eq!(numerals("1,23,456"), "一,二十三,四百五十六");
+        // cn2an: 一,零零零年, as if a year.
+        assert_eq!(numerals("1,000年"), "一千年");
         // cn2an: COVID负十九, 二千零二十四负一负一, 五负三.
         assert_eq!(numerals("COVID-19"), "COVID-十九");
         assert_eq!(numerals("2024-01-01"), "二千零二十四-一-一");
@@ -1023,6 +1108,60 @@ mod tests {
         assert_eq!(numerals("温度-5度"), "温度负五度");
         assert_eq!(numerals("下降-5%"), "下降百分之负五");
         assert_eq!(numerals("(-3.5)"), "(负三点五)");
+    }
+
+    #[test]
+    fn ranges_temperatures_and_phone_numbers_read_as_a_newsreader_would() {
+        for (text, ours, cn2an) in [
+            (
+                "增长10%-20%",
+                "增长百分之十到百分之二十",
+                "增长百分之十百分之负二十",
+            ),
+            ("5元-10元", "五元到十元", "五元负十元"),
+            ("3小时-5小时", "三小时到五小时", "三小时负五小时"),
+            ("5-10℃", "五到十摄氏度", "五-十摄氏度"),
+            ("气温-5℃", "气温零下五摄氏度", "气温-五摄氏度"),
+            ("-0.5℃", "零下零点五摄氏度", "负零.五摄氏度"),
+            ("36.5℃", "三十六点五摄氏度", "三十六.五摄氏度"),
+            (
+                "电话13812345678。",
+                "电话一三八一二三四五六七八。",
+                "电话一百三十八亿一千二百三十四万五千六百七十八。",
+            ),
+            (
+                "010-12345678",
+                "零一零 一二三四五六七八",
+                "十负一千二百三十四万五千六百七十八",
+            ),
+            (
+                "0755-1234567",
+                "零七五五 一二三四五六七",
+                "七百五十五负一百二十三万四千五百六十七",
+            ),
+        ] {
+            assert_eq!(numerals(text), ours, "{text}, cn2an: {cn2an}");
+        }
+        // Unchanged: cn2an's own range, and numbers that are not phone-shaped.
+        assert_eq!(numerals("3-5个"), "三到五个");
+        assert_eq!(numerals("10%-"), "百分之十-");
+        assert_eq!(
+            numerals("12345678901"),
+            "一百二十三亿四千五百六十七万八千九百零一"
+        );
+        assert_eq!(
+            numerals("138123456789"),
+            "一千三百八十一亿二千三百四十五万六千七百八十九"
+        );
+        assert_eq!(
+            numerals("15812345678.5"),
+            "一百五十八亿一千二百三十四万五千六百七十八点五"
+        );
+        // misaki reads the number whole: "i↘pai↓sa→nʂɨ↗pa→ i↘li↗ŋ …".
+        assert_eq!(
+            reads("电话号码是13800138000。"),
+            "tjɛ↘nxwa↘xau↘ma↓ ʂɨ↘ i→ sa→npa→ li↗ŋli↗ŋ i→ sa→npa→ li↗ŋli↗ŋ li↗ŋ."
+        );
     }
 
     #[test]
@@ -1045,10 +1184,19 @@ mod tests {
 
     #[test]
     fn only_chinese_writing_counts_as_chinese() {
-        for text in ["你好", "日本語 and emoji", "，", "１２３", "二〇二四"] {
+        for text in ["你好", "日本語 and emoji", "。", "二〇二四", "１２３，你好"] {
             assert!(has_chinese(text), "{text}");
         }
-        for text in ["Hello, world.", "こんにちは", "123", "café", ""] {
+        for text in [
+            "Hello, world.",
+            "こんにちは",
+            "123",
+            "café",
+            "",
+            "It costs ￥500",
+            "，",
+            "１２３",
+        ] {
             assert!(!has_chinese(text), "{text}");
         }
     }
