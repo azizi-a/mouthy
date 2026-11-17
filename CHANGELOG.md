@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The overlay starts on under native Wayland with the GTK layer shell (KDE Plasma with the rpm or deb), and off elsewhere, including the AppImage, which runs under XWayland.
 - `MOUTHY_GDK_BACKEND` chooses the AppImage's display backend.
 - From the AppImage, `--speak-file` takes a relative path from the folder it was run in.
+- The tray icon is the plain mouth glyph, as on the Mac: white, or black on a light KDE Plasma panel.
 
 ### Languages
 
