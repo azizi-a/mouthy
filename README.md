@@ -50,6 +50,7 @@ A running Mouthy can be controlled from scripts or other hotkey tools:
 /Applications/Mouthy.app/Contents/MacOS/mouthy --speak-clipboard   # speak the clipboard, or stop if speaking
 /Applications/Mouthy.app/Contents/MacOS/mouthy --speak-file reply.txt   # speak a text file, cutting off any speech
 /Applications/Mouthy.app/Contents/MacOS/mouthy --speak-file reply.txt --voice 'bm_lewis(70)+bm_george(30)'   # in another voice
+/Applications/Mouthy.app/Contents/MacOS/mouthy --speak-file reply.txt --voice ef_dora --lang en   # a Spanish voice reading English
 /Applications/Mouthy.app/Contents/MacOS/mouthy --stop
 pkill -USR2 -x mouthy   # speak selection
 pkill -USR1 -x mouthy   # stop
@@ -58,6 +59,8 @@ pkill -USR1 -x mouthy   # stop
 `--speak-file` is for scripts that hand Mouthy each new message: the text goes in a UTF-8 file rather than an argument, so it needs no quoting, and each call cuts off what Mouthy is saying instead of toggling. It reads the first 20,000 characters, takes a relative path from the caller's directory, and stops at a hotkey press or `--stop`.
 
 `--voice` reads that file in another voice than the Settings one, so each script or session can have its own: a voice name or a blend as typed in the voice picker's Other… (quote a blend for the shell). A voice that is not downloaded, or is not a voice name, falls back to the Settings voice and the log says so. With the server engine the voice is trimmed of spaces and otherwise passed to the server unchanged.
+
+`--lang en` reads that file as English whatever the voice's language, and `--lang voice` in the voice's own; without it the Settings reading language applies (see Languages). A script that speaks English text in a rotation of voices should pass `--lang en`, so a Spanish or Japanese voice keeps reading English.
 
 When no Mouthy is running, the command is Mouthy itself and does not return until Mouthy quits. A script should start Mouthy first (`open -a Mouthy`, or the binary with `--start-hidden` in the background), give it a second to start, and then call the binary for each message. That call returns before the running Mouthy reads the file, so the file must outlive it: write each message to a new file and delete old ones later, rather than overwriting or deleting the file straight away.
 
@@ -80,6 +83,8 @@ Words the voice's dictionary lacks, such as many names and product terms, are sp
 ## Languages
 
 Every voice reads text as English for now (see Voices).
+
+Settings → General → **Reading Language** chooses whether a voice reads text in its own language (the default) or as English. With English, a voice of another language reads English text with its accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
 
 ## Using a speech server instead
 
