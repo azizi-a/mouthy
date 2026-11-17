@@ -720,11 +720,12 @@ fn speech_backend(
         TtsBackend::Local => {
             let files = local_model_files(app, settings, voice)
                 .map_err(|message| OverlayView::Error { message })?;
-            match files.missing() {
-                Some(missing) => {
-                    info!("The local voice is missing {missing}");
-                    Err(OverlayView::ModelMissing)
-                }
+            if let Some(missing) = files.missing() {
+                info!("The local voice is missing {missing}");
+                return Err(OverlayView::ModelMissing);
+            }
+            match files.unmet_requirement() {
+                Some(message) => Err(OverlayView::Error { message }),
                 None => Ok(tts::Backend::Local(files)),
             }
         }
@@ -746,6 +747,7 @@ fn local_model_files(
     let models_dir = crate::commands::models_dir(app)?;
     Ok(
         tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, voice)
+            .with_english_fallback(settings.tts_espeak_fallback)
             .with_espeak(tts::espeak::find_if_enabled(settings.tts_espeak_fallback)),
     )
 }
