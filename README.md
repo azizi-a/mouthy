@@ -106,7 +106,7 @@ x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need 
 
 On Linux, install [espeak-ng](#better-pronunciation-of-unknown-words) with your distribution's package manager, or with `brew install espeak-ng` on an immutable distribution such as Bazzite.
 
-Mouthy runs on Wayland and is tried on KDE Plasma; GNOME is untested, and X11 sessions are not supported.
+Mouthy targets Wayland and is being tested on KDE Plasma; GNOME is untested, and X11 sessions are not supported.
 
 ### Install on Linux
 
