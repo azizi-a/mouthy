@@ -1441,6 +1441,7 @@ P4.1 (2026-11-17, PR #49, branch `feat/wayland-speak-path`). Designed for KDE Pl
   1. Fresh store (move `~/.local/share/com.azizi.mouthy/settings_store.json` aside), plain AppImage launch: the log says `GDK_BACKEND: wayland`; the overlay setting is Minimal; speech shows the bar at the screen edge, typing in Konsole carries on, no ghosting on the card, its buttons work. Put the store back.
   2. `MOUTHY_GDK_BACKEND=x11 ~/Applications/Mouthy*.AppImage`: the log says `GDK_BACKEND: x11`; with the overlay on Minimal it does not take focus (Stage P4.2a's steps).
   3. In both modes: Settings looks normal (no blank or blurry window), the tray icon and its menu work, speak-selection and speak-clipboard read through the bound shortcuts.
+- **Validation (P4.2 and P4.2a, after merging `main` at `7df2a9b4`, L4):** Mac `cargo test` 438 pass / 12 ignored, clippy, fmt, `bun run lint`, `format:check`, `check:translations` clean. **Linux CI:** check job green on `b3febdb4` (run 44158347222, 408 pass / 10 ignored: the GTK calls compile) and on `8107feda` (run 44160047142, 429 pass / 11 ignored, the decision table included). `rg gdk_backend`: only `main.rs`, the `lib.rs` re-export and the tests call it.
 
 ### Stage P4.2a — the fallback overlay does not take focus `[fix]`
 
