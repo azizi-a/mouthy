@@ -132,7 +132,8 @@ fn word_len(text: &str) -> usize {
 
 /// What to write for `word`, or `None` to leave it to misaki-rs. Capitals
 /// are read only as a compound ("CHANGELOG"): shorter ones and the rest are
-/// initialisms, which `spell_out` and misaki-rs spell.
+/// initialisms, which `spell_out` and misaki-rs spell. "Mc" names stay whole,
+/// as `spell_out` keeps them.
 fn rewrite(word: &str, lexicon: &Lexicon) -> Option<String> {
     let (letters, possessive) = match word.strip_suffix("'s") {
         Some(letters) => (letters, true),
@@ -146,6 +147,7 @@ fn rewrite(word: &str, lexicon: &Lexicon) -> Option<String> {
         || letters.len() > LONGEST_WORD
         || !letters.bytes().all(|b| b.is_ascii_alphabetic())
         || (is_capitals(letters) && letters.len() < SHORTEST_WORD)
+        || letters.starts_with("Mc")
         || knows(word, lexicon)
     {
         return None;
@@ -263,9 +265,13 @@ fn said(word: &str, lexicon: &Lexicon) -> Option<String> {
     let stressed = parts.iter().position(|part| is_capitals(part)).unwrap_or(0);
     let parts = parts
         .iter()
-        .map(|part| match is_capitals(part) {
-            true => phonemes_of(&part.to_ascii_lowercase(), lexicon),
-            false => phonemes_of(part, lexicon),
+        .map(|&part| {
+            let word = if is_capitals(part) {
+                part.to_ascii_lowercase()
+            } else {
+                part.to_string()
+            };
+            phonemes_of(&word, lexicon)
         })
         .collect::<Option<Vec<_>>>()?;
     Some(join(parts, stressed, lexicon))
@@ -610,6 +616,7 @@ mod tests {
                 "changelog'd",
                 "XMLHttpRequest",
                 "REDIST",
+                "McChangelog",
                 "[ changelog",
             ] {
                 assert_eq!(read_unknown_words(text, lexicon), text);
