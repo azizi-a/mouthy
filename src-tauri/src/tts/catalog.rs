@@ -299,6 +299,7 @@ mod tests {
         let workflow = include_str!("../../../.github/workflows/linux.yml");
         assert!(workflow.contains(&format!("URL: {DICTIONARY_URL}")));
         assert!(workflow.contains(&format!("SHA256: {}", DICTIONARY.2)));
+        assert!(workflow.contains("MOUTHY_REQUIRE_JA_DICTIONARY: \"1\""));
     }
 
     #[test]
