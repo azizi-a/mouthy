@@ -99,6 +99,8 @@ Open Settings from the tray. Besides the hotkeys and voices above, General sets 
 
 x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need glibc 2.38 or newer: Ubuntu 24.04, Fedora 39 or later, Debian 13; not Ubuntu 22.04 or Debian 12. To build one yourself, see [BUILD.md](BUILD.md#linux).
 
+On Linux, install [espeak-ng](#better-pronunciation-of-unknown-words) with your distribution's package manager, or with `brew install espeak-ng` on an immutable distribution such as Bazzite.
+
 ## Known issues
 
 - **⌥⎋ clashes with macOS "Speak selection",** which uses the same key by default. If it is on in System Settings → Accessibility → Spoken Content, turn it off or change either hotkey.
