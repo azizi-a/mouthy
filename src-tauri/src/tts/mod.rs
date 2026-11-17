@@ -4,6 +4,7 @@ pub mod catalog;
 pub mod download;
 pub mod espeak;
 pub mod http;
+mod ja;
 pub mod local;
 pub mod text;
 #[cfg(test)]
@@ -28,7 +29,15 @@ impl Backend {
     pub fn max_chunk_chars(&self) -> usize {
         match self {
             Backend::Http { .. } => http::MAX_CHUNK_CHARS,
-            Backend::Local(_) => local::MAX_CHUNK_CHARS,
+            Backend::Local(files) => files.max_chunk_chars(),
+        }
+    }
+
+    /// The notice to show instead of reading `text`, when this backend cannot.
+    pub fn refuses(&self, text: &str) -> Option<String> {
+        match self {
+            Backend::Http { .. } => None,
+            Backend::Local(files) => files.refuses(text),
         }
     }
 

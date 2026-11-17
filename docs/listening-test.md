@@ -102,3 +102,11 @@ It costs £4.99.
 It was popular in the 1990s.
 
 You should hear: "example dot com" and "settings dot R S"; "version two point zero"; the address as "one hundred and ninety-two point one hundred and sixty-eight point zero point one"; "three point five G B"; "four pounds and ninety-nine pence"; "the nineteen nineties".
+
+## Part 5: Japanese
+
+Select only this part's paragraph, with a Japanese voice such as `jf_alpha` or `jm_kumo`.
+
+きょうも、いいてんきですね。あさごはんをたべてから、こうえんまでさんぽにいきました。ベンチにすわって、コーヒーをのみながら、ちょっとだけほんをよみました。ラジオからきこえてくるおんがくが、とてもきもちよかったです。あしたもまた、いっしょにいきませんか？
+
+You should hear five Japanese sentences, the last one a question: the small っ in ちょっと and いっしょ as a short catch, ー in コーヒー as a long vowel, ん in さんぽ as "m". Words run together a little, since Mouthy has no dictionary to find word boundaries. A paragraph that is mostly kanji shows "Japanese text with kanji is not supported yet" instead.

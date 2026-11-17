@@ -6,6 +6,7 @@
 
 use super::catalog::VoiceLanguage;
 use super::espeak;
+use super::ja;
 use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out, Marks};
 use super::voice::{is_voice_name, VoiceSpec};
 use super::SAMPLE_RATE;
@@ -35,7 +36,7 @@ const PIECE_TOKENS: usize = 510;
 /// about one id per character, so a chunk, even with a short tail merged back,
 /// fits one inference; numbers and spelled-out words run longer and
 /// `split_tokens` cuts those.
-pub(super) const MAX_CHUNK_CHARS: usize = 450;
+const MAX_CHUNK_CHARS: usize = 450;
 const STYLE_DIM: usize = 256;
 /// How often a running inference checks whether its session was stopped.
 const STOP_POLL: Duration = Duration::from_millis(20);
@@ -117,7 +118,7 @@ static PRELOAD_ERROR: Mutex<Option<String>> = Mutex::new(None);
 fn native(language: VoiceLanguage) -> bool {
     matches!(
         language,
-        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish
+        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish | VoiceLanguage::Japanese
     )
 }
 
@@ -247,6 +248,23 @@ impl ModelFiles {
             VoiceLanguage::Japanese | VoiceLanguage::Mandarin => &Marks::CJK,
             VoiceLanguage::Hindi => &Marks::HINDI,
             _ => &Marks::DEFAULT,
+        }
+    }
+
+    /// The longest sentence one inference gets before it is cut.
+    pub fn max_chunk_chars(&self) -> usize {
+        match self.language {
+            VoiceLanguage::Japanese => ja::MAX_CHUNK_CHARS,
+            _ => MAX_CHUNK_CHARS,
+        }
+    }
+
+    /// The notice to show instead of reading `text`, when this build cannot
+    /// read enough of it.
+    pub fn refuses(&self, text: &str) -> Option<String> {
+        match self.language {
+            VoiceLanguage::Japanese => ja::refusal(text).map(String::from),
+            _ => None,
         }
     }
 
@@ -817,6 +835,15 @@ fn text_to_ids(
 
 /// Kokoro's symbols for `text`, before they become ids.
 fn text_to_phonemes(g2p: &G2P, language: VoiceLanguage, text: &str) -> Result<String, String> {
+    if language == VoiceLanguage::Japanese {
+        // Latin letters in Japanese text are read as American English.
+        let english = |latin: &str| text_to_phonemes(g2p, VoiceLanguage::AmericanEnglish, latin);
+        let (phonemes, skipped) = ja::phonemes(&plain_text(text, language), english)?;
+        if skipped > 0 {
+            debug!("Skipped {skipped} kanji this build cannot read");
+        }
+        return Ok(phonemes);
+    }
     let (raw, _) = g2p
         .g2p(&reading(g2p, text, language))
         .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
@@ -1506,6 +1533,9 @@ mod tests {
                 "{voice}"
             );
         }
+        for voice in ["jf_alpha", "jm_kumo", "jf_nezumi+af_heart"] {
+            assert_eq!(language_of(voice), VoiceLanguage::Japanese, "{voice}");
+        }
     }
 
     #[test]
@@ -1516,7 +1546,6 @@ mod tests {
             "ff_siwis",
             "hf_alpha",
             "im_nicola",
-            "jf_alpha",
             "pf_dora",
             "zm_yunyang",
             "Zf_xiaobei",
@@ -1569,6 +1598,59 @@ mod tests {
             dora.reading_as(VoiceLanguage::BritishEnglish).language,
             VoiceLanguage::BritishEnglish
         );
+    }
+
+    fn japanese(text: &str) -> String {
+        let g2p =
+            build_g2p(&ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "jm_kumo").reading());
+        text_to_phonemes(&g2p, VoiceLanguage::Japanese, text).unwrap()
+    }
+
+    #[test]
+    fn japanese_reads_kana_and_its_latin_words_in_english() {
+        assert_eq!(japanese("きょうはOKです。"), "kʲoɯha ˌOkˈA desɨ.");
+        assert_eq!(
+            japanese("これはiPhone 15です。"),
+            "koɾeha ˈI fˈOn fˈɪftin desɨ."
+        );
+        assert_eq!(japanese("「API」をつかう。"), "“ˌApˌiˈI” oʦɨkaɯ.");
+    }
+
+    /// The listening test's Japanese paragraph.
+    const KANA_PARAGRAPH: &str = "きょうも、いいてんきですね。あさごはんをたべてから、こうえんまでさんぽにいきました。ベンチにすわって、コーヒーをのみながら、ちょっとだけほんをよみました。ラジオからきこえてくるおんがくが、とてもきもちよかったです。あしたもまた、いっしょにいきませんか？";
+
+    #[test]
+    fn a_japanese_chunk_fits_one_inference() {
+        let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "jf_alpha");
+        let g2p = build_g2p(&files.reading());
+        // One sentence of about 380 characters, cut at its commas.
+        let long_sentence = KANA_PARAGRAPH.replace(['。', '？'], "、").repeat(3);
+        let text = format!("{KANA_PARAGRAPH}{long_sentence}");
+        let chunks = text::split_sentences_with(&text, files.max_chunk_chars(), files.marks());
+        assert!(chunks.iter().any(|chunk| chunk.text.chars().count() > 150));
+        for chunk in &chunks {
+            let (ids, dropped) = text_to_ids(&g2p, VoiceLanguage::Japanese, &chunk.text).unwrap();
+            assert_eq!(dropped, 0, "{}", chunk.text);
+            assert!(
+                ids.len() <= PIECE_TOKENS,
+                "{} ids: {}",
+                ids.len(),
+                chunk.text
+            );
+        }
+    }
+
+    #[test]
+    fn only_japanese_refuses_kanji() {
+        let files = |voice| ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice);
+        let kanji = "東京に行きます。";
+        assert_eq!(
+            files("jm_kumo").refuses(kanji).as_deref(),
+            Some("Japanese text with kanji is not supported yet")
+        );
+        assert_eq!(files("jm_kumo").refuses(KANA_PARAGRAPH), None);
+        assert_eq!(files("af_alloy").refuses(kanji), None);
+        assert_eq!(files("zf_xiaobei").refuses(kanji), None);
     }
 
     #[test]

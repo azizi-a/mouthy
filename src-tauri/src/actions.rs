@@ -303,6 +303,9 @@ fn file_speech(
     let backend = speech_backend(app, &settings, &voice)?;
     let split_started = Instant::now();
     let text = tts::text::normalize(&text);
+    if let Some(message) = backend.refuses(&text) {
+        return Err(OverlayView::Error { message });
+    }
     let sentences = sentences_for(&text, &backend);
     let captured_at = Instant::now();
     info!(
@@ -492,6 +495,11 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
     let text = text
         .map(|text| tts::text::normalize(&text))
         .unwrap_or_default();
+    if let Some(message) = backend.refuses(&text) {
+        info!("Not speaking the {}: {message}", input.name());
+        overlay::show_overlay(app, OverlayView::Error { message });
+        return;
+    }
     let sentences = sentences_for(&text, &backend);
     let captured_at = Instant::now();
     info!(
@@ -1411,14 +1419,32 @@ mod tests {
         assert!(!preview_text(VoiceLanguage::Japanese).contains(is_kanji));
     }
 
+    /// A voice of each language this build cannot read yet.
+    const READ_AS_ENGLISH: &[&str] = &["zf_xiaobei", "ef_dora", "hf_alpha"];
+
     #[test]
     fn a_voice_this_build_cannot_read_previews_in_english() {
         let english = preview_text(VoiceLanguage::AmericanEnglish);
-        for voice in ["ef_dora", "jf_alpha", "zf_xiaobei", "hf_alpha", "xx_custom"] {
+        for voice in READ_AS_ENGLISH.iter().chain(&["xx_custom"]) {
             assert_eq!(preview_sentence(&local_backend(voice)), english, "{voice}");
         }
         let server = http_backend(&settings::get_default_settings(), "ef_dora");
         assert_eq!(preview_sentence(&server), english);
+        let server = http_backend(&settings::get_default_settings(), "jm_kumo");
+        assert_eq!(preview_sentence(&server), english);
+    }
+
+    #[test]
+    fn a_japanese_voice_previews_in_japanese() {
+        let backend = local_backend("jm_kumo");
+        assert_eq!(
+            preview_sentence(&backend),
+            preview_text(VoiceLanguage::Japanese)
+        );
+        assert_eq!(backend.refuses(preview_sentence(&backend)), None);
+        // "どうも。" is too short to read alone and joins the next sentence.
+        let sentences = sentences_for(preview_sentence(&backend), &backend);
+        assert_eq!(sentences.len(), 1, "{sentences:?}");
     }
 
     #[test]
@@ -1439,7 +1465,7 @@ mod tests {
     #[test]
     fn both_engines_speak_the_preview_sentence() {
         let http = http_backend(&settings::get_default_settings(), "af_alloy");
-        for backend in [http, local_backend("af_alloy")] {
+        for backend in [http, local_backend("af_alloy"), local_backend("jf_alpha")] {
             let text = tts::text::normalize(preview_sentence(&backend));
             let sentences = sentences_for(&text, &backend);
             assert!(!sentences.is_empty());
@@ -1527,7 +1553,7 @@ mod tests {
     #[test]
     fn a_voice_in_a_language_this_build_cannot_read_reads_as_american_english() {
         let american = english_reading("af_alloy");
-        for voice in ["zf_xiaobei", "ef_dora", "jm_kumo", "hf_alpha"] {
+        for &voice in READ_AS_ENGLISH {
             let read = english_reading(voice);
             assert_eq!(read.len(), american.len(), "{voice}");
             for (read, american) in read.iter().zip(&american) {
@@ -1556,6 +1582,65 @@ mod tests {
             "/src/tts/fixtures/english-phonemes.txt"
         );
         std::fs::write(path, english_phonemes()).unwrap();
+    }
+
+    /// 16-bit mono PCM at Kokoro's rate.
+    fn write_wav(path: &Path, samples: &[i16]) {
+        let data = (samples.len() * 2) as u32;
+        let rate = tts::SAMPLE_RATE;
+        let mut bytes = Vec::with_capacity(44 + data as usize);
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&(36 + data).to_le_bytes());
+        bytes.extend_from_slice(b"WAVEfmt ");
+        bytes.extend_from_slice(&16u32.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&rate.to_le_bytes());
+        bytes.extend_from_slice(&(rate * 2).to_le_bytes());
+        bytes.extend_from_slice(&2u16.to_le_bytes());
+        bytes.extend_from_slice(&16u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&data.to_le_bytes());
+        for sample in samples {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        std::fs::write(path, bytes).unwrap();
+    }
+
+    /// Writes Japanese for a listener, as a session would read it:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored japanese_voice --nocapture`.
+    #[test]
+    #[ignore = "needs Kokoro model files and jm_kumo"]
+    fn japanese_voice_reads_kana_aloud() {
+        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let files =
+            || tts::local::ModelFiles::new(&models, settings::ModelVariant::Int8, "jm_kumo");
+        for (name, text) in [
+            ("preview", preview_text(VoiceLanguage::Japanese)),
+            (
+                "kana",
+                "がっこうのまえで、ラーメンをたべました。コーヒーもおいしかったです！あしたは、さんぽにいきませんか？",
+            ),
+        ] {
+            let backend = tts::Backend::Local(files());
+            let sentences = sentences_for(&tts::text::normalize(text), &backend);
+            let stop = Arc::new(AtomicBool::new(false));
+            let tts::Synth::Local(mut loaded) = backend.open(&stop).unwrap() else {
+                unreachable!()
+            };
+            let mut audio = Vec::new();
+            for sentence in &sentences {
+                let samples = loaded
+                    .synthesize(&sentence.text, 1.0, sentence.ends_sentence)
+                    .unwrap();
+                assert!(samples.len() > tts::SAMPLE_RATE as usize / 2, "{sentence:?}");
+                audio.extend(samples);
+            }
+            drop(loaded);
+            let path = std::env::temp_dir().join(format!("mouthy-ja-{name}.wav"));
+            write_wav(&path, &audio);
+            println!("{}", path.display());
+        }
     }
 
     #[test]
