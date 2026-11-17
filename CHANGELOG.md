@@ -11,6 +11,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Languages
 
+- Spanish, French, Italian, Brazilian Portuguese and Hindi voices read text in their own language, with numbers, times and English words read as a speaker of that language would. They need espeak-ng, which you install yourself (`brew install espeak-ng`); without it they show a notice instead of speaking, and `--voice` with one of them uses the Settings voice.
+- **Changed:** those five voices no longer read text as English. English text in one of them is read with its language's rules unless Reading Language is set to English, or `--lang en` is passed.
+
 ## 0.5.0 — 2026-11-02
 
 For scripts: a tool such as a Claude Code skill can have Mouthy read each of its replies aloud, each new one cutting off the last. Mouthy is still not signed or notarised and does not update itself.

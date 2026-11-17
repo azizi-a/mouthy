@@ -67,7 +67,7 @@ Call the binary directly: `open -a Mouthy --args …` drops the arguments. With 
 
 Mouthy runs the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. Settings → General → Speech lists the voices you have downloaded, each with Preview and Use. Turn on **Show uninstalled voices** to see all 54 and download any of them (0.5 MB each). The Blend row mixes the voice in use with a second voice on a slider, and Other… takes any voice name or a blend of up to four voices, such as `bm_lewis(70)+bm_george(30)`.
 
-Mouthy reads all text as English. Voices starting with `b` get British pronunciations, all others American, and a blend reads with its first voice's. 28 voices are English; the rest read English with their language's accent and cannot read their own language.
+Each voice reads text in its own language (see Languages), and a blend reads in its first voice's. Of the 28 English voices, those starting with `b` get British pronunciations and the others American.
 
 Settings → Models manages the files: the int8 model, the fp32 model (326 MB; about twice as slow) and the voices, each of which you can preview, use or delete. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256. The files live in `~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/`.
 
@@ -75,11 +75,11 @@ Mouthy uses about 350 MB of memory once the voice has loaded, and up to about 1.
 
 ### Better pronunciation of unknown words
 
-Words the voice's dictionary lacks, such as many names and product terms, are spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say them instead. Each new unknown word delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
+Words an English voice's dictionary lacks, such as many names and product terms, are spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say them instead. Each new unknown word delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
 
 ## Languages
 
-Every voice reads text as English for now (see Voices).
+English voices read English. Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language, as Kokoro learned it: Mouthy asks [espeak-ng](https://github.com/espeak-ng/espeak-ng) how to say each sentence, numbers and times included, so these voices need it installed (`brew install espeak-ng`; on Linux see below), whatever the unknown-words setting says. Without it they show a notice instead of speaking, and `--voice` with one of them falls back to the Settings voice. Text in another language, English included, is read with the voice's own language's rules. Japanese and Mandarin voices read text as American English for now.
 
 ## Using a speech server instead
 
