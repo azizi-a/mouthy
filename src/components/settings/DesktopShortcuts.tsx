@@ -66,6 +66,9 @@ export const DesktopShortcuts: React.FC<DesktopShortcutsProps> = ({
           {t("settings.general.shortcut.desktop.notRunning")}
         </p>
         <p className="text-xs text-mid-gray">
+          {t("settings.general.shortcut.desktop.noArguments")}
+        </p>
+        <p className="text-xs text-mid-gray">
           {t("settings.general.shortcut.desktop.eventTap")}
         </p>
         <p className="text-xs text-mid-gray">
