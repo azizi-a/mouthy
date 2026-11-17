@@ -1355,6 +1355,96 @@ mod tests {
         }
     }
 
+    /// What the English pin reads: the listening test as it stood when the pin
+    /// was made, so later edits to that guide leave it alone, and then each of
+    /// `ENGLISH_LINES` on its own, as a selection would be.
+    const ENGLISH_TEXT: &str = include_str!("tts/fixtures/english-text.txt");
+    const ENGLISH_PHONEMES: &str = include_str!("tts/fixtures/english-phonemes.txt");
+    const ENGLISH_LINES: &[&str] = &[
+        "The naïve café served crème brûlée and a jalapeño.",
+        "Œuvre, Straße, æsthetics and the ﬁnal ﬂoor plan.",
+        "Señor Muñoz flew from Zürich to Kraków and São Paulo.",
+        "Cafe\u{301} and re\u{301}sume\u{301} are typed with separate accents.",
+        "She said “no” twice, and it’s the user’s fault, isn’t it?",
+        "„Quoted“ and ‘single’ quotes don’t split a word.",
+        "Dr. Smith and Mrs. Jones met Prof. Brown on Baker St. at 9 a.m.",
+        "Cats vs. dogs, approx. forty of each, etc.",
+        "See No. 5, Capt. Hook and Smith Jr. at St. Paul's.",
+        "Ms. Smith met Dr Who, Gen Z and Gen. Patton.",
+        "Tools, e.g. hammers, i.e. the heavy ones, at 7 a.m. or 5 p.m.",
+        "The API, URL and HTTP specs are on GitHub.",
+        "IDs, URLs and PDFs: the U.S. and the U.K. agree.",
+        "macOS, iOS, HTMLParser and camelCase names read as words.",
+        "Node.js, README.md and ort.pyke.io are names, not sentences.",
+        "It costs $3.2 billion, £45 or €10.50 each.",
+        "Version 2.0.1 fixed 37 bugs on 1 April 2027.",
+        "The 1990s, the '80s and the 21st century.",
+        "At 10:30 or 7.30pm, about 45% of us left.",
+        "Read pages 10-12, then 1914–1918, then 9:00–17:00.",
+        "Prices fell by \u{2212}5 percent, from 1,500 to 1,425.",
+        "He came 3rd, then 2nd, then 1st.",
+        "Call 020-7946-0958 before 2026-10-13.",
+        "Tea — or coffee – is fine, well—maybe.",
+        "Use [the API docs][1] and (see [the FAQ]).",
+        "Soft\u{ad}ware, zero\u{200b}width and no\u{a0}break spaces vanish.",
+        "Wait... what? Really!",
+        "日本語 and emoji 🎉 pass through untouched.",
+        "When the meeting finally ended, after a long day of talks about the budget, everyone went home.",
+        "The report, which the committee had asked for in the spring, ran to more than two hundred pages, \
+         covered every branch of the library from the smallest reading room to the main hall, listed the \
+         books that had been lost, damaged or never returned, set out what each repair would cost and how \
+         long it would take, and ended with a long list of recommendations that the members argued about \
+         for most of the summer, until the chair finally called a vote in September and the plan was \
+         approved by a narrow margin.",
+    ];
+
+    /// One `voice<TAB>phonemes` line per chunk the local voice reads.
+    fn english_phonemes() -> String {
+        let mut out = String::new();
+        for voice in ["bm_lewis", "af_alloy"] {
+            let files = tts::local::ModelFiles::new(
+                std::path::Path::new("models"),
+                settings::ModelVariant::Int8,
+                voice,
+            );
+            let backend = tts::Backend::Local(files);
+            let texts: Vec<String> = std::iter::once(ENGLISH_TEXT)
+                .chain(ENGLISH_LINES.iter().copied())
+                .flat_map(|text| sentences_for(&tts::text::normalize(text), &backend))
+                .map(|chunk| chunk.text)
+                .collect();
+            let tts::Backend::Local(files) = &backend else {
+                unreachable!()
+            };
+            for phonemes in tts::local::phonemes_without_espeak(files, &texts) {
+                out.push_str(&format!("{voice}\t{phonemes}\n"));
+            }
+        }
+        out
+    }
+
+    /// English as the local voice reads it must not move unless on purpose:
+    /// then run `cargo test -- --ignored write_the_english_phonemes` and
+    /// review the fixture's diff.
+    #[test]
+    fn english_reads_as_the_fixture_says() {
+        let read = english_phonemes();
+        for (line, (read, expected)) in read.lines().zip(ENGLISH_PHONEMES.lines()).enumerate() {
+            assert_eq!(read, expected, "fixture line {}", line + 1);
+        }
+        assert_eq!(read, ENGLISH_PHONEMES);
+    }
+
+    #[test]
+    #[ignore = "rewrites the English fixture"]
+    fn write_the_english_phonemes() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/tts/fixtures/english-phonemes.txt"
+        );
+        std::fs::write(path, english_phonemes()).unwrap();
+    }
+
     #[test]
     fn the_server_gets_the_voice_asked_for_not_the_settings_voice() {
         let settings = AppSettings {

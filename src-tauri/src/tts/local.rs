@@ -735,10 +735,30 @@ fn style_row(rows: &[f32], tokens: usize) -> &[f32] {
 
 /// Kokoro ids for `text`, and how many symbols had no id.
 fn text_to_ids(g2p: &G2P, dialect: Dialect, text: &str) -> Result<(Vec<i64>, usize), String> {
+    Ok(token_ids(&text_to_phonemes(g2p, dialect, text)?))
+}
+
+/// Kokoro's symbols for `text`, before they become ids.
+fn text_to_phonemes(g2p: &G2P, dialect: Dialect, text: &str) -> Result<String, String> {
     let (raw, _) = g2p
         .g2p(&reading(g2p, text))
         .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
-    Ok(token_ids(&to_kokoro_phonemes(&raw, dialect)))
+    Ok(to_kokoro_phonemes(&raw, dialect))
+}
+
+/// The symbols the local voice for `files` reads each of `texts` as, without
+/// espeak-ng, so every machine gives the same.
+#[cfg(test)]
+pub(crate) fn phonemes_without_espeak(files: &ModelFiles, texts: &[String]) -> Vec<String> {
+    let reading = Reading {
+        dialect: files.dialect().expect("a voice or blend"),
+        espeak: None,
+    };
+    let g2p = build_g2p(&reading);
+    texts
+        .iter()
+        .map(|text| text_to_phonemes(&g2p, reading.dialect, text).unwrap())
+        .collect()
 }
 
 /// `text` as misaki-rs should get it: plain characters, abbreviations and

@@ -19,5 +19,6 @@ src/bindings.ts
 .DS_Store
 *.log
 
-# Test input whose tabs and line indents are what it tests
+# Test input whose tabs and line indents are what it tests, and output pinned byte for byte
 docs/listening-test.md
+src-tauri/src/tts/fixtures/
