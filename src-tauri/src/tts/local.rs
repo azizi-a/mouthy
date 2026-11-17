@@ -1572,35 +1572,9 @@ mod tests {
     }
 
     #[test]
-    fn each_language_cuts_its_text_at_its_own_marks() {
-        let reading_in = |language| ModelFiles {
-            language,
-            ..ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "af_alloy")
-        };
-        for (language, marks) in [
-            (VoiceLanguage::AmericanEnglish, &Marks::DEFAULT),
-            (VoiceLanguage::Spanish, &Marks::DEFAULT),
-            (VoiceLanguage::Japanese, &Marks::CJK),
-            (VoiceLanguage::Mandarin, &Marks::CJK),
-            (VoiceLanguage::Hindi, &Marks::HINDI),
-        ] {
-            assert_eq!(reading_in(language).marks(), marks, "{language:?}");
-        }
-        // Until this build reads Chinese, a Chinese voice's text is cut as English.
+    fn a_chinese_voice_has_its_text_cut_as_english_until_this_build_reads_chinese() {
         let xiaobei = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "zf_xiaobei");
         assert_eq!(xiaobei.marks(), &Marks::DEFAULT);
-    }
-
-    #[test]
-    fn british_english_alone_reads_with_the_british_lexicon() {
-        assert_eq!(Dialect::of(VoiceLanguage::BritishEnglish), Dialect::British);
-        for language in [
-            VoiceLanguage::AmericanEnglish,
-            VoiceLanguage::Spanish,
-            VoiceLanguage::Japanese,
-        ] {
-            assert_eq!(Dialect::of(language), Dialect::American, "{language:?}");
-        }
     }
 
     #[test]

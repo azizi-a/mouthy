@@ -1524,6 +1524,18 @@ mod tests {
             .collect()
     }
 
+    #[test]
+    fn a_voice_in_a_language_this_build_cannot_read_reads_as_american_english() {
+        let american = english_reading("af_alloy");
+        for voice in ["zf_xiaobei", "ef_dora", "jm_kumo", "hf_alpha"] {
+            let read = english_reading(voice);
+            assert_eq!(read.len(), american.len(), "{voice}");
+            for (read, american) in read.iter().zip(&american) {
+                assert_eq!(read, american, "{voice}");
+            }
+        }
+    }
+
     /// English as the local voice reads it must not move unless on purpose:
     /// then run `cargo test -- --ignored write_the_english_phonemes` and
     /// review the fixture's diff.
