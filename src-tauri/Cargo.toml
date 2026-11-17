@@ -64,6 +64,10 @@ misaki-rs = { version = "0.6", default-features = false }
 jpreprocess = "=0.15.0"
 # Unpacks that dictionary's .tar.gz; already linked through png.
 flate2 = "1"
+# Mandarin: word segmentation with jieba's dictionary, and each character's pinyin.
+# Pinned exactly: their data decides the readings the misaki fixtures pin.
+jieba-rs = "=0.7.4"
+pinyin = { version = "=0.10.0", default-features = false, features = ["with_tone"] }
 # Model downloads: checksums, and cancelling a download mid-transfer.
 sha2 = "0.10"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }

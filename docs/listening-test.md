@@ -128,3 +128,11 @@ Select one paragraph at a time, with a Japanese voice such as `jf_alpha` or `jm_
 私は毎朝、駅前の店でコーヒーを買います。今日は天気がいいので、3人で公園へ行きました。昨日、新しいiPhoneで写真を撮りました。
 
 You should hear the kana paragraph as five Japanese sentences, the last one a question: the small っ in ちょっと and いっしょ as a short catch, ー in コーヒー as a long vowel, ん in さんぽ as "m". Without the dictionary its words run together a little and the kanji paragraph shows "Kanji need the dictionary in Settings → Models" instead. With the dictionary, words come apart, きょう and こうえん have long vowels, and the kanji paragraph is read whole: 私は and 今日は with "wa", 公園へ with "e", 3人 as "san nin", and "iPhone" in English.
+
+## Part 7: Mandarin
+
+Select only this part's paragraph, with a Chinese voice such as `zf_xiaobei` or `zm_yunjian`.
+
+今天天气很好，我们一起去公园散步吧。路上，我在银行门口遇到了一位老朋友，他说他重新开始学画画儿了。我们聊了一会儿，觉得时间过得真快：上次见面还是2019年！你明天有空吗？
+
+You should hear five Mandarin sentences, the last one a question, with the four tones distinct: 今天 level, 银 rising, 好 dipping, 在 falling. 银行 is "yínháng" and 重新 "chóngxīn"; 2019年 is read digit by digit, "èr líng yī jiǔ nián"; 了, the 得 of 觉得 and 吗 are light and unstressed.

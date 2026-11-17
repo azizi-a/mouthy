@@ -78,7 +78,7 @@ fn preview_text(language: VoiceLanguage) -> &'static str {
         VoiceLanguage::Japanese => {
             "どうも。これが、あなたのテキストをよみあげるときの、わたしのこえです。"
         }
-        VoiceLanguage::Mandarin => "你好。这就是我朗读你的文字时的声音。",
+        VoiceLanguage::Mandarin => "你好！这就是我为你朗读文字时的声音。",
     }
 }
 
@@ -2009,19 +2009,26 @@ mod tests {
         assert!(!preview_text(VoiceLanguage::Japanese).contains(is_kanji));
     }
 
-    /// A voice of each language this build cannot read yet.
-    const READ_AS_ENGLISH: &[&str] = &["zf_xiaobei"];
+    #[test]
+    fn a_custom_voice_and_the_server_preview_in_english() {
+        let english = preview_text(VoiceLanguage::AmericanEnglish);
+        assert_eq!(preview_sentence(&local_backend("xx_custom")), english);
+        for voice in ["ef_dora", "jm_kumo", "zf_xiaobei"] {
+            let server = http_backend(&settings::get_default_settings(), voice);
+            assert_eq!(preview_sentence(&server), english, "{voice}");
+        }
+    }
 
     #[test]
-    fn a_voice_this_build_cannot_read_previews_in_english() {
-        let english = preview_text(VoiceLanguage::AmericanEnglish);
-        for voice in READ_AS_ENGLISH.iter().chain(&["xx_custom"]) {
-            assert_eq!(preview_sentence(&local_backend(voice)), english, "{voice}");
-        }
-        let server = http_backend(&settings::get_default_settings(), "ef_dora");
-        assert_eq!(preview_sentence(&server), english);
-        let server = http_backend(&settings::get_default_settings(), "jm_kumo");
-        assert_eq!(preview_sentence(&server), english);
+    fn a_chinese_voice_previews_in_mandarin() {
+        let backend = local_backend("zf_xiaobei");
+        assert_eq!(
+            preview_sentence(&backend),
+            preview_text(VoiceLanguage::Mandarin)
+        );
+        // "你好！" is too short to read alone and joins the next sentence.
+        let text = tts::text::normalize(preview_sentence(&backend));
+        assert_eq!(sentences_for(&text, &backend).len(), 1);
     }
 
     #[test]
@@ -2075,7 +2082,12 @@ mod tests {
     #[test]
     fn both_engines_speak_the_preview_sentence() {
         let http = http_backend(&settings::get_default_settings(), "af_alloy");
-        for backend in [http, local_backend("af_alloy"), local_backend("jf_alpha")] {
+        for backend in [
+            http,
+            local_backend("af_alloy"),
+            local_backend("jf_alpha"),
+            local_backend("zf_xiaobei"),
+        ] {
             let text = tts::text::normalize(preview_sentence(&backend));
             let sentences = sentences_for(&text, &backend);
             assert!(!sentences.is_empty());
@@ -2194,15 +2206,64 @@ mod tests {
     }
 
     #[test]
-    fn a_voice_in_a_language_this_build_cannot_read_reads_as_american_english() {
-        let american = english_reading("af_alloy");
-        for &voice in READ_AS_ENGLISH {
-            let read = english_reading(voice);
+    fn english_text_in_a_chinese_voice_reads_as_an_american_voice_does() {
+        let american = english_chunks("af_alloy");
+        let has_han = |text: &str| text.chars().any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c));
+        let han_line = "日本語 and emoji 🎉 pass through untouched.";
+        for voice in ["zf_xiaobei", "zm_yunjian"] {
+            let read = english_chunks(voice);
             assert_eq!(read.len(), american.len(), "{voice}");
-            for (read, american) in read.iter().zip(&american) {
-                assert_eq!(read, american, "{voice}");
+            let mut with_han = Vec::new();
+            for ((text, line), (american_text, american_line)) in read.iter().zip(&american) {
+                assert_eq!(text, american_text, "{voice}: chunks differ");
+                if has_han(text) {
+                    with_han.push(text.as_str());
+                } else {
+                    assert_eq!(line, american_line, "{voice}: {text}");
+                }
             }
+            assert_eq!(with_han, [han_line], "{voice}");
         }
+        // Its Chinese reads as Mandarin, the rest as an American voice reads it.
+        let tts::Backend::Local(xiaobei) = local_backend("zf_xiaobei") else {
+            unreachable!()
+        };
+        let tts::Backend::Local(alloy) = local_backend("af_alloy") else {
+            unreachable!()
+        };
+        let read =
+            |files, text: &str| tts::local::phonemes_without_espeak(files, &[text.to_string()]);
+        assert_eq!(
+            read(&xiaobei, han_line),
+            [format!(
+                "{} {}",
+                read(&xiaobei, "日本語")[0],
+                read(&alloy, "and emoji 🎉 pass through untouched.")[0]
+            )]
+        );
+    }
+
+    #[test]
+    fn a_chinese_voice_set_to_read_english_takes_the_whole_english_path() {
+        let xiaobei = read_in(files("zf_xiaobei"), ReadingLanguage::English);
+        assert_eq!(xiaobei.language(), VoiceLanguage::AmericanEnglish);
+        let text = "今天天气很好。The build passed, and 3 tests ran at 10:30.";
+        let backend = tts::Backend::Local(xiaobei);
+        assert_eq!(backend.max_chunk_chars(text), 450);
+        assert_eq!(
+            sentences_for(text, &backend),
+            sentences_for(text, &local_backend("af_alloy"))
+        );
+        let tts::Backend::Local(xiaobei) = &backend else {
+            unreachable!()
+        };
+        let tts::Backend::Local(alloy) = local_backend("af_alloy") else {
+            unreachable!()
+        };
+        assert_eq!(
+            tts::local::phonemes_without_espeak(xiaobei, &[text.to_string()]),
+            tts::local::phonemes_without_espeak(&alloy, &[text.to_string()])
+        );
     }
 
     #[test]
@@ -2389,6 +2450,42 @@ mod tests {
             }
             drop(loaded);
             let path = std::env::temp_dir().join(format!("mouthy-ja-{name}.wav"));
+            write_wav(&path, &audio);
+            println!("{}", path.display());
+        }
+    }
+
+    /// Writes Mandarin for a listener, as a session would read it:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored chinese_voice --nocapture`.
+    #[test]
+    #[ignore = "needs Kokoro model files and zf_xiaobei"]
+    fn chinese_voice_reads_mandarin_aloud() {
+        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let files =
+            || tts::local::ModelFiles::new(&models, settings::ModelVariant::Int8, "zf_xiaobei");
+        for (name, text) in [
+            ("preview", preview_text(VoiceLanguage::Mandarin)),
+            (
+                "paragraph",
+                "今天天气很好，我们一起去公园散步吧。路上，我在银行门口遇到了一位老朋友，他说他重新开始学画画儿了。我们聊了一会儿，觉得时间过得真快：上次见面还是2019年！你明天有空吗？",
+            ),
+        ] {
+            let backend = tts::Backend::Local(files());
+            let sentences = sentences_for(&tts::text::normalize(text), &backend);
+            let stop = Arc::new(AtomicBool::new(false));
+            let tts::Synth::Local(mut loaded) = backend.open(&stop).unwrap() else {
+                unreachable!()
+            };
+            let mut audio = Vec::new();
+            for sentence in &sentences {
+                let samples = loaded
+                    .synthesize(&sentence.text, 1.0, sentence.ends_sentence)
+                    .unwrap();
+                assert!(samples.len() > tts::SAMPLE_RATE as usize / 2, "{sentence:?}");
+                audio.extend(samples);
+            }
+            drop(loaded);
+            let path = std::env::temp_dir().join(format!("mouthy-zh-{name}.wav"));
             write_wav(&path, &audio);
             println!("{}", path.display());
         }

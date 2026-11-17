@@ -7,7 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Linux
 
 - Linux builds: a deb, an rpm and an AppImage for x86_64, built by GitHub Actions and attached to each release.
-- espeak-ng is found where Linuxbrew and the system package manager put it, and Settings says how to install it on Linux.
+- espeak-ng is found where Linuxbrew and the system package manager put it, and the AppImage starts it with the system's own libraries; Settings says how to install it on Linux.
 - On Wayland, bind `mouthy --speak-selection`, `--speak-clipboard` and `--stop` to keys in the desktop's settings; Settings → General lists them with the right path. The highlighted text and the clipboard are read as plain text with wl-clipboard's `wl-paste`, and Settings says whether it is installed. A held shortcut cannot stop what its first press started, and presses less than 0.7 s apart count as one.
 - On Linux a copied password is refused only when it carries KDE's password hint. Most password managers add none there, so Speak Clipboard may read a copied password aloud.
 - The overlay starts on under native Wayland with the GTK layer shell (KDE Plasma with the rpm or deb), and off elsewhere, including the AppImage, which runs under XWayland.
@@ -18,10 +18,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Spanish, French, Italian, Brazilian Portuguese and Hindi voices read text in their own language, with numbers, times and English words read as a speaker of that language would. They need espeak-ng, which you install yourself (the README's Languages and Linux sections say how); without it they show a notice instead of speaking, and `--voice` with one of them uses the Settings voice unless the file is read as English.
 - **Changed:** those five voices no longer read text as English. English text in one of them is read with its language's rules unless Reading Language is set to English, or `--lang en` is passed.
-- Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language where Mouthy can read it.
+- Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language.
 - Japanese voices (`jf_*`, `jm_*`) read Japanese, with its numbers in Japanese and any English in it as English. Kanji need the Japanese dictionary, a 29 MB download on Settings → Models; with it particles and long vowels are said as spoken too. Without it Japanese voices read kana only, and text that is mostly kanji shows a notice pointing at the download.
 - **Changed:** Japanese voices read kana as Japanese rather than dropping it; text with no Japanese in it reads exactly as before.
 - Accented letters typed or copied as a letter plus a separate accent, as macOS file names often are, read like ordinary accented letters in Spanish, French, Italian, Portuguese and Hindi; Japanese voices also read half-width katakana, pausing at its half-width full stops and commas.
+- Chinese voices (`zf_*`, `zm_*`) read Mandarin, with each word's tones and numbers read in Chinese, and any English in it as English. Settings no longer marks any voice as reading English only.
+- **Changed:** Chinese voices now read Chinese text as Mandarin, where they used to skip it; English text in them still reads as English, exactly as before.
 
 ### Fixed
 
@@ -29,6 +31,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - On Linux, Mouthy runs without a tray icon when no appindicator library is installed, instead of failing to start.
 - On Linux and Windows, closing Settings quits Mouthy whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), since there is no other way to quit.
 - When the Settings window fails to start, it shows the error instead of staying empty.
+- A web address in Chinese or Japanese text is read as "link" and the text after it is read too; it used to swallow everything up to the next space.
 
 ## 0.5.0 — 2026-11-02
 
