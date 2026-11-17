@@ -2486,6 +2486,39 @@ mod tests {
         }
     }
 
+    /// Writes `ef_dora` reading English text as English, as the English reading
+    /// language has it, to `mouthy-ef_dora-as-english.wav` beside the paragraphs:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored as_english --nocapture`.
+    #[test]
+    #[ignore = "needs Kokoro model files"]
+    fn a_spanish_voice_reads_english_as_english() {
+        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let out = std::env::var_os("MOUTHY_WAV_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir);
+        let files = ModelFiles::new(&models, ModelVariant::Int8, "ef_dora")
+            .reading_as(VoiceLanguage::AmericanEnglish);
+        assert!(!files.needs_espeak());
+        let text =
+            "The build passed, and all 37 tests ran in 12 seconds. Dr. Smith will review it.";
+        let stop = Arc::new(AtomicBool::new(false));
+        let mut loaded = open(&files, &stop).unwrap();
+        let mut samples = Vec::new();
+        for chunk in chunks(&files, text) {
+            samples.extend(
+                loaded
+                    .synthesize(&chunk.text, 1.0, chunk.ends_sentence)
+                    .unwrap(),
+            );
+        }
+        drop(loaded);
+        let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
+        assert!(seconds > 3.0, "{seconds} s");
+        let path = out.join("mouthy-ef_dora-as-english.wav");
+        write_wav(&path, &samples);
+        println!("ef_dora as English: {seconds:.1} s, {}", path.display());
+    }
+
     /// 16-bit mono PCM at Kokoro's rate.
     fn write_wav(path: &Path, samples: &[i16]) {
         let data = u32::try_from(samples.len() * 2).unwrap();
