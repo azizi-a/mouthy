@@ -709,9 +709,40 @@ fn hide_if_current_after(
 #[cfg(target_os = "linux")]
 static LAYER_SHELL_ACTIVE: AtomicBool = AtomicBool::new(false);
 
+/// Sets a new store's overlay style once the overlay window exists. Call it
+/// after `create_overlay`.
+#[cfg(target_os = "linux")]
+pub fn choose_first_overlay_style(app_handle: &AppHandle) {
+    let style = first_overlay_style(LAYER_SHELL_ACTIVE.load(Ordering::SeqCst));
+    debug!("Overlay style for a new store: {style:?}");
+    let mut settings = settings::get_settings(app_handle);
+    if settings.overlay_style != style {
+        settings.overlay_style = style;
+        settings::write_settings(app_handle, settings);
+    }
+}
+
+/// The bar at the screen's edge where the compositor offers the layer shell
+/// (KDE Plasma). Elsewhere the overlay is an ordinary window that takes focus,
+/// so none.
+#[cfg(any(target_os = "linux", test))]
+fn first_overlay_style(layer_shell: bool) -> OverlayStyle {
+    if layer_shell {
+        OverlayStyle::Minimal
+    } else {
+        OverlayStyle::None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_new_linux_store_shows_the_overlay_only_with_the_layer_shell() {
+        assert_eq!(first_overlay_style(true), OverlayStyle::Minimal);
+        assert_eq!(first_overlay_style(false), OverlayStyle::None);
+    }
 
     #[test]
     fn overlay_view_is_tagged_by_kind() {

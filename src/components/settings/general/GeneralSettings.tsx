@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { platform } from "@tauri-apps/plugin-os";
+import { commands, type ShortcutHelp } from "@/bindings";
 import { ShortcutInput } from "../ShortcutInput";
+import { DesktopShortcuts } from "../DesktopShortcuts";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { OutputDeviceSelector } from "../OutputDeviceSelector";
 import { AutostartToggle } from "../AutostartToggle";
@@ -19,11 +22,43 @@ export const GeneralSettings: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting } = useSettings();
   const usesServer = (getSetting("tts_backend") ?? "local") === "http";
+  const keyboardImplementation = getSetting("keyboard_implementation");
+  // Only Linux can need the notice; there neither it nor the inputs show
+  // until the first answer (undefined).
+  const [shortcutHelp, setShortcutHelp] = useState<
+    ShortcutHelp | null | undefined
+  >(() => (platform() === "linux" ? undefined : null));
+
+  // Asked again when the backend changes: Event Tap registers its own.
+  useEffect(() => {
+    let current = true;
+    commands
+      .shortcutHelp()
+      .then((help) => {
+        if (current) setShortcutHelp(help);
+      })
+      .catch(() => {
+        // The inputs, rather than nothing, if the answer never comes.
+        if (current) setShortcutHelp(null);
+      });
+    return () => {
+      current = false;
+    };
+  }, [keyboardImplementation]);
+
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <SettingsGroup title={t("settings.general.title")}>
-        <ShortcutInput shortcutId="speak" grouped={true} />
-        <ShortcutInput shortcutId="speak_clipboard" grouped={true} />
+        {shortcutHelp ? (
+          <DesktopShortcuts command={shortcutHelp.command} grouped={true} />
+        ) : (
+          shortcutHelp === null && (
+            <>
+              <ShortcutInput shortcutId="speak" grouped={true} />
+              <ShortcutInput shortcutId="speak_clipboard" grouped={true} />
+            </>
+          )
+        )}
         <AutostartToggle descriptionMode="tooltip" grouped={true} />
         <StartHidden descriptionMode="tooltip" grouped={true} />
         <ShowOverlay descriptionMode="tooltip" grouped={true} />
