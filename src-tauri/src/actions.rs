@@ -1475,29 +1475,36 @@ mod tests {
          approved by a narrow margin.",
     ];
 
-    /// One `voice<TAB>phonemes` line per chunk the local voice reads.
+    /// One `ends_sentence<TAB>phonemes` line per chunk `voice` reads the
+    /// English pin's text as.
+    fn english_reading(voice: &str) -> Vec<String> {
+        let backend = local_backend(voice);
+        let chunks: Vec<tts::text::Chunk> = std::iter::once(ENGLISH_TEXT)
+            .chain(ENGLISH_LINES.iter().copied())
+            .flat_map(|text| sentences_for(&tts::text::normalize(text), &backend))
+            .collect();
+        let tts::Backend::Local(files) = &backend else {
+            unreachable!()
+        };
+        let texts: Vec<String> = chunks.iter().map(|chunk| chunk.text.clone()).collect();
+        let phonemes = tts::local::phonemes_without_espeak(files, &texts);
+        chunks
+            .iter()
+            .zip(phonemes)
+            .map(|(chunk, phonemes)| format!("{}\t{phonemes}", chunk.ends_sentence))
+            .collect()
+    }
+
+    /// One `voice<TAB>ends_sentence<TAB>phonemes` line per chunk.
     fn english_phonemes() -> String {
-        let mut out = String::new();
-        for voice in ["bm_lewis", "af_alloy"] {
-            let files = tts::local::ModelFiles::new(
-                std::path::Path::new("models"),
-                settings::ModelVariant::Int8,
-                voice,
-            );
-            let backend = tts::Backend::Local(files);
-            let texts: Vec<String> = std::iter::once(ENGLISH_TEXT)
-                .chain(ENGLISH_LINES.iter().copied())
-                .flat_map(|text| sentences_for(&tts::text::normalize(text), &backend))
-                .map(|chunk| chunk.text)
-                .collect();
-            let tts::Backend::Local(files) = &backend else {
-                unreachable!()
-            };
-            for phonemes in tts::local::phonemes_without_espeak(files, &texts) {
-                out.push_str(&format!("{voice}\t{phonemes}\n"));
-            }
-        }
-        out
+        ["bm_lewis", "af_alloy"]
+            .into_iter()
+            .flat_map(|voice| {
+                english_reading(voice)
+                    .into_iter()
+                    .map(move |line| format!("{voice}\t{line}\n"))
+            })
+            .collect()
     }
 
     /// English as the local voice reads it must not move unless on purpose:

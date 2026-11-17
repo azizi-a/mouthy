@@ -1,194 +1,194 @@
-bm_lewis	mˈWθi lˈɪsənɪŋ tˈɛst fɔː tˈɛkst ɹˈiːdɪŋ
-bm_lewis	ˈQpən ðɪs fˈIl ɪn ɐ tˈɛkst ˈɛdɪtəɹ, nˌɒt ɐ mˈɑːkdWn pɹˈiːvjuː, sˌQ ɪts lˈIn bɹˈAks stˈA az ɹˈɪtən.
-bm_lewis	sɪlˈɛkt ðə hˈQl fˈIl ɔːɹ wˈɒn pˈɑːt, pɹˈɛs ðə mˈWθi hˈɒtkiː and lˈɪsən.
-bm_lewis	ˈiːʧ pˈɑːt ˈɛndz wɪð wɒt juː ʃˌʊd hˈɪə, wˌɪʧ ɪz ɹˈiːd ɐlˈWd tˈuː.
-bm_lewis	jˈuːs ði ˈɒflIn vˈYs: mˈQst ɒv ðɪs ɪz ɐbˌWt hˌW ɪt ɹˈiːdz.
-bm_lewis	pˈɑːt wˈɒn: ɪnˈɪʃᵊlˌɪzəmz and nˈAmz
-bm_lewis	jˌɔː ˌIdˈiː ɪz ɹˈɛdi tʊ jˈuːs nˈW.
-bm_lewis	ði ˌApˌiːˈI jˌuːˌɑːˈɛl ɪz ɪn ðə ɹˈiːd mˌiː.
-bm_lewis	ˈQpən sˈɛtɪŋz ˌɒn mˈak ˌQˈɛs ɔːɹ IQˈɛs.
-bm_lewis	ɪn ði jˌuːˈɛs ˌI lˈɜːnd tə dɹˈIv.
-bm_lewis	ʃˈQ jɔː jˌuːˈɛs ˌIdˈiː kˈɑːd.
-bm_lewis	wˌiː jˈuːs ʤˈAsᵊn and jˈam ˌɛl, nˈasə stˈIl.
-bm_lewis	ɪnstˈɔːl nˈQd dˈɒt ʤˌAˈɛs and ɡˈɪt hˈʌb dˈɛsktɒp.
-bm_lewis	tə dˈuː: fˈɪks ði ˌApˌiːˈI bɪfˌɔː ɹɪlˈiːs
-bm_lewis	pɹˈIsɪz ɹˈQz ɪn ði jˌuːˈɛs. ˈanɐlˌɪsts ɛkspˈɛkt mˈɔː.
-bm_lewis	ði ˌIdˈiːz and jˌuːˌɑːˈɛlz ɑːɹ lˈɪstɪd bɪlˌQ.
-bm_lewis	jˌuː ʃˌʊd hˈɪə: ˌIdˈiː, ˌApˌiːˈI, jˌuːˌɑːˈɛl, jˌuːˈɛs and ˌIdˈiːz spˈɛld lˈɛtə bI lˈɛtə; ɹˈiːd mˌiː az ɹˈiːd mˌiː; mˈak ˌQˈɛs az mˈak ˈQ ˈɛs and IQˈɛs az ˈI ˈQ ˈɛs; ʤˈAsᵊn az ʤˈAsᵊn and jˈam ˌɛl az jˈam ˌɛl; nˈasə az wˈɒn wˈɜːd; nˈQd dˈɒt ʤˌAˈɛs az nˈQd dˈɒt ʤˈA ˈɛs and ɡˈɪt hˈʌb az ɡˈɪt hˈʌb.
-bm_lewis	ɪn ðə bɹˈakɪtɪd lˈIn ˈɛvɹɪ wˈɜːd ɪz spˈQkən, nˈɒn dɹˈɒpt bɪfˌɔː ˌApˌiːˈI.
-bm_lewis	ðə lˈIn ɐbˌWt pɹˈIsɪz ɪz tˈuː sˈɛntənsɪz, wɪð ɐ fˈʊl stˈɒp ˈaftəɹ ði jˌuːˈɛs lˈɛtəz.
-bm_lewis	pˈɑːt tˈuː: ɹˈapt tˈɛkst
-bm_lewis	mˈWθi ɹˈiːdz tˈɛkst kˈɒpɪd fɹɒm sɐfˈɑːɹi, mˈAl, nˈQts and vˈɪʒuːᵊl stjˈuːdɪˌQ kˈQd ɐlˈWd, and ˌI jˈuːs ɪt ˈɛvɹɪ dˈA wɪð klˈɔːd kˈQd tə hˈɪə lˈɒŋ ɹɪplˈIz.
-bm_lewis	ði ˈɒflIn vˈYs ɹˈiːdz ðə sɪlˈɛkʃən wɛn juː pɹˈɛs ðə hˈɒtkiː, and stˈɒps wɛn juː pɹˈɛs ðə hˈɒtkiː ɐɡˈɛn.
-bm_lewis	nˈʌθɪŋ juː sɪlˈɛkt lˈiːvz jɔː mˈak, bɪkˈɒz ðə vˈYs ɹˈʌnz ˌɒn jɔː ˈQn kəmpjˈuːtə wˈʌns ɪts fˈIlz ɑːɹ dˈWnlQdɪd.
-bm_lewis	ɡˌɛtɪŋ stˈɑːtɪd wɪð mˈWθi
-bm_lewis	ʧˈuːzɪŋ ɐ vˈYs fɔː ɹˈiːdɪŋ
-bm_lewis	ɹˈiːdɪŋ ɐ sɪlˈɛkʃən ɐlˈWd
-bm_lewis	ˈalɪs: dˈɪd ðə njˈuː bˈɪld fˈɪks ðə pˈɔːzɪz
-bm_lewis	bˈɒb: jˈɛs, ɹˈapt lˈInz ɹˈiːd az wˈɒn sˈɛntəns nˈW
-bm_lewis	ˈalɪs: ɡɹˈAt, ˌI wɪl tɹˈI ɪt ˈaftəɹ lˈʌnʧ
-bm_lewis	vˈYs nˈAm ˈaksənt ɹˈiːdɪŋ spˈiːd
-bm_lewis	ˈalY əmˈɛɹɪkᵊn nˈɔːmᵊl
-bm_lewis	lˈuːɪs bɹˈɪtɪʃ fˈastə
-bm_lewis	ˈɪnfQ stˈɑːtɪŋ sˈɜːvə ˌɒn pˈɔːt ˈAti ˈAti wɪð fˈɔː wˈɜːkəz ˌQkˈA
-bm_lewis	wˈɔːn dˈɪsk jˈuːsɪʤ ˌɒn ðə mˈAn vˈɒljuːm ɪz at nˈInti wˈɒn pəsˈɛnt
-bm_lewis	ˈɛɹəɹ fˈAld tə kənˈɛkt tə ðə dˈAtəbˌAs at dˌiːbˈiː: fˈɪfti fˈɔː θˈɜːti tˈuː
-bm_lewis	ˈiː θɹˈiː hˈʌndɹɪd ˈAt mɪsmˈaʧt tˈIps ɪn ˈɛs ˈɑː sˈiː tˈiː tˈiː ˈɛs tˈɛkst dˈɒt ˌɑːɹˈɛs lˈIn twˈɛlv
-bm_lewis	ˈiː fˈɔː hˈʌndɹɪd twˈɛnti fˈIv kˈanɒt fˈInd vˈaljuː fˈuː ɪn ðɪs skˈQp hˈɪə
-bm_lewis	ðə splˈɪtə tɹˈiːts ˈɛvɹɪ lˈIn bɹˈAk az ði ˈɛnd ɒv ɐ sˈɛntəns, sˌQ ˈiːʧ ɹˈapt lˈIn ɒv ɐ tˈɜːmɪnᵊl sɪlˈɛkʃən ɡˈɛts ɪts ˈQn pˈɔːz.
-bm_lewis	ðˌat ɹˈuːl ɛɡzˈɪsts sˌQ hˈɛdɪŋz and bˈʊlɪts wɪðˌWt pˌʌŋkʧuːˈAʃən stˈɪl ɹˈiːd az sˈɛntənsɪz.
-bm_lewis	bˈaʃ ɡˈɪt lˈɒɡ ˈQ ˈɛn ˈiː ˈɛl ˈI ˈɛn ˈiː mˈInəs θɹˈiː
-bm_lewis	ɐ wˈɒn bˈiː tˈuː sˈiː θɹˈiː dˈiː fˈɪks: ɹɪflˈQ ɹˈapt lˈInz bɪfˌɔː sˈɛntəns splˈɪtɪŋ
-bm_lewis	nˈIn ˈɛf ˈAt ˈiː sˈɛvən dˈiː sˈɪks fˈiːt: dɪfˈɒlt vˈYs ˈalY fɔː fɹˈɛʃ ɪnstˈɔːlz
-bm_lewis	ˈiː fˈɔː ˈɛf fˈIv ɐ sˈɪks bˈiː ʧˈɔː: bˈʌmp vˈɜːʃən tə zˈɪəɹQ pˈYnt tˈuː pˈYnt zˈɪəɹQ fɔː ðə ɹɪlˈiːs
-bm_lewis	lˈɛt wˈɜːdz tˈɛkst dˈɒt splˈɪt wˈItspAs;
-bm_lewis	pˈiː ˈɑː ˈI ˈɛn tˈiː ˈɛl ˈɛn!, wˈɜːdz dˈɒt kˈWnt;
-bm_lewis	jˌuː ʃˌʊd hˈɪə: ðə sɐfˈɑːɹi pˈaɹəɡɹˌaf az wˈɒn sˈɛntəns, wɪð nˈQ stˈɒp bɪfˌɔː vˈɪʒuːᵊl stjˈuːdɪˌQ kˈQd ɔːɹ klˈɔːd kˈQd; ˈiːʧ bˈʊlɪt az wˈɒn sˈɛntəns; ðə θɹˈiː hˈɛdɪŋz, ðə θɹˈiː ʧˈat lˈInz, ðə θɹˈiː tˈAbᵊl ɹˈQz, ðə θɹˈiː lˈɒɡ lˈInz and ðə tˈuː kəmpˈIlə lˈInz ˈiːʧ az ðɛː ˈQn sˈɛntəns; ðə klˈɔːd kˈQd pˈaɹəɡɹˌaf az tˈuː hˈQl sˈɛntənsɪz; ðə kəmˈand and ˈiːʧ kəmˈɪt lˈIn ˌɒn ɪts ˈQn.
-bm_lewis	ðə kˈQd blˈɒk ɪz ɹˈiːd az ɹˈɪtən, wˈɒn sˈɛntəns pɜː lˈIn; ɪts fˈɛnsɪz ɑːɹ sˈIlənt.
-bm_lewis	pˈɑːt θɹˈiː: pˈɔːzɪz and sˈɛntənsɪz
-bm_lewis	wˌɛn ðə kəmˈɪti mˈɛt ɐɡˈɛn ɪn ðə spɹˈɪŋ, ˈaftəɹ ɐ lˈɒŋ wˈɪntə ɒv ˈɑːɡjuːmənts ɐbˌWt ðə bˈʌʤɪt, ðə mˈɛmbəz ɐɡɹˈiːd, wɪð sˌʌm ɹɪlˈʌktəns, ðat ði ˈQld lˈIbɹəɹi wʊd stˈA ˈQpən ˌɒn sˈatədˌAz, ðat ðə ɹˈiːdɪŋ ɹˈuːm wʊd biː ɹɪpˈAntɪd bɪfˌɔː ðə sˈʌmə, and ðat ðə mˈʌni lˈɛft ˌQvəɹ wʊd ɡˌQ tə ðə ʧˈɪldɹənz bˈʊks ðat had bˌiːn pɹˈɒmɪst fɔː jˈɪəz. ˌɪt wˈɜːks. tɹˈI ɪt nˈW.
-bm_lewis	wˌI ðə vˈYs pˈɔːzɪz
-bm_lewis	ˈiːʧ sˈɛntəns ɪz ɹˈiːd ɪn wˈɒn ɡˌQ, sˌQ ɪts tˈQn ɹˈIzɪz and fˈɔːlz az wˈɒn sˈɛntəns and pˈɔːzɪz ˈQnli wˌɛː ðə kˈɒməz ɑːɹ.
-bm_lewis	dˈɒktə smˈɪθ mˈɛt mˈɪstə ʤˈQnz at sˈɛvən θˈɜːti pˌiːˈɛm.
-bm_lewis	ɹˈiːd pˈAʤɪz tˈɛn tə twˈɛlv fˈɜːst.
-bm_lewis	jˌuː ʃˌʊd hˈɪə: ðə kəmˈɪti sˈɛntəns ɪn wˈɒn tˈQn, wɪð ʃˈɔːt pˈɔːzɪz at ɪts kˈɒməz and nˈQ lˈɒŋɡə ɡˈap sɪlˈɛktɪd ɐlˈQn, ɪt stˈɑːts ˈaftəɹ ɪts fˈɜːst kˈɒmə, sˌQ ɛkspˈɛkt ɐ sˈiːm ðɛː; ɐ fˈʊl pˈɔːz ˈaftəɹ ˌɪt wˈɜːks; ðə hˈɛdɪŋ, ɐ fˈʊl pˈɔːz, ðˈɛn ɪts pˈaɹəɡɹˌaf; dˈɒktə smˈɪθ mˈɛt mˈɪstə ʤˈQnz at sˈɛvən θˈɜːti pˈiː ˈɛm, wɪð nˈQ pˈɔːz ˈaftəɹ dˈɒktə ɔːɹ mˈɪstə; and pˈAʤɪz tˈɛn tə twˈɛlv.
-bm_lewis	pˈɑːt fˈɔː: dˈɒts and nˈʌmbəz
-bm_lewis	vˈɪzɪt ɛɡzˈampᵊl dˈɒt kˈɒm and ˈQpən sˈɛtɪŋz dˈɒt ˌɑːɹˈɛs.
-bm_lewis	ˈʌpdAt tə vˈɜːʃən tˈuː pˈYnt zˈɪəɹQ tədˈA.
-bm_lewis	ðə ɹˈuːtə ɪz at wˈɒn hˈʌndɹɪd and nˈInti tˈuː pˈYnt wˈɒn hˈʌndɹɪd and sˈɪksti ˈAt pˈYnt zˈɪəɹQ pˈYnt wˈɒn. ðə fˈIl ɪz θɹˈiː pˈYnt fˈIv ʤˌiːbˈiː. ˌɪt kˈɒsts fˈɔː pˈWndz and nˈInti nˈIn pˈɛns.
-bm_lewis	ˌɪt wɒz pˈɒpjʊlə ɪn ðə nˈIntiːn nˈIntiz.
-bm_lewis	jˌuː ʃˌʊd hˈɪə: ɛɡzˈampᵊl dˈɒt kˈɒm and sˈɛtɪŋz dˈɒt ˈɑː ˈɛs; vˈɜːʃən tˈuː pˈYnt zˈɪəɹQ; ði ɐdɹˈɛs az wˈɒn hˈʌndɹɪd and nˈInti tˈuː pˈYnt wˈɒn hˈʌndɹɪd and sˈɪksti ˈAt pˈYnt zˈɪəɹQ pˈYnt wˈɒn; θɹˈiː pˈYnt fˈIv ʤˈiː bˈiː; fˈɔː pˈWndz and nˈInti nˈIn pˈɛns; ðə nˈIntiːn nˈIntiz.
-bm_lewis	ðə nIˈiːv kˈafA sˈɜːvd kɹˈiːm bɹˈuːliː and ɐ hˌɑːləpˈAnʲQ.
-bm_lewis	ˈQ ˈiː jˈuː vˈiː ˈɑː ˈiː, ˈɛs tˈiː ˈɑː ɐ ˈɛs ˈɛs ˈiː, iːsθˈɛtɪks and ðə fˈInᵊl flˈɔː plˈan.
-bm_lewis	sˈɛnə ˈɛm jˈuː ˈɛn ˈQ zˈɛd flˈuː fɹɒm zjˈʊəɹɪk tə kɹˈakW and sˈW pˈiː ɐ jˈuː ˈɛl ˈQ.
-bm_lewis	kˈafA and ɹɪzjˈuːm ɑːɹ tˈIpd wɪð sˈɛpɹət ˈaksənts.
-bm_lewis	ʃˌiː sˈɛd nˈQ twˈIs,
-bm_lewis	and ɪts ði jˈuːzəz fˈɒlt, ˈɪzᵊnt ɪt?
-bm_lewis	kwˈQtɪd and sˈɪŋɡᵊl kwˈQts dˈQnt splˈɪt ɐ wˈɜːd.
-bm_lewis	dˈɒktə smˈɪθ and mˈɪsəs ʤˈQnz mˈɛt pɹəfˈɛsə bɹˈWn ˌɒn bˈAkə stɹˈiːt at nˈIn ˌAˈɛm.
-bm_lewis	kˈats vˈɜːsɪz dˈɒɡz, ɐpɹˈɒksɪmətli fˈɔːti ɒv ˈiːʧ, ˈɛt sˈɛtəɹə.
-bm_lewis	sˈiː nˈʌmbə fˈIv, kˈaptɪn hˈʊk and smˈɪθ ʤˈuːnjə at sˈAnt pˈɔːlz.
-bm_lewis	mˈɪz smˈɪθ mˈɛt dˈɒktə hˌuː,
-bm_lewis	ʤˈɛn zˈiː and ʤˈɛnəɹᵊl pˈiː ɐ tˈiː tˈiː ˈQ ˈɛn.
-bm_lewis	tˈuːlz, ˌiːʤˈiː hˈaməz,
-bm_lewis	ˌIˈiː ðə hˈɛvi wˈɒnz, at sˈɛvən ˌAˈɛm ɔːɹ fˈIv pˌiːˈɛm.
-bm_lewis	ði ˌApˌiːˈI, jˌuːˌɑːˈɛl and ˌAʧtˌiːtˌiːpˈiː spˈɛks ɑːɹ ˌɒn ɡˈɪt hˈʌb.
-bm_lewis	ˌIdˈiːz, jˌuːˌɑːˈɛlz and pˌiːdˌiːˈɛfs: ði jˌuːˈɛs and ði jˌuːkˈA ɐɡɹˈiː.
-bm_lewis	mˈak ˌQˈɛs, IQˈɛs, ˌAʧtˌiːˌɛmˈɛl pˈɑːsə and kˈamᵊl kˈAs nˈAmz ɹˈiːd az wˈɜːdz.
-bm_lewis	nˈQd dˈɒt ʤˌAˈɛs, ɹˈiːd mˌiː dˈɒt ˌɛmdˈiː and ˈɔːt dˈɒt pˈIk dˈɒt ˈIQ ɑːɹ nˈAmz, nˌɒt sˈɛntənsɪz.
-bm_lewis	ˌɪt kˈɒsts θɹˈiː pˈYnt tˈuː bˈɪlɪən dˈɒləz, fˈɔːti fˈIv pˈWndz ɔːɹ tˈɛn jˈʊəɹQz and fˈɪfti sˈɛnts ˈiːʧ.
-bm_lewis	vˈɜːʃən tˈuː pˈYnt zˈɪəɹQ pˈYnt wˈɒn fˈɪkst θˈɜːti sˈɛvən bˈʌɡz ˌɒn wˈɒn ˈApɹɪl twˈɛnti twˈɛnti sˈɛvən.
-bm_lewis	ðə nˈIntiːn nˈIntiz, ði ˈAtiz and ðə twˈɛnti fˈɜːst sˈɛnʧəɹi.
-bm_lewis	ˌat tˈɛn θˈɜːti ɔːɹ sˈɛvən θˈɜːti pˌiːˈɛm, ɐbˌWt fˈɔːti fˈIv pəsˈɛnt ɒv ˌʌs lˈɛft.
-bm_lewis	ɹˈiːd pˈAʤɪz tˈɛn tə twˈɛlv, ðˈɛn nˈIntiːn fˈɔːtiːn tə nˈIntiːn ˈAtiːn, ðˈɛn nˈIn əklˈɒk tə sˈɛvəntˌiːn hˈʌndɹɪd.
-bm_lewis	pɹˈIsɪz fˈɛl bI mˈInəs fˈIv pəsˈɛnt,
-bm_lewis	fɹɒm wˈɒn θˈWzənd fˈIv hˈʌndɹɪd tə wˈɒn θˈWzənd fˈɔː hˈʌndɹɪd and twˈɛnti fˈIv.
-bm_lewis	hˌiː kˈAm θˈɜːd, ðˈɛn sˈɛkənd, ðˈɛn fˈɜːst.
-bm_lewis	kˈɔːl twˈɛnti sˈɛvən θˈWzənd nˈIn hˈʌndɹɪd and fˈɔːti sˈɪks nˈIn hˈʌndɹɪd fˈɪfti ˈAt bɪfˌɔː tˈuː θˈWzənd and twˈɛnti sˈɪks tˈɛn θˈɜːtiːn.
-bm_lewis	tˈiː, ɔːɹ kˈɒfi, ɪz fˈIn, wˈɛl mˈAbiː.
-bm_lewis	jˈuːs ði ˌApˌiːˈI dˈɒks wˈɒn and sˈiː ðə ˌɛfˌAkjˈuː.
-bm_lewis	sˈɒftwɛː, zˈɛd ˈiː ˈɑː ˈQ dˈʌbᵊljˌuː ˈI dˈiː tˈiː ˈAʧ and nˈQ bɹˈAk spˈAsɪz vˈanɪʃ.
-bm_lewis	wˈAt... wɒt? ɹˈɪəlɪ!
-bm_lewis	❓ ❓ ❓ and ɪmˈQʤi ❓ pˈas θɹuː ʌntˈʌʧt.
-bm_lewis	wˌɛn ðə mˈiːtɪŋ fˈInᵊli ˈɛndɪd,
-bm_lewis	ˈaftəɹ ɐ lˈɒŋ dˈA ɒv tˈɔːks ɐbˌWt ðə bˈʌʤɪt, ˈɛvɹɪwˌɒn wɛnt hˈQm.
-bm_lewis	ðə ɹɪpˈɔːt, wˌɪʧ ðə kəmˈɪti had ˈaskt fɔː ɪn ðə spɹˈɪŋ,
-bm_lewis	ɹˈan tə mˈɔː ðɐn tˈuː hˈʌndɹɪd pˈAʤɪz, kˈʌvəd ˈɛvɹɪ bɹˈanʧ ɒv ðə lˈIbɹəɹi fɹɒm ðə smˈɔːlɪst ɹˈiːdɪŋ ɹˈuːm tə ðə mˈAn hˈɔːl, lˈɪstɪd ðə bˈʊks ðat had bˌiːn lˈɒst, dˈamɪʤd ɔːɹ nˈɛvə ɹɪtˈɜːnd, sˈɛt ˈWt wɒt ˈiːʧ ɹɪpˈɛː wʊd kˈɒst and hˌW lˈɒŋ ɪt wʊd tˈAk, and ˈɛndɪd wɪð ɐ lˈɒŋ lˈɪst ɒv ɹˌɛkəmɛndˈAʃənz ðat ðə mˈɛmbəz ˈɑːɡjuːd ɐbˌWt fɔː mˈQst ɒv ðə sˈʌmə,
-bm_lewis	ʌntˈɪl ðə ʧˈɛː fˈInᵊli kˈɔːld ɐ vˈQt ɪn sɛptˈɛmbə and ðə plˈan wɒz ɐpɹˈuːvd bI ɐ nˈaɹQ mˈɑːʤɪn.
-af_alloy	mˈWθi lˈɪsənɪŋ tˈɛst fɔɹ tˈɛkst ɹˈidɪŋ
-af_alloy	ˈOpən ðɪs fˈIl ɪn ɐ tˈɛkst ˈɛdɪɾɚɹ, nˌɑt ɐ mˈɑɹkdWn pɹˈivju, sˌO ɪts lˈIn bɹˈAks stˈA æz ɹˈɪʔᵊn.
-af_alloy	sᵻlˈɛkt ðə hˈOl fˈIl ɔɹ wˈʌn pˈɑɹt, pɹˈɛs ðə mˈWθi hˈɑtki ænd lˈɪsən.
-af_alloy	ˈiʧ pˈɑɹt ˈɛndz wɪð wʌt ju ʃˌʊd hˈɪɹ, wˌɪʧ ɪz ɹˈid ɐlˈWd tˈu.
-af_alloy	jˈus ði ˈɔflIn vˈYs: mˈOst ʌv ðɪs ɪz ɐbˌWt hˌW ɪɾ ɹˈidz.
-af_alloy	pˈɑɹt wˈʌn: ɪnˈɪʃᵊlˌɪzəmz ænd nˈAmz
-af_alloy	jˌʊɹ ˌIdˈi ɪz ɹˈɛdi tʊ jˈus nˈW.
-af_alloy	ði ˌApˌiˈI jˌuˌɑɹˈɛl ɪz ɪn ðə ɹˈid mˌi.
-af_alloy	ˈOpən sˈɛɾɪŋz ˌɔn mˈæk ˌOˈɛs ɔɹ ˌIOˈɛs.
-af_alloy	ɪn ði jˌuˈɛs ˌI lˈɜnd tə dɹˈIv.
-af_alloy	ʃˈO jʊɹ jˌuˈɛs ˌIdˈi kˈɑɹd.
-af_alloy	wˌi jˈus ʤˈAsᵊn ænd jˈæm ˌɛl, nˈæsə stˈIl.
-af_alloy	ɪnstˈɔl nˈOd dˈɑt ʤˌAˈɛs ænd ɡˈɪt hˈʌb dˈɛsktɑp.
-af_alloy	tə dˈu: fˈɪks ði ˌApˌiˈI bᵻfˌɔɹ ɹᵻlˈis
-af_alloy	pɹˈIsᵻz ɹˈOz ɪn ði jˌuˈɛs. ˈænɐlˌɪsts ɛkspˈɛkt mˈɔɹ.
-af_alloy	ði ˌIdˈiz ænd jˌuˌɑɹˈɛlz ɑɹ lˈɪstᵻd bᵻlˌO.
-af_alloy	jˌu ʃˌʊd hˈɪɹ: ˌIdˈi, ˌApˌiˈI, jˌuˌɑɹˈɛl, jˌuˈɛs ænd ˌIdˈiz spˈɛld lˈɛɾɚ bI lˈɛɾɚ; ɹˈid mˌi æz ɹˈid mˌi; mˈæk ˌOˈɛs æz mˈæk ˈO ˈɛs ænd ˌIOˈɛs æz ˈI ˈO ˈɛs; ʤˈAsᵊn æz ʤˈAsᵊn ænd jˈæm ˌɛl æz jˈæm ˌɛl; nˈæsə æz wˈʌn wˈɜd; nˈOd dˈɑt ʤˌAˈɛs æz nˈOd dˈɑt ʤˈA ˈɛs ænd ɡˈɪt hˈʌb æz ɡˈɪt hˈʌb.
-af_alloy	ɪn ðə bɹˈækɪɾᵻd lˈIn ˈɛvɹi wˈɜd ɪz spˈOkən, nˈʌn dɹˈɑpt bᵻfˌɔɹ ˌApˌiˈI.
-af_alloy	ðə lˈIn ɐbˌWt pɹˈIsᵻz ɪz tˈu sˈɛntənsᵻz, wɪð ɐ fˈʊl stˈɑp ˈæftɚɹ ði jˌuˈɛs lˈɛɾɚz.
-af_alloy	pˈɑɹt tˈu: ɹˈæpt tˈɛkst
-af_alloy	mˈWθi ɹˈidz tˈɛkst kˈɑpɪd fɹʌm sɐfˈɑɹɹi, mˈAl, nˈOts ænd vˈɪʒuᵊl stˈudɪˌO kˈOd ɐlˈWd, ænd ˌI jˈus ɪɾ ˈɛvɹi dˈA wɪð klˈɔd kˈOd tə hˈɪɹ lˈɔŋ ɹᵻplˈIz.
-af_alloy	ði ˈɔflIn vˈYs ɹˈidz ðə sᵻlˈɛkʃən wɛn ju pɹˈɛs ðə hˈɑtki, ænd stˈɑps wɛn ju pɹˈɛs ðə hˈɑtki ɐɡˈɛn.
-af_alloy	nˈʌθɪŋ ju sᵻlˈɛkt lˈivz jʊɹ mˈæk, bɪkˈʌz ðə vˈYs ɹˈʌnz ˌɔn jʊɹ ˈOn kəmpjˈuɾɚ wˈʌns ɪts fˈIlz ɑɹ dˈWnlOdᵻd.
-af_alloy	ɡˌɛɾɪŋ stˈɑɹɾᵻd wɪð mˈWθi
-af_alloy	ʧˈuzɪŋ ɐ vˈYs fɔɹ ɹˈidɪŋ
-af_alloy	ɹˈidɪŋ ɐ sᵻlˈɛkʃən ɐlˈWd
-af_alloy	ˈælɪs: dˈɪd ðə nˈu bˈɪld fˈɪks ðə pˈɔzᵻz
-af_alloy	bˈɑb: jˈɛs, ɹˈæpt lˈInz ɹˈid æz wˈʌn sˈɛntəns nˈW
-af_alloy	ˈælɪs: ɡɹˈAt, ˌI wɪl tɹˈI ɪɾ ˈæftɚɹ lˈʌnʧ
-af_alloy	vˈYs nˈAm ˈæksənt ɹˈidɪŋ spˈid
-af_alloy	ˈælY əmˈɛɹəkᵊn nˈɔɹmᵊl
-af_alloy	lˈuɪs bɹˈɪɾɪʃ fˈæstɚ
-af_alloy	ˈɪnfO stˈɑɹɾɪŋ sˈɜvɚ ˌɔn pˈɔɹt ˈAɾi ˈAɾi wɪð fˈɔɹ wˈɜkɚz ˌOkˈA
-af_alloy	wˈɔɹn dˈɪsk jˈusɪʤ ˌɔn ðə mˈAn vˈɑljum ɪz æɾ nˈInti wˈʌn pɚsˈɛnt
-af_alloy	ˈɛɹɚɹ fˈAld tə kənˈɛkt tə ðə dˈAɾəbˌAs æɾ dˌibˈi: fˈɪfti fˈɔɹ θˈɜɾi tˈu
-af_alloy	ˈi θɹˈi hˈʌndɹɪd ˈAt mɪsmˈæʧt tˈIps ɪn ˈɛs ˈɑɹ sˈi tˈi tˈi ˈɛs tˈɛkst dˈɑt ˌɑɹɹˈɛs lˈIn twˈɛlv
-af_alloy	ˈi fˈɔɹ hˈʌndɹɪd twˈɛnti fˈIv kænˈɑt fˈInd vˈælju fˈu ɪn ðɪs skˈOp hˈɪɹ
-af_alloy	ðə splˈɪɾɚ tɹˈits ˈɛvɹi lˈIn bɹˈAk æz ði ˈɛnd ʌv ɐ sˈɛntəns, sˌO ˈiʧ ɹˈæpt lˈIn ʌv ɐ tˈɜmɪnᵊl sᵻlˈɛkʃən ɡˈɛts ɪts ˈOn pˈɔz.
-af_alloy	ðˌæt ɹˈul ɛɡzˈɪsts sˌO hˈɛdɪŋz ænd bˈʊlɪts wɪðˌWt pˌʌŋkʧuˈAʃən stˈɪl ɹˈid æz sˈɛntənsᵻz.
-af_alloy	bˈæʃ ɡˈɪt lˈɔɡ ˈO ˈɛn ˈi ˈɛl ˈI ˈɛn ˈi mˈInəs θɹˈi
-af_alloy	ɐ wˈʌn bˈi tˈu sˈi θɹˈi dˈi fˈɪks: ɹᵻflˈO ɹˈæpt lˈInz bᵻfˌɔɹ sˈɛntəns splˈɪɾɪŋ
-af_alloy	nˈIn ˈɛf ˈAt ˈi sˈɛvən dˈi sˈɪks fˈit: dᵻfˈɔlt vˈYs ˈælY fɔɹ fɹˈɛʃ ɪnstˈɔlz
-af_alloy	ˈi fˈɔɹ ˈɛf fˈIv ɐ sˈɪks bˈi ʧˈɔɹ: bˈʌmp vˈɜʒən tə zˈiəɹO pˈYnt tˈu pˈYnt zˈiəɹO fɔɹ ðə ɹᵻlˈis
-af_alloy	lˈɛt wˈɜdz tˈɛkst dˈɑt splˈɪt wˈItspAs;
-af_alloy	pˈi ˈɑɹ ˈI ˈɛn tˈi ˈɛl ˈɛn!, wˈɜdz dˈɑt kˈWnt;
-af_alloy	jˌu ʃˌʊd hˈɪɹ: ðə sɐfˈɑɹɹi pˈæɹəɡɹˌæf æz wˈʌn sˈɛntəns, wɪð nˈO stˈɑp bᵻfˌɔɹ vˈɪʒuᵊl stˈudɪˌO kˈOd ɔɹ klˈɔd kˈOd; ˈiʧ bˈʊlɪt æz wˈʌn sˈɛntəns; ðə θɹˈi hˈɛdɪŋz, ðə θɹˈi ʧˈæt lˈInz, ðə θɹˈi tˈAbᵊl ɹˈOz, ðə θɹˈi lˈɔɡ lˈInz ænd ðə tˈu kəmpˈIlɚ lˈInz ˈiʧ æz ðɛɹ ˈOn sˈɛntəns; ðə klˈɔd kˈOd pˈæɹəɡɹˌæf æz tˈu hˈOl sˈɛntənsᵻz; ðə kəmˈænd ænd ˈiʧ kəmˈɪt lˈIn ˌɔn ɪts ˈOn.
-af_alloy	ðə kˈOd blˈɑk ɪz ɹˈid æz ɹˈɪʔᵊn, wˈʌn sˈɛntəns pɜ lˈIn; ɪts fˈɛnsᵻz ɑɹ sˈIlənt.
-af_alloy	pˈɑɹt θɹˈi: pˈɔzᵻz ænd sˈɛntənsᵻz
-af_alloy	wˌɛn ðə kəmˈɪɾi mˈɛt ɐɡˈɛn ɪn ðə spɹˈɪŋ, ˈæftɚɹ ɐ lˈɔŋ wˈɪntɚ ʌv ˈɑɹɡjumənts ɐbˌWt ðə bˈʌʤɪt, ðə mˈɛmbɚz ɐɡɹˈid, wɪð sˌʌm ɹᵻlˈʌktəns, ðæt ði ˈOld lˈIbɹɛɹi wʊd stˈA ˈOpən ˌɔn sˈæɾɚdˌAz, ðæt ðə ɹˈidɪŋ ɹˈum wʊd bi ɹᵻpˈAntᵻd bᵻfˌɔɹ ðə sˈʌmɚ, ænd ðæt ðə mˈʌni lˈɛft ˌOvɚɹ wʊd ɡˌO tə ðə ʧˈɪldɹənz bˈʊks ðæt hæd bˌɪn pɹˈɑmɪst fɔɹ jˈɪɹz. ˌɪɾ wˈɜks. tɹˈI ɪɾ nˈW.
-af_alloy	wˌI ðə vˈYs pˈɔzᵻz
-af_alloy	ˈiʧ sˈɛntəns ɪz ɹˈid ɪn wˈʌn ɡˌO, sˌO ɪts tˈOn ɹˈIzᵻz ænd fˈɔlz æz wˈʌn sˈɛntəns ænd pˈɔzᵻz ˈOnli wˌɛɹ ðə kˈɑməz ɑɹ.
-af_alloy	dˈɑktɚ smˈɪθ mˈɛt mˈɪstɚ ʤˈOnz æɾ sˈɛvən θˈɜɾi pˌiˈɛm.
-af_alloy	ɹˈid pˈAʤᵻz tˈɛn tə twˈɛlv fˈɜst.
-af_alloy	jˌu ʃˌʊd hˈɪɹ: ðə kəmˈɪɾi sˈɛntəns ɪn wˈʌn tˈOn, wɪð ʃˈɔɹt pˈɔzᵻz æɾ ɪts kˈɑməz ænd nˈO lˈɔŋɡɚ ɡˈæp sᵻlˈɛktᵻd ɐlˈOn, ɪɾ stˈɑɹts ˈæftɚɹ ɪts fˈɜst kˈɑmə, sˌO ɛkspˈɛkt ɐ sˈim ðɛɹ; ɐ fˈʊl pˈɔz ˈæftɚɹ ˌɪɾ wˈɜks; ðə hˈɛdɪŋ, ɐ fˈʊl pˈɔz, ðˈɛn ɪts pˈæɹəɡɹˌæf; dˈɑktɚ smˈɪθ mˈɛt mˈɪstɚ ʤˈOnz æɾ sˈɛvən θˈɜɾi pˈi ˈɛm, wɪð nˈO pˈɔz ˈæftɚɹ dˈɑktɚ ɔɹ mˈɪstɚ; ænd pˈAʤᵻz tˈɛn tə twˈɛlv.
-af_alloy	pˈɑɹt fˈɔɹ: dˈɑts ænd nˈʌmbəɹz
-af_alloy	vˈɪzɪt ɛɡzˈæmpᵊl dˈɑt kˈɑm ænd ˈOpən sˈɛɾɪŋz dˈɑt ˌɑɹɹˈɛs.
-af_alloy	ˈʌpdAt tə vˈɜʒən tˈu pˈYnt zˈiəɹO tədˈA.
-af_alloy	ðə ɹˈWɾɚ ɪz æɾ wˈʌn hˈʌndɹɪd ænd nˈInti tˈu pˈYnt wˈʌn hˈʌndɹɪd ænd sˈɪksti ˈAt pˈYnt zˈiəɹO pˈYnt wˈʌn. ðə fˈIl ɪz θɹˈi pˈYnt fˈIv ʤˌibˈi. ˌɪɾ kˈɔsts fˈɔɹ pˈWndz ænd nˈInti nˈIn pˈɛns.
-af_alloy	ˌɪɾ wʌz pˈɑpjʊlɚ ɪn ðə nˈIntin nˈIntiz.
-af_alloy	jˌu ʃˌʊd hˈɪɹ: ɛɡzˈæmpᵊl dˈɑt kˈɑm ænd sˈɛɾɪŋz dˈɑt ˈɑɹ ˈɛs; vˈɜʒən tˈu pˈYnt zˈiəɹO; ði ɐdɹˈɛs æz wˈʌn hˈʌndɹɪd ænd nˈInti tˈu pˈYnt wˈʌn hˈʌndɹɪd ænd sˈɪksti ˈAt pˈYnt zˈiəɹO pˈYnt wˈʌn; θɹˈi pˈYnt fˈIv ʤˈi bˈi; fˈɔɹ pˈWndz ænd nˈInti nˈIn pˈɛns; ðə nˈIntin nˈIntiz.
-af_alloy	ðə nIˈiv kˈæfA sˈɜvd kɹˈim bɹˈuli ænd ɐ hˌɑləpˈAnʲO.
-af_alloy	ˈO ˈi jˈu vˈi ˈɑɹ ˈi, ˈɛs tˈi ˈɑɹ ɐ ˈɛs ˈɛs ˈi, ɛsθˈɛɾɪks ænd ðə fˈInᵊl flˈɔɹ plˈæn.
-af_alloy	sˈɛnɚ ˈɛm jˈu ˈɛn ˈO zˈi flˈu fɹʌm zˈuɹɪk tə kˈA ˈɑɹ ɐ kˈA ˈO dˈʌbᵊljˌu ænd sˈW pˈi ɐ jˈu ˈɛl ˈO.
-af_alloy	kˈæfA ænd ɹᵻzˈum ɑɹ tˈIpd wɪð sˈɛpɹət ˈæksənts.
-af_alloy	ʃˌi sˈɛd nˈO twˈIs,
-af_alloy	ænd ɪts ði jˈuzɚz fˈɔlt, ˈɪzᵊnt ɪɾ?
-af_alloy	kwˈOɾᵻd ænd sˈɪŋɡᵊl kwˈOts dˈOnt splˈɪt ɐ wˈɜd.
-af_alloy	dˈɑktɚ smˈɪθ ænd mˈɪsəs ʤˈOnz mˈɛt pɹəfˈɛsɚ bɹˈWn ˌɔn bˈAkɚ stɹˈit æɾ nˈIn ˌAˈɛm.
-af_alloy	kˈæts vˈɜsᵻz dˈɑɡz, ɐpɹˈɑksɪmətli fˈɔɹɾi ʌv ˈiʧ, ˈɛt sˈɛɾɚɹə.
-af_alloy	sˈi nˈʌmbɚ fˈIv, kˈæptɪn hˈʊk ænd smˈɪθ ʤˈunjɚ æɾ sˈAnt pˈɔlz.
-af_alloy	mˈɪz smˈɪθ mˈɛt dˈɑktɚ hˌu,
-af_alloy	ʤˈɛn zˈi ænd ʤˈɛnɚɹᵊl pˈi ɐ tˈi tˈi ˈO ˈɛn.
-af_alloy	tˈulz, ˌiʤˈi hˈæmɚz,
-af_alloy	ˌIˈi ðə hˈɛvi wˈʌnz, æɾ sˈɛvən ˌAˈɛm ɔɹ fˈIv pˌiˈɛm.
-af_alloy	ði ˌApˌiˈI, jˌuˌɑɹˈɛl ænd ˌAʧtˌitˌipˈi spˈɛks ɑɹ ˌɔn ɡˈɪt hˈʌb.
-af_alloy	ˌIdˈiz, jˌuˌɑɹˈɛlz ænd pˌidˌiˈɛfs: ði jˌuˈɛs ænd ði jˌukˈA ɐɡɹˈi.
-af_alloy	mˈæk ˌOˈɛs, ˌIOˈɛs, ˌAʧtˌiˌɛmˈɛl pˈɑɹsɚ ænd kˈæmᵊl kˈAs nˈAmz ɹˈid æz wˈɜdz.
-af_alloy	nˈOd dˈɑt ʤˌAˈɛs, ɹˈid mˌi dˈɑt ˌɛmdˈi ænd ˈɔɹt dˈɑt pˈIk dˈɑt ˈIˌO ɑɹ nˈAmz, nˌɑt sˈɛntənsᵻz.
-af_alloy	ˌɪɾ kˈɔsts θɹˈi pˈYnt tˈu bˈɪliən dˈɑlɚz, fˈɔɹɾi fˈIv pˈWndz ɔɹ tˈɛn jˈʊɹɹOz ænd fˈɪfti sˈɛnts ˈiʧ.
-af_alloy	vˈɜʒən tˈu pˈYnt zˈiəɹO pˈYnt wˈʌn fˈɪkst θˈɜɾi sˈɛvən bˈʌɡz ˌɔn wˈʌn ˈApɹəl twˈɛnti twˈɛnti sˈɛvən.
-af_alloy	ðə nˈIntin nˈIntiz, ði ˈAɾiz ænd ðə twˈɛnti fˈɜst sˈɛnʧɚɹi.
-af_alloy	ˌæɾ tˈɛn θˈɜɾi ɔɹ sˈɛvən θˈɜɾi pˌiˈɛm, ɐbˌWt fˈɔɹɾi fˈIv pɚsˈɛnt ʌv ˌʌs lˈɛft.
-af_alloy	ɹˈid pˈAʤᵻz tˈɛn tə twˈɛlv, ðˈɛn nˈIntin fˈɔɹtin tə nˈIntin ˈAtin, ðˈɛn nˈIn əklˈɑk tə sˈɛvəntˌin hˈʌndɹɪd.
-af_alloy	pɹˈIsᵻz fˈɛl bI mˈInəs fˈIv pɚsˈɛnt,
-af_alloy	fɹʌm wˈʌn θˈWzənd fˈIv hˈʌndɹɪd tə wˈʌn θˈWzənd fˈɔɹ hˈʌndɹɪd ænd twˈɛnti fˈIv.
-af_alloy	hˌi kˈAm θˈɜd, ðˈɛn sˈɛkənd, ðˈɛn fˈɜst.
-af_alloy	kˈɔl twˈɛnti sˈɛvən θˈWzənd nˈIn hˈʌndɹɪd ænd fˈɔɹɾi sˈɪks nˈIn hˈʌndɹɪd fˈɪfti ˈAt bᵻfˌɔɹ tˈu θˈWzənd ænd twˈɛnti sˈɪks tˈɛn θˈɜtin.
-af_alloy	tˈi, ɔɹ kˈɔfi, ɪz fˈIn, wˈɛl mˈAbi.
-af_alloy	jˈus ði ˌApˌiˈI dˈɑks wˈʌn ænd sˈi ðə ˌɛfˌAkjˈu.
-af_alloy	sˈɔftwɛɹ, zˈi ˈi ˈɑɹ ˈO dˈʌbᵊljˌu ˈI dˈi tˈi ˈAʧ ænd nˈO bɹˈAk spˈAsᵻz vˈænɪʃ.
-af_alloy	wˈAt... wʌt? ɹˈiəli!
-af_alloy	❓ ❓ ❓ ænd ɪmˈOʤi ❓ pˈæs θɹu ʌntˈʌʧt.
-af_alloy	wˌɛn ðə mˈiɾɪŋ fˈInᵊli ˈɛndᵻd,
-af_alloy	ˈæftɚɹ ɐ lˈɔŋ dˈA ʌv tˈɔks ɐbˌWt ðə bˈʌʤɪt, ˈɛvɹɪwˌʌn wɛnt hˈOm.
-af_alloy	ðə ɹᵻpˈɔɹt, wˌɪʧ ðə kəmˈɪɾi hæd ˈæskt fɔɹ ɪn ðə spɹˈɪŋ,
-af_alloy	ɹˈæn tə mˈɔɹ ðɐn tˈu hˈʌndɹɪd pˈAʤᵻz, kˈʌvɚd ˈɛvɹi bɹˈænʧ ʌv ðə lˈIbɹɛɹi fɹʌm ðə smˈɔlɪst ɹˈidɪŋ ɹˈum tə ðə mˈAn hˈɔl, lˈɪstᵻd ðə bˈʊks ðæt hæd bˌɪn lˈɔst, dˈæmɪʤd ɔɹ nˈɛvɚ ɹᵻtˈɜnd, sˈɛt ˈWt wʌt ˈiʧ ɹᵻpˈɛɹ wʊd kˈɔst ænd hˌW lˈɔŋ ɪɾ wʊd tˈAk, ænd ˈɛndᵻd wɪð ɐ lˈɔŋ lˈɪst ʌv ɹˌɛkəmɛndˈAʃənz ðæt ðə mˈɛmbɚz ˈɑɹɡjud ɐbˌWt fɔɹ mˈOst ʌv ðə sˈʌmɚ,
-af_alloy	ʌntˈɪl ðə ʧˈɛɹ fˈInᵊli kˈɔld ɐ vˈOt ɪn sɛptˈɛmbəɹ ænd ðə plˈæn wʌz ɐpɹˈuvd bI ɐ nˈæɹO mˈɑɹʤɪn.
+bm_lewis	true	mˈWθi lˈɪsənɪŋ tˈɛst fɔː tˈɛkst ɹˈiːdɪŋ
+bm_lewis	true	ˈQpən ðɪs fˈIl ɪn ɐ tˈɛkst ˈɛdɪtəɹ, nˌɒt ɐ mˈɑːkdWn pɹˈiːvjuː, sˌQ ɪts lˈIn bɹˈAks stˈA az ɹˈɪtən.
+bm_lewis	true	sɪlˈɛkt ðə hˈQl fˈIl ɔːɹ wˈɒn pˈɑːt, pɹˈɛs ðə mˈWθi hˈɒtkiː and lˈɪsən.
+bm_lewis	true	ˈiːʧ pˈɑːt ˈɛndz wɪð wɒt juː ʃˌʊd hˈɪə, wˌɪʧ ɪz ɹˈiːd ɐlˈWd tˈuː.
+bm_lewis	true	jˈuːs ði ˈɒflIn vˈYs: mˈQst ɒv ðɪs ɪz ɐbˌWt hˌW ɪt ɹˈiːdz.
+bm_lewis	true	pˈɑːt wˈɒn: ɪnˈɪʃᵊlˌɪzəmz and nˈAmz
+bm_lewis	true	jˌɔː ˌIdˈiː ɪz ɹˈɛdi tʊ jˈuːs nˈW.
+bm_lewis	true	ði ˌApˌiːˈI jˌuːˌɑːˈɛl ɪz ɪn ðə ɹˈiːd mˌiː.
+bm_lewis	true	ˈQpən sˈɛtɪŋz ˌɒn mˈak ˌQˈɛs ɔːɹ IQˈɛs.
+bm_lewis	true	ɪn ði jˌuːˈɛs ˌI lˈɜːnd tə dɹˈIv.
+bm_lewis	true	ʃˈQ jɔː jˌuːˈɛs ˌIdˈiː kˈɑːd.
+bm_lewis	true	wˌiː jˈuːs ʤˈAsᵊn and jˈam ˌɛl, nˈasə stˈIl.
+bm_lewis	true	ɪnstˈɔːl nˈQd dˈɒt ʤˌAˈɛs and ɡˈɪt hˈʌb dˈɛsktɒp.
+bm_lewis	true	tə dˈuː: fˈɪks ði ˌApˌiːˈI bɪfˌɔː ɹɪlˈiːs
+bm_lewis	true	pɹˈIsɪz ɹˈQz ɪn ði jˌuːˈɛs. ˈanɐlˌɪsts ɛkspˈɛkt mˈɔː.
+bm_lewis	true	ði ˌIdˈiːz and jˌuːˌɑːˈɛlz ɑːɹ lˈɪstɪd bɪlˌQ.
+bm_lewis	true	jˌuː ʃˌʊd hˈɪə: ˌIdˈiː, ˌApˌiːˈI, jˌuːˌɑːˈɛl, jˌuːˈɛs and ˌIdˈiːz spˈɛld lˈɛtə bI lˈɛtə; ɹˈiːd mˌiː az ɹˈiːd mˌiː; mˈak ˌQˈɛs az mˈak ˈQ ˈɛs and IQˈɛs az ˈI ˈQ ˈɛs; ʤˈAsᵊn az ʤˈAsᵊn and jˈam ˌɛl az jˈam ˌɛl; nˈasə az wˈɒn wˈɜːd; nˈQd dˈɒt ʤˌAˈɛs az nˈQd dˈɒt ʤˈA ˈɛs and ɡˈɪt hˈʌb az ɡˈɪt hˈʌb.
+bm_lewis	true	ɪn ðə bɹˈakɪtɪd lˈIn ˈɛvɹɪ wˈɜːd ɪz spˈQkən, nˈɒn dɹˈɒpt bɪfˌɔː ˌApˌiːˈI.
+bm_lewis	true	ðə lˈIn ɐbˌWt pɹˈIsɪz ɪz tˈuː sˈɛntənsɪz, wɪð ɐ fˈʊl stˈɒp ˈaftəɹ ði jˌuːˈɛs lˈɛtəz.
+bm_lewis	true	pˈɑːt tˈuː: ɹˈapt tˈɛkst
+bm_lewis	true	mˈWθi ɹˈiːdz tˈɛkst kˈɒpɪd fɹɒm sɐfˈɑːɹi, mˈAl, nˈQts and vˈɪʒuːᵊl stjˈuːdɪˌQ kˈQd ɐlˈWd, and ˌI jˈuːs ɪt ˈɛvɹɪ dˈA wɪð klˈɔːd kˈQd tə hˈɪə lˈɒŋ ɹɪplˈIz.
+bm_lewis	true	ði ˈɒflIn vˈYs ɹˈiːdz ðə sɪlˈɛkʃən wɛn juː pɹˈɛs ðə hˈɒtkiː, and stˈɒps wɛn juː pɹˈɛs ðə hˈɒtkiː ɐɡˈɛn.
+bm_lewis	true	nˈʌθɪŋ juː sɪlˈɛkt lˈiːvz jɔː mˈak, bɪkˈɒz ðə vˈYs ɹˈʌnz ˌɒn jɔː ˈQn kəmpjˈuːtə wˈʌns ɪts fˈIlz ɑːɹ dˈWnlQdɪd.
+bm_lewis	true	ɡˌɛtɪŋ stˈɑːtɪd wɪð mˈWθi
+bm_lewis	true	ʧˈuːzɪŋ ɐ vˈYs fɔː ɹˈiːdɪŋ
+bm_lewis	true	ɹˈiːdɪŋ ɐ sɪlˈɛkʃən ɐlˈWd
+bm_lewis	true	ˈalɪs: dˈɪd ðə njˈuː bˈɪld fˈɪks ðə pˈɔːzɪz
+bm_lewis	true	bˈɒb: jˈɛs, ɹˈapt lˈInz ɹˈiːd az wˈɒn sˈɛntəns nˈW
+bm_lewis	true	ˈalɪs: ɡɹˈAt, ˌI wɪl tɹˈI ɪt ˈaftəɹ lˈʌnʧ
+bm_lewis	true	vˈYs nˈAm ˈaksənt ɹˈiːdɪŋ spˈiːd
+bm_lewis	true	ˈalY əmˈɛɹɪkᵊn nˈɔːmᵊl
+bm_lewis	true	lˈuːɪs bɹˈɪtɪʃ fˈastə
+bm_lewis	true	ˈɪnfQ stˈɑːtɪŋ sˈɜːvə ˌɒn pˈɔːt ˈAti ˈAti wɪð fˈɔː wˈɜːkəz ˌQkˈA
+bm_lewis	true	wˈɔːn dˈɪsk jˈuːsɪʤ ˌɒn ðə mˈAn vˈɒljuːm ɪz at nˈInti wˈɒn pəsˈɛnt
+bm_lewis	true	ˈɛɹəɹ fˈAld tə kənˈɛkt tə ðə dˈAtəbˌAs at dˌiːbˈiː: fˈɪfti fˈɔː θˈɜːti tˈuː
+bm_lewis	true	ˈiː θɹˈiː hˈʌndɹɪd ˈAt mɪsmˈaʧt tˈIps ɪn ˈɛs ˈɑː sˈiː tˈiː tˈiː ˈɛs tˈɛkst dˈɒt ˌɑːɹˈɛs lˈIn twˈɛlv
+bm_lewis	true	ˈiː fˈɔː hˈʌndɹɪd twˈɛnti fˈIv kˈanɒt fˈInd vˈaljuː fˈuː ɪn ðɪs skˈQp hˈɪə
+bm_lewis	true	ðə splˈɪtə tɹˈiːts ˈɛvɹɪ lˈIn bɹˈAk az ði ˈɛnd ɒv ɐ sˈɛntəns, sˌQ ˈiːʧ ɹˈapt lˈIn ɒv ɐ tˈɜːmɪnᵊl sɪlˈɛkʃən ɡˈɛts ɪts ˈQn pˈɔːz.
+bm_lewis	true	ðˌat ɹˈuːl ɛɡzˈɪsts sˌQ hˈɛdɪŋz and bˈʊlɪts wɪðˌWt pˌʌŋkʧuːˈAʃən stˈɪl ɹˈiːd az sˈɛntənsɪz.
+bm_lewis	true	bˈaʃ ɡˈɪt lˈɒɡ ˈQ ˈɛn ˈiː ˈɛl ˈI ˈɛn ˈiː mˈInəs θɹˈiː
+bm_lewis	true	ɐ wˈɒn bˈiː tˈuː sˈiː θɹˈiː dˈiː fˈɪks: ɹɪflˈQ ɹˈapt lˈInz bɪfˌɔː sˈɛntəns splˈɪtɪŋ
+bm_lewis	true	nˈIn ˈɛf ˈAt ˈiː sˈɛvən dˈiː sˈɪks fˈiːt: dɪfˈɒlt vˈYs ˈalY fɔː fɹˈɛʃ ɪnstˈɔːlz
+bm_lewis	true	ˈiː fˈɔː ˈɛf fˈIv ɐ sˈɪks bˈiː ʧˈɔː: bˈʌmp vˈɜːʃən tə zˈɪəɹQ pˈYnt tˈuː pˈYnt zˈɪəɹQ fɔː ðə ɹɪlˈiːs
+bm_lewis	true	lˈɛt wˈɜːdz tˈɛkst dˈɒt splˈɪt wˈItspAs;
+bm_lewis	true	pˈiː ˈɑː ˈI ˈɛn tˈiː ˈɛl ˈɛn!, wˈɜːdz dˈɒt kˈWnt;
+bm_lewis	true	jˌuː ʃˌʊd hˈɪə: ðə sɐfˈɑːɹi pˈaɹəɡɹˌaf az wˈɒn sˈɛntəns, wɪð nˈQ stˈɒp bɪfˌɔː vˈɪʒuːᵊl stjˈuːdɪˌQ kˈQd ɔːɹ klˈɔːd kˈQd; ˈiːʧ bˈʊlɪt az wˈɒn sˈɛntəns; ðə θɹˈiː hˈɛdɪŋz, ðə θɹˈiː ʧˈat lˈInz, ðə θɹˈiː tˈAbᵊl ɹˈQz, ðə θɹˈiː lˈɒɡ lˈInz and ðə tˈuː kəmpˈIlə lˈInz ˈiːʧ az ðɛː ˈQn sˈɛntəns; ðə klˈɔːd kˈQd pˈaɹəɡɹˌaf az tˈuː hˈQl sˈɛntənsɪz; ðə kəmˈand and ˈiːʧ kəmˈɪt lˈIn ˌɒn ɪts ˈQn.
+bm_lewis	true	ðə kˈQd blˈɒk ɪz ɹˈiːd az ɹˈɪtən, wˈɒn sˈɛntəns pɜː lˈIn; ɪts fˈɛnsɪz ɑːɹ sˈIlənt.
+bm_lewis	true	pˈɑːt θɹˈiː: pˈɔːzɪz and sˈɛntənsɪz
+bm_lewis	true	wˌɛn ðə kəmˈɪti mˈɛt ɐɡˈɛn ɪn ðə spɹˈɪŋ, ˈaftəɹ ɐ lˈɒŋ wˈɪntə ɒv ˈɑːɡjuːmənts ɐbˌWt ðə bˈʌʤɪt, ðə mˈɛmbəz ɐɡɹˈiːd, wɪð sˌʌm ɹɪlˈʌktəns, ðat ði ˈQld lˈIbɹəɹi wʊd stˈA ˈQpən ˌɒn sˈatədˌAz, ðat ðə ɹˈiːdɪŋ ɹˈuːm wʊd biː ɹɪpˈAntɪd bɪfˌɔː ðə sˈʌmə, and ðat ðə mˈʌni lˈɛft ˌQvəɹ wʊd ɡˌQ tə ðə ʧˈɪldɹənz bˈʊks ðat had bˌiːn pɹˈɒmɪst fɔː jˈɪəz. ˌɪt wˈɜːks. tɹˈI ɪt nˈW.
+bm_lewis	true	wˌI ðə vˈYs pˈɔːzɪz
+bm_lewis	true	ˈiːʧ sˈɛntəns ɪz ɹˈiːd ɪn wˈɒn ɡˌQ, sˌQ ɪts tˈQn ɹˈIzɪz and fˈɔːlz az wˈɒn sˈɛntəns and pˈɔːzɪz ˈQnli wˌɛː ðə kˈɒməz ɑːɹ.
+bm_lewis	true	dˈɒktə smˈɪθ mˈɛt mˈɪstə ʤˈQnz at sˈɛvən θˈɜːti pˌiːˈɛm.
+bm_lewis	true	ɹˈiːd pˈAʤɪz tˈɛn tə twˈɛlv fˈɜːst.
+bm_lewis	true	jˌuː ʃˌʊd hˈɪə: ðə kəmˈɪti sˈɛntəns ɪn wˈɒn tˈQn, wɪð ʃˈɔːt pˈɔːzɪz at ɪts kˈɒməz and nˈQ lˈɒŋɡə ɡˈap sɪlˈɛktɪd ɐlˈQn, ɪt stˈɑːts ˈaftəɹ ɪts fˈɜːst kˈɒmə, sˌQ ɛkspˈɛkt ɐ sˈiːm ðɛː; ɐ fˈʊl pˈɔːz ˈaftəɹ ˌɪt wˈɜːks; ðə hˈɛdɪŋ, ɐ fˈʊl pˈɔːz, ðˈɛn ɪts pˈaɹəɡɹˌaf; dˈɒktə smˈɪθ mˈɛt mˈɪstə ʤˈQnz at sˈɛvən θˈɜːti pˈiː ˈɛm, wɪð nˈQ pˈɔːz ˈaftəɹ dˈɒktə ɔːɹ mˈɪstə; and pˈAʤɪz tˈɛn tə twˈɛlv.
+bm_lewis	true	pˈɑːt fˈɔː: dˈɒts and nˈʌmbəz
+bm_lewis	true	vˈɪzɪt ɛɡzˈampᵊl dˈɒt kˈɒm and ˈQpən sˈɛtɪŋz dˈɒt ˌɑːɹˈɛs.
+bm_lewis	true	ˈʌpdAt tə vˈɜːʃən tˈuː pˈYnt zˈɪəɹQ tədˈA.
+bm_lewis	true	ðə ɹˈuːtə ɪz at wˈɒn hˈʌndɹɪd and nˈInti tˈuː pˈYnt wˈɒn hˈʌndɹɪd and sˈɪksti ˈAt pˈYnt zˈɪəɹQ pˈYnt wˈɒn. ðə fˈIl ɪz θɹˈiː pˈYnt fˈIv ʤˌiːbˈiː. ˌɪt kˈɒsts fˈɔː pˈWndz and nˈInti nˈIn pˈɛns.
+bm_lewis	true	ˌɪt wɒz pˈɒpjʊlə ɪn ðə nˈIntiːn nˈIntiz.
+bm_lewis	true	jˌuː ʃˌʊd hˈɪə: ɛɡzˈampᵊl dˈɒt kˈɒm and sˈɛtɪŋz dˈɒt ˈɑː ˈɛs; vˈɜːʃən tˈuː pˈYnt zˈɪəɹQ; ði ɐdɹˈɛs az wˈɒn hˈʌndɹɪd and nˈInti tˈuː pˈYnt wˈɒn hˈʌndɹɪd and sˈɪksti ˈAt pˈYnt zˈɪəɹQ pˈYnt wˈɒn; θɹˈiː pˈYnt fˈIv ʤˈiː bˈiː; fˈɔː pˈWndz and nˈInti nˈIn pˈɛns; ðə nˈIntiːn nˈIntiz.
+bm_lewis	true	ðə nIˈiːv kˈafA sˈɜːvd kɹˈiːm bɹˈuːliː and ɐ hˌɑːləpˈAnʲQ.
+bm_lewis	true	ˈQ ˈiː jˈuː vˈiː ˈɑː ˈiː, ˈɛs tˈiː ˈɑː ɐ ˈɛs ˈɛs ˈiː, iːsθˈɛtɪks and ðə fˈInᵊl flˈɔː plˈan.
+bm_lewis	true	sˈɛnə ˈɛm jˈuː ˈɛn ˈQ zˈɛd flˈuː fɹɒm zjˈʊəɹɪk tə kɹˈakW and sˈW pˈiː ɐ jˈuː ˈɛl ˈQ.
+bm_lewis	true	kˈafA and ɹɪzjˈuːm ɑːɹ tˈIpd wɪð sˈɛpɹət ˈaksənts.
+bm_lewis	true	ʃˌiː sˈɛd nˈQ twˈIs,
+bm_lewis	true	and ɪts ði jˈuːzəz fˈɒlt, ˈɪzᵊnt ɪt?
+bm_lewis	true	kwˈQtɪd and sˈɪŋɡᵊl kwˈQts dˈQnt splˈɪt ɐ wˈɜːd.
+bm_lewis	true	dˈɒktə smˈɪθ and mˈɪsəs ʤˈQnz mˈɛt pɹəfˈɛsə bɹˈWn ˌɒn bˈAkə stɹˈiːt at nˈIn ˌAˈɛm.
+bm_lewis	true	kˈats vˈɜːsɪz dˈɒɡz, ɐpɹˈɒksɪmətli fˈɔːti ɒv ˈiːʧ, ˈɛt sˈɛtəɹə.
+bm_lewis	true	sˈiː nˈʌmbə fˈIv, kˈaptɪn hˈʊk and smˈɪθ ʤˈuːnjə at sˈAnt pˈɔːlz.
+bm_lewis	true	mˈɪz smˈɪθ mˈɛt dˈɒktə hˌuː,
+bm_lewis	true	ʤˈɛn zˈiː and ʤˈɛnəɹᵊl pˈiː ɐ tˈiː tˈiː ˈQ ˈɛn.
+bm_lewis	true	tˈuːlz, ˌiːʤˈiː hˈaməz,
+bm_lewis	true	ˌIˈiː ðə hˈɛvi wˈɒnz, at sˈɛvən ˌAˈɛm ɔːɹ fˈIv pˌiːˈɛm.
+bm_lewis	true	ði ˌApˌiːˈI, jˌuːˌɑːˈɛl and ˌAʧtˌiːtˌiːpˈiː spˈɛks ɑːɹ ˌɒn ɡˈɪt hˈʌb.
+bm_lewis	true	ˌIdˈiːz, jˌuːˌɑːˈɛlz and pˌiːdˌiːˈɛfs: ði jˌuːˈɛs and ði jˌuːkˈA ɐɡɹˈiː.
+bm_lewis	true	mˈak ˌQˈɛs, IQˈɛs, ˌAʧtˌiːˌɛmˈɛl pˈɑːsə and kˈamᵊl kˈAs nˈAmz ɹˈiːd az wˈɜːdz.
+bm_lewis	true	nˈQd dˈɒt ʤˌAˈɛs, ɹˈiːd mˌiː dˈɒt ˌɛmdˈiː and ˈɔːt dˈɒt pˈIk dˈɒt ˈIQ ɑːɹ nˈAmz, nˌɒt sˈɛntənsɪz.
+bm_lewis	true	ˌɪt kˈɒsts θɹˈiː pˈYnt tˈuː bˈɪlɪən dˈɒləz, fˈɔːti fˈIv pˈWndz ɔːɹ tˈɛn jˈʊəɹQz and fˈɪfti sˈɛnts ˈiːʧ.
+bm_lewis	true	vˈɜːʃən tˈuː pˈYnt zˈɪəɹQ pˈYnt wˈɒn fˈɪkst θˈɜːti sˈɛvən bˈʌɡz ˌɒn wˈɒn ˈApɹɪl twˈɛnti twˈɛnti sˈɛvən.
+bm_lewis	true	ðə nˈIntiːn nˈIntiz, ði ˈAtiz and ðə twˈɛnti fˈɜːst sˈɛnʧəɹi.
+bm_lewis	true	ˌat tˈɛn θˈɜːti ɔːɹ sˈɛvən θˈɜːti pˌiːˈɛm, ɐbˌWt fˈɔːti fˈIv pəsˈɛnt ɒv ˌʌs lˈɛft.
+bm_lewis	true	ɹˈiːd pˈAʤɪz tˈɛn tə twˈɛlv, ðˈɛn nˈIntiːn fˈɔːtiːn tə nˈIntiːn ˈAtiːn, ðˈɛn nˈIn əklˈɒk tə sˈɛvəntˌiːn hˈʌndɹɪd.
+bm_lewis	true	pɹˈIsɪz fˈɛl bI mˈInəs fˈIv pəsˈɛnt,
+bm_lewis	true	fɹɒm wˈɒn θˈWzənd fˈIv hˈʌndɹɪd tə wˈɒn θˈWzənd fˈɔː hˈʌndɹɪd and twˈɛnti fˈIv.
+bm_lewis	true	hˌiː kˈAm θˈɜːd, ðˈɛn sˈɛkənd, ðˈɛn fˈɜːst.
+bm_lewis	true	kˈɔːl twˈɛnti sˈɛvən θˈWzənd nˈIn hˈʌndɹɪd and fˈɔːti sˈɪks nˈIn hˈʌndɹɪd fˈɪfti ˈAt bɪfˌɔː tˈuː θˈWzənd and twˈɛnti sˈɪks tˈɛn θˈɜːtiːn.
+bm_lewis	true	tˈiː, ɔːɹ kˈɒfi, ɪz fˈIn, wˈɛl mˈAbiː.
+bm_lewis	true	jˈuːs ði ˌApˌiːˈI dˈɒks wˈɒn and sˈiː ðə ˌɛfˌAkjˈuː.
+bm_lewis	true	sˈɒftwɛː, zˈɛd ˈiː ˈɑː ˈQ dˈʌbᵊljˌuː ˈI dˈiː tˈiː ˈAʧ and nˈQ bɹˈAk spˈAsɪz vˈanɪʃ.
+bm_lewis	true	wˈAt... wɒt? ɹˈɪəlɪ!
+bm_lewis	true	❓ ❓ ❓ and ɪmˈQʤi ❓ pˈas θɹuː ʌntˈʌʧt.
+bm_lewis	true	wˌɛn ðə mˈiːtɪŋ fˈInᵊli ˈɛndɪd,
+bm_lewis	true	ˈaftəɹ ɐ lˈɒŋ dˈA ɒv tˈɔːks ɐbˌWt ðə bˈʌʤɪt, ˈɛvɹɪwˌɒn wɛnt hˈQm.
+bm_lewis	true	ðə ɹɪpˈɔːt, wˌɪʧ ðə kəmˈɪti had ˈaskt fɔː ɪn ðə spɹˈɪŋ,
+bm_lewis	false	ɹˈan tə mˈɔː ðɐn tˈuː hˈʌndɹɪd pˈAʤɪz, kˈʌvəd ˈɛvɹɪ bɹˈanʧ ɒv ðə lˈIbɹəɹi fɹɒm ðə smˈɔːlɪst ɹˈiːdɪŋ ɹˈuːm tə ðə mˈAn hˈɔːl, lˈɪstɪd ðə bˈʊks ðat had bˌiːn lˈɒst, dˈamɪʤd ɔːɹ nˈɛvə ɹɪtˈɜːnd, sˈɛt ˈWt wɒt ˈiːʧ ɹɪpˈɛː wʊd kˈɒst and hˌW lˈɒŋ ɪt wʊd tˈAk, and ˈɛndɪd wɪð ɐ lˈɒŋ lˈɪst ɒv ɹˌɛkəmɛndˈAʃənz ðat ðə mˈɛmbəz ˈɑːɡjuːd ɐbˌWt fɔː mˈQst ɒv ðə sˈʌmə,
+bm_lewis	true	ʌntˈɪl ðə ʧˈɛː fˈInᵊli kˈɔːld ɐ vˈQt ɪn sɛptˈɛmbə and ðə plˈan wɒz ɐpɹˈuːvd bI ɐ nˈaɹQ mˈɑːʤɪn.
+af_alloy	true	mˈWθi lˈɪsənɪŋ tˈɛst fɔɹ tˈɛkst ɹˈidɪŋ
+af_alloy	true	ˈOpən ðɪs fˈIl ɪn ɐ tˈɛkst ˈɛdɪɾɚɹ, nˌɑt ɐ mˈɑɹkdWn pɹˈivju, sˌO ɪts lˈIn bɹˈAks stˈA æz ɹˈɪʔᵊn.
+af_alloy	true	sᵻlˈɛkt ðə hˈOl fˈIl ɔɹ wˈʌn pˈɑɹt, pɹˈɛs ðə mˈWθi hˈɑtki ænd lˈɪsən.
+af_alloy	true	ˈiʧ pˈɑɹt ˈɛndz wɪð wʌt ju ʃˌʊd hˈɪɹ, wˌɪʧ ɪz ɹˈid ɐlˈWd tˈu.
+af_alloy	true	jˈus ði ˈɔflIn vˈYs: mˈOst ʌv ðɪs ɪz ɐbˌWt hˌW ɪɾ ɹˈidz.
+af_alloy	true	pˈɑɹt wˈʌn: ɪnˈɪʃᵊlˌɪzəmz ænd nˈAmz
+af_alloy	true	jˌʊɹ ˌIdˈi ɪz ɹˈɛdi tʊ jˈus nˈW.
+af_alloy	true	ði ˌApˌiˈI jˌuˌɑɹˈɛl ɪz ɪn ðə ɹˈid mˌi.
+af_alloy	true	ˈOpən sˈɛɾɪŋz ˌɔn mˈæk ˌOˈɛs ɔɹ ˌIOˈɛs.
+af_alloy	true	ɪn ði jˌuˈɛs ˌI lˈɜnd tə dɹˈIv.
+af_alloy	true	ʃˈO jʊɹ jˌuˈɛs ˌIdˈi kˈɑɹd.
+af_alloy	true	wˌi jˈus ʤˈAsᵊn ænd jˈæm ˌɛl, nˈæsə stˈIl.
+af_alloy	true	ɪnstˈɔl nˈOd dˈɑt ʤˌAˈɛs ænd ɡˈɪt hˈʌb dˈɛsktɑp.
+af_alloy	true	tə dˈu: fˈɪks ði ˌApˌiˈI bᵻfˌɔɹ ɹᵻlˈis
+af_alloy	true	pɹˈIsᵻz ɹˈOz ɪn ði jˌuˈɛs. ˈænɐlˌɪsts ɛkspˈɛkt mˈɔɹ.
+af_alloy	true	ði ˌIdˈiz ænd jˌuˌɑɹˈɛlz ɑɹ lˈɪstᵻd bᵻlˌO.
+af_alloy	true	jˌu ʃˌʊd hˈɪɹ: ˌIdˈi, ˌApˌiˈI, jˌuˌɑɹˈɛl, jˌuˈɛs ænd ˌIdˈiz spˈɛld lˈɛɾɚ bI lˈɛɾɚ; ɹˈid mˌi æz ɹˈid mˌi; mˈæk ˌOˈɛs æz mˈæk ˈO ˈɛs ænd ˌIOˈɛs æz ˈI ˈO ˈɛs; ʤˈAsᵊn æz ʤˈAsᵊn ænd jˈæm ˌɛl æz jˈæm ˌɛl; nˈæsə æz wˈʌn wˈɜd; nˈOd dˈɑt ʤˌAˈɛs æz nˈOd dˈɑt ʤˈA ˈɛs ænd ɡˈɪt hˈʌb æz ɡˈɪt hˈʌb.
+af_alloy	true	ɪn ðə bɹˈækɪɾᵻd lˈIn ˈɛvɹi wˈɜd ɪz spˈOkən, nˈʌn dɹˈɑpt bᵻfˌɔɹ ˌApˌiˈI.
+af_alloy	true	ðə lˈIn ɐbˌWt pɹˈIsᵻz ɪz tˈu sˈɛntənsᵻz, wɪð ɐ fˈʊl stˈɑp ˈæftɚɹ ði jˌuˈɛs lˈɛɾɚz.
+af_alloy	true	pˈɑɹt tˈu: ɹˈæpt tˈɛkst
+af_alloy	true	mˈWθi ɹˈidz tˈɛkst kˈɑpɪd fɹʌm sɐfˈɑɹɹi, mˈAl, nˈOts ænd vˈɪʒuᵊl stˈudɪˌO kˈOd ɐlˈWd, ænd ˌI jˈus ɪɾ ˈɛvɹi dˈA wɪð klˈɔd kˈOd tə hˈɪɹ lˈɔŋ ɹᵻplˈIz.
+af_alloy	true	ði ˈɔflIn vˈYs ɹˈidz ðə sᵻlˈɛkʃən wɛn ju pɹˈɛs ðə hˈɑtki, ænd stˈɑps wɛn ju pɹˈɛs ðə hˈɑtki ɐɡˈɛn.
+af_alloy	true	nˈʌθɪŋ ju sᵻlˈɛkt lˈivz jʊɹ mˈæk, bɪkˈʌz ðə vˈYs ɹˈʌnz ˌɔn jʊɹ ˈOn kəmpjˈuɾɚ wˈʌns ɪts fˈIlz ɑɹ dˈWnlOdᵻd.
+af_alloy	true	ɡˌɛɾɪŋ stˈɑɹɾᵻd wɪð mˈWθi
+af_alloy	true	ʧˈuzɪŋ ɐ vˈYs fɔɹ ɹˈidɪŋ
+af_alloy	true	ɹˈidɪŋ ɐ sᵻlˈɛkʃən ɐlˈWd
+af_alloy	true	ˈælɪs: dˈɪd ðə nˈu bˈɪld fˈɪks ðə pˈɔzᵻz
+af_alloy	true	bˈɑb: jˈɛs, ɹˈæpt lˈInz ɹˈid æz wˈʌn sˈɛntəns nˈW
+af_alloy	true	ˈælɪs: ɡɹˈAt, ˌI wɪl tɹˈI ɪɾ ˈæftɚɹ lˈʌnʧ
+af_alloy	true	vˈYs nˈAm ˈæksənt ɹˈidɪŋ spˈid
+af_alloy	true	ˈælY əmˈɛɹəkᵊn nˈɔɹmᵊl
+af_alloy	true	lˈuɪs bɹˈɪɾɪʃ fˈæstɚ
+af_alloy	true	ˈɪnfO stˈɑɹɾɪŋ sˈɜvɚ ˌɔn pˈɔɹt ˈAɾi ˈAɾi wɪð fˈɔɹ wˈɜkɚz ˌOkˈA
+af_alloy	true	wˈɔɹn dˈɪsk jˈusɪʤ ˌɔn ðə mˈAn vˈɑljum ɪz æɾ nˈInti wˈʌn pɚsˈɛnt
+af_alloy	true	ˈɛɹɚɹ fˈAld tə kənˈɛkt tə ðə dˈAɾəbˌAs æɾ dˌibˈi: fˈɪfti fˈɔɹ θˈɜɾi tˈu
+af_alloy	true	ˈi θɹˈi hˈʌndɹɪd ˈAt mɪsmˈæʧt tˈIps ɪn ˈɛs ˈɑɹ sˈi tˈi tˈi ˈɛs tˈɛkst dˈɑt ˌɑɹɹˈɛs lˈIn twˈɛlv
+af_alloy	true	ˈi fˈɔɹ hˈʌndɹɪd twˈɛnti fˈIv kænˈɑt fˈInd vˈælju fˈu ɪn ðɪs skˈOp hˈɪɹ
+af_alloy	true	ðə splˈɪɾɚ tɹˈits ˈɛvɹi lˈIn bɹˈAk æz ði ˈɛnd ʌv ɐ sˈɛntəns, sˌO ˈiʧ ɹˈæpt lˈIn ʌv ɐ tˈɜmɪnᵊl sᵻlˈɛkʃən ɡˈɛts ɪts ˈOn pˈɔz.
+af_alloy	true	ðˌæt ɹˈul ɛɡzˈɪsts sˌO hˈɛdɪŋz ænd bˈʊlɪts wɪðˌWt pˌʌŋkʧuˈAʃən stˈɪl ɹˈid æz sˈɛntənsᵻz.
+af_alloy	true	bˈæʃ ɡˈɪt lˈɔɡ ˈO ˈɛn ˈi ˈɛl ˈI ˈɛn ˈi mˈInəs θɹˈi
+af_alloy	true	ɐ wˈʌn bˈi tˈu sˈi θɹˈi dˈi fˈɪks: ɹᵻflˈO ɹˈæpt lˈInz bᵻfˌɔɹ sˈɛntəns splˈɪɾɪŋ
+af_alloy	true	nˈIn ˈɛf ˈAt ˈi sˈɛvən dˈi sˈɪks fˈit: dᵻfˈɔlt vˈYs ˈælY fɔɹ fɹˈɛʃ ɪnstˈɔlz
+af_alloy	true	ˈi fˈɔɹ ˈɛf fˈIv ɐ sˈɪks bˈi ʧˈɔɹ: bˈʌmp vˈɜʒən tə zˈiəɹO pˈYnt tˈu pˈYnt zˈiəɹO fɔɹ ðə ɹᵻlˈis
+af_alloy	true	lˈɛt wˈɜdz tˈɛkst dˈɑt splˈɪt wˈItspAs;
+af_alloy	true	pˈi ˈɑɹ ˈI ˈɛn tˈi ˈɛl ˈɛn!, wˈɜdz dˈɑt kˈWnt;
+af_alloy	true	jˌu ʃˌʊd hˈɪɹ: ðə sɐfˈɑɹɹi pˈæɹəɡɹˌæf æz wˈʌn sˈɛntəns, wɪð nˈO stˈɑp bᵻfˌɔɹ vˈɪʒuᵊl stˈudɪˌO kˈOd ɔɹ klˈɔd kˈOd; ˈiʧ bˈʊlɪt æz wˈʌn sˈɛntəns; ðə θɹˈi hˈɛdɪŋz, ðə θɹˈi ʧˈæt lˈInz, ðə θɹˈi tˈAbᵊl ɹˈOz, ðə θɹˈi lˈɔɡ lˈInz ænd ðə tˈu kəmpˈIlɚ lˈInz ˈiʧ æz ðɛɹ ˈOn sˈɛntəns; ðə klˈɔd kˈOd pˈæɹəɡɹˌæf æz tˈu hˈOl sˈɛntənsᵻz; ðə kəmˈænd ænd ˈiʧ kəmˈɪt lˈIn ˌɔn ɪts ˈOn.
+af_alloy	true	ðə kˈOd blˈɑk ɪz ɹˈid æz ɹˈɪʔᵊn, wˈʌn sˈɛntəns pɜ lˈIn; ɪts fˈɛnsᵻz ɑɹ sˈIlənt.
+af_alloy	true	pˈɑɹt θɹˈi: pˈɔzᵻz ænd sˈɛntənsᵻz
+af_alloy	true	wˌɛn ðə kəmˈɪɾi mˈɛt ɐɡˈɛn ɪn ðə spɹˈɪŋ, ˈæftɚɹ ɐ lˈɔŋ wˈɪntɚ ʌv ˈɑɹɡjumənts ɐbˌWt ðə bˈʌʤɪt, ðə mˈɛmbɚz ɐɡɹˈid, wɪð sˌʌm ɹᵻlˈʌktəns, ðæt ði ˈOld lˈIbɹɛɹi wʊd stˈA ˈOpən ˌɔn sˈæɾɚdˌAz, ðæt ðə ɹˈidɪŋ ɹˈum wʊd bi ɹᵻpˈAntᵻd bᵻfˌɔɹ ðə sˈʌmɚ, ænd ðæt ðə mˈʌni lˈɛft ˌOvɚɹ wʊd ɡˌO tə ðə ʧˈɪldɹənz bˈʊks ðæt hæd bˌɪn pɹˈɑmɪst fɔɹ jˈɪɹz. ˌɪɾ wˈɜks. tɹˈI ɪɾ nˈW.
+af_alloy	true	wˌI ðə vˈYs pˈɔzᵻz
+af_alloy	true	ˈiʧ sˈɛntəns ɪz ɹˈid ɪn wˈʌn ɡˌO, sˌO ɪts tˈOn ɹˈIzᵻz ænd fˈɔlz æz wˈʌn sˈɛntəns ænd pˈɔzᵻz ˈOnli wˌɛɹ ðə kˈɑməz ɑɹ.
+af_alloy	true	dˈɑktɚ smˈɪθ mˈɛt mˈɪstɚ ʤˈOnz æɾ sˈɛvən θˈɜɾi pˌiˈɛm.
+af_alloy	true	ɹˈid pˈAʤᵻz tˈɛn tə twˈɛlv fˈɜst.
+af_alloy	true	jˌu ʃˌʊd hˈɪɹ: ðə kəmˈɪɾi sˈɛntəns ɪn wˈʌn tˈOn, wɪð ʃˈɔɹt pˈɔzᵻz æɾ ɪts kˈɑməz ænd nˈO lˈɔŋɡɚ ɡˈæp sᵻlˈɛktᵻd ɐlˈOn, ɪɾ stˈɑɹts ˈæftɚɹ ɪts fˈɜst kˈɑmə, sˌO ɛkspˈɛkt ɐ sˈim ðɛɹ; ɐ fˈʊl pˈɔz ˈæftɚɹ ˌɪɾ wˈɜks; ðə hˈɛdɪŋ, ɐ fˈʊl pˈɔz, ðˈɛn ɪts pˈæɹəɡɹˌæf; dˈɑktɚ smˈɪθ mˈɛt mˈɪstɚ ʤˈOnz æɾ sˈɛvən θˈɜɾi pˈi ˈɛm, wɪð nˈO pˈɔz ˈæftɚɹ dˈɑktɚ ɔɹ mˈɪstɚ; ænd pˈAʤᵻz tˈɛn tə twˈɛlv.
+af_alloy	true	pˈɑɹt fˈɔɹ: dˈɑts ænd nˈʌmbəɹz
+af_alloy	true	vˈɪzɪt ɛɡzˈæmpᵊl dˈɑt kˈɑm ænd ˈOpən sˈɛɾɪŋz dˈɑt ˌɑɹɹˈɛs.
+af_alloy	true	ˈʌpdAt tə vˈɜʒən tˈu pˈYnt zˈiəɹO tədˈA.
+af_alloy	true	ðə ɹˈWɾɚ ɪz æɾ wˈʌn hˈʌndɹɪd ænd nˈInti tˈu pˈYnt wˈʌn hˈʌndɹɪd ænd sˈɪksti ˈAt pˈYnt zˈiəɹO pˈYnt wˈʌn. ðə fˈIl ɪz θɹˈi pˈYnt fˈIv ʤˌibˈi. ˌɪɾ kˈɔsts fˈɔɹ pˈWndz ænd nˈInti nˈIn pˈɛns.
+af_alloy	true	ˌɪɾ wʌz pˈɑpjʊlɚ ɪn ðə nˈIntin nˈIntiz.
+af_alloy	true	jˌu ʃˌʊd hˈɪɹ: ɛɡzˈæmpᵊl dˈɑt kˈɑm ænd sˈɛɾɪŋz dˈɑt ˈɑɹ ˈɛs; vˈɜʒən tˈu pˈYnt zˈiəɹO; ði ɐdɹˈɛs æz wˈʌn hˈʌndɹɪd ænd nˈInti tˈu pˈYnt wˈʌn hˈʌndɹɪd ænd sˈɪksti ˈAt pˈYnt zˈiəɹO pˈYnt wˈʌn; θɹˈi pˈYnt fˈIv ʤˈi bˈi; fˈɔɹ pˈWndz ænd nˈInti nˈIn pˈɛns; ðə nˈIntin nˈIntiz.
+af_alloy	true	ðə nIˈiv kˈæfA sˈɜvd kɹˈim bɹˈuli ænd ɐ hˌɑləpˈAnʲO.
+af_alloy	true	ˈO ˈi jˈu vˈi ˈɑɹ ˈi, ˈɛs tˈi ˈɑɹ ɐ ˈɛs ˈɛs ˈi, ɛsθˈɛɾɪks ænd ðə fˈInᵊl flˈɔɹ plˈæn.
+af_alloy	true	sˈɛnɚ ˈɛm jˈu ˈɛn ˈO zˈi flˈu fɹʌm zˈuɹɪk tə kˈA ˈɑɹ ɐ kˈA ˈO dˈʌbᵊljˌu ænd sˈW pˈi ɐ jˈu ˈɛl ˈO.
+af_alloy	true	kˈæfA ænd ɹᵻzˈum ɑɹ tˈIpd wɪð sˈɛpɹət ˈæksənts.
+af_alloy	true	ʃˌi sˈɛd nˈO twˈIs,
+af_alloy	true	ænd ɪts ði jˈuzɚz fˈɔlt, ˈɪzᵊnt ɪɾ?
+af_alloy	true	kwˈOɾᵻd ænd sˈɪŋɡᵊl kwˈOts dˈOnt splˈɪt ɐ wˈɜd.
+af_alloy	true	dˈɑktɚ smˈɪθ ænd mˈɪsəs ʤˈOnz mˈɛt pɹəfˈɛsɚ bɹˈWn ˌɔn bˈAkɚ stɹˈit æɾ nˈIn ˌAˈɛm.
+af_alloy	true	kˈæts vˈɜsᵻz dˈɑɡz, ɐpɹˈɑksɪmətli fˈɔɹɾi ʌv ˈiʧ, ˈɛt sˈɛɾɚɹə.
+af_alloy	true	sˈi nˈʌmbɚ fˈIv, kˈæptɪn hˈʊk ænd smˈɪθ ʤˈunjɚ æɾ sˈAnt pˈɔlz.
+af_alloy	true	mˈɪz smˈɪθ mˈɛt dˈɑktɚ hˌu,
+af_alloy	true	ʤˈɛn zˈi ænd ʤˈɛnɚɹᵊl pˈi ɐ tˈi tˈi ˈO ˈɛn.
+af_alloy	true	tˈulz, ˌiʤˈi hˈæmɚz,
+af_alloy	true	ˌIˈi ðə hˈɛvi wˈʌnz, æɾ sˈɛvən ˌAˈɛm ɔɹ fˈIv pˌiˈɛm.
+af_alloy	true	ði ˌApˌiˈI, jˌuˌɑɹˈɛl ænd ˌAʧtˌitˌipˈi spˈɛks ɑɹ ˌɔn ɡˈɪt hˈʌb.
+af_alloy	true	ˌIdˈiz, jˌuˌɑɹˈɛlz ænd pˌidˌiˈɛfs: ði jˌuˈɛs ænd ði jˌukˈA ɐɡɹˈi.
+af_alloy	true	mˈæk ˌOˈɛs, ˌIOˈɛs, ˌAʧtˌiˌɛmˈɛl pˈɑɹsɚ ænd kˈæmᵊl kˈAs nˈAmz ɹˈid æz wˈɜdz.
+af_alloy	true	nˈOd dˈɑt ʤˌAˈɛs, ɹˈid mˌi dˈɑt ˌɛmdˈi ænd ˈɔɹt dˈɑt pˈIk dˈɑt ˈIˌO ɑɹ nˈAmz, nˌɑt sˈɛntənsᵻz.
+af_alloy	true	ˌɪɾ kˈɔsts θɹˈi pˈYnt tˈu bˈɪliən dˈɑlɚz, fˈɔɹɾi fˈIv pˈWndz ɔɹ tˈɛn jˈʊɹɹOz ænd fˈɪfti sˈɛnts ˈiʧ.
+af_alloy	true	vˈɜʒən tˈu pˈYnt zˈiəɹO pˈYnt wˈʌn fˈɪkst θˈɜɾi sˈɛvən bˈʌɡz ˌɔn wˈʌn ˈApɹəl twˈɛnti twˈɛnti sˈɛvən.
+af_alloy	true	ðə nˈIntin nˈIntiz, ði ˈAɾiz ænd ðə twˈɛnti fˈɜst sˈɛnʧɚɹi.
+af_alloy	true	ˌæɾ tˈɛn θˈɜɾi ɔɹ sˈɛvən θˈɜɾi pˌiˈɛm, ɐbˌWt fˈɔɹɾi fˈIv pɚsˈɛnt ʌv ˌʌs lˈɛft.
+af_alloy	true	ɹˈid pˈAʤᵻz tˈɛn tə twˈɛlv, ðˈɛn nˈIntin fˈɔɹtin tə nˈIntin ˈAtin, ðˈɛn nˈIn əklˈɑk tə sˈɛvəntˌin hˈʌndɹɪd.
+af_alloy	true	pɹˈIsᵻz fˈɛl bI mˈInəs fˈIv pɚsˈɛnt,
+af_alloy	true	fɹʌm wˈʌn θˈWzənd fˈIv hˈʌndɹɪd tə wˈʌn θˈWzənd fˈɔɹ hˈʌndɹɪd ænd twˈɛnti fˈIv.
+af_alloy	true	hˌi kˈAm θˈɜd, ðˈɛn sˈɛkənd, ðˈɛn fˈɜst.
+af_alloy	true	kˈɔl twˈɛnti sˈɛvən θˈWzənd nˈIn hˈʌndɹɪd ænd fˈɔɹɾi sˈɪks nˈIn hˈʌndɹɪd fˈɪfti ˈAt bᵻfˌɔɹ tˈu θˈWzənd ænd twˈɛnti sˈɪks tˈɛn θˈɜtin.
+af_alloy	true	tˈi, ɔɹ kˈɔfi, ɪz fˈIn, wˈɛl mˈAbi.
+af_alloy	true	jˈus ði ˌApˌiˈI dˈɑks wˈʌn ænd sˈi ðə ˌɛfˌAkjˈu.
+af_alloy	true	sˈɔftwɛɹ, zˈi ˈi ˈɑɹ ˈO dˈʌbᵊljˌu ˈI dˈi tˈi ˈAʧ ænd nˈO bɹˈAk spˈAsᵻz vˈænɪʃ.
+af_alloy	true	wˈAt... wʌt? ɹˈiəli!
+af_alloy	true	❓ ❓ ❓ ænd ɪmˈOʤi ❓ pˈæs θɹu ʌntˈʌʧt.
+af_alloy	true	wˌɛn ðə mˈiɾɪŋ fˈInᵊli ˈɛndᵻd,
+af_alloy	true	ˈæftɚɹ ɐ lˈɔŋ dˈA ʌv tˈɔks ɐbˌWt ðə bˈʌʤɪt, ˈɛvɹɪwˌʌn wɛnt hˈOm.
+af_alloy	true	ðə ɹᵻpˈɔɹt, wˌɪʧ ðə kəmˈɪɾi hæd ˈæskt fɔɹ ɪn ðə spɹˈɪŋ,
+af_alloy	false	ɹˈæn tə mˈɔɹ ðɐn tˈu hˈʌndɹɪd pˈAʤᵻz, kˈʌvɚd ˈɛvɹi bɹˈænʧ ʌv ðə lˈIbɹɛɹi fɹʌm ðə smˈɔlɪst ɹˈidɪŋ ɹˈum tə ðə mˈAn hˈɔl, lˈɪstᵻd ðə bˈʊks ðæt hæd bˌɪn lˈɔst, dˈæmɪʤd ɔɹ nˈɛvɚ ɹᵻtˈɜnd, sˈɛt ˈWt wʌt ˈiʧ ɹᵻpˈɛɹ wʊd kˈɔst ænd hˌW lˈɔŋ ɪɾ wʊd tˈAk, ænd ˈɛndᵻd wɪð ɐ lˈɔŋ lˈɪst ʌv ɹˌɛkəmɛndˈAʃənz ðæt ðə mˈɛmbɚz ˈɑɹɡjud ɐbˌWt fɔɹ mˈOst ʌv ðə sˈʌmɚ,
+af_alloy	true	ʌntˈɪl ðə ʧˈɛɹ fˈInᵊli kˈɔld ɐ vˈOt ɪn sɛptˈɛmbəɹ ænd ðə plˈæn wʌz ɐpɹˈuvd bI ɐ nˈæɹO mˈɑɹʤɪn.
