@@ -6,7 +6,8 @@ import { useVoicePreview } from "../../hooks/useVoicePreview";
 import { Button } from "../ui/Button";
 import { FileRow, useMegabytes } from "./FileRow";
 
-// Mirrors `VoiceLanguage::of` in catalog.rs.
+// Catalog-style ids only: stricter than `VoiceLanguage::of` in catalog.rs,
+// which takes any id's first letter in either case.
 const LANGUAGES: Record<string, VoiceLanguage> = {
   a: "americanEnglish",
   b: "britishEnglish",
