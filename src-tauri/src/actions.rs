@@ -14,10 +14,11 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::num::NonZero;
+use std::panic::{self, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, SyncSender};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
@@ -37,12 +38,25 @@ const SAMPLE_RATE: NonZero<u32> = NonZero::new(tts::SAMPLE_RATE).unwrap();
 /// A hotkey release this soon after a ⌘C sent with the hotkey still held is
 /// the hotkey listener taking our synthetic ⌘-up for the user letting go.
 const COPY_ECHO_WINDOW: Duration = Duration::from_millis(150);
-/// Most characters read aloud from the clipboard or a file. Normalising and
-/// splitting the clipboard run on the main thread, which a huge one would stall.
-const TEXT_CHAR_CAP: usize = 20_000;
+/// Most characters read aloud from the clipboard, a file or a Linux selection.
+/// Normalising and splitting them run on the main thread, which a huge one
+/// would stall.
+pub(crate) const TEXT_CHAR_CAP: usize = 20_000;
 /// Most bytes read from a file: a UTF-8 character is at most four bytes, so
 /// these always hold `TEXT_CHAR_CAP` whole characters when the file has them.
 const FILE_BYTE_CAP: u64 = TEXT_CHAR_CAP as u64 * 4;
+/// On Linux the selection and clipboard come from wl-paste, which waits for
+/// the app that owns them, and that can be Mouthy's own main thread. So they
+/// are read on the request thread (`send_in_order`) instead.
+const READ_OFF_MAIN_THREAD: bool = cfg!(target_os = "linux");
+/// On Linux, the least time between two requests that go ahead, when they
+/// are not hotkey presses: longer than a keyboard waits before repeating a
+/// held key (500–660 ms), so a desktop that repeats a held shortcut never
+/// stops what its first press started.
+const PRESS_GAP: Duration = Duration::from_millis(700);
+/// And the least quiet before one goes ahead: repeats come every 30 ms or so,
+/// so a burst never gets through part way.
+const REPEAT_GAP: Duration = Duration::from_millis(100);
 
 /// What a voice preview reads in `language`, whatever the app's language.
 fn preview_text(language: VoiceLanguage) -> &'static str {
@@ -225,6 +239,107 @@ fn should_toggle_stop(released_since_start: bool, trigger: Trigger) -> bool {
     trigger == Trigger::Other || released_since_start
 }
 
+/// Holds back requests that come in a burst, as a held key's repeats do: one
+/// goes ahead `PRESS_GAP` after the last that did, once `REPEAT_GAP` has
+/// passed with none at all.
+#[derive(Debug, Default)]
+struct RepeatGuard {
+    last_allowed: Option<Instant>,
+    last_seen: Option<Instant>,
+}
+
+impl RepeatGuard {
+    fn allow(&mut self, now: Instant) -> bool {
+        let since = |then: Option<Instant>| then.map(|then| now.saturating_duration_since(then));
+        let allowed = since(self.last_allowed).is_none_or(|gap| gap >= PRESS_GAP)
+            && since(self.last_seen).is_none_or(|gap| gap >= REPEAT_GAP);
+        self.last_seen = Some(now);
+        if allowed {
+            self.last_allowed = Some(now);
+        }
+        allowed
+    }
+}
+
+static REPEATS: Mutex<RepeatGuard> = Mutex::new(RepeatGuard {
+    last_allowed: None,
+    last_seen: None,
+});
+
+fn repeats() -> MutexGuard<'static, RepeatGuard> {
+    REPEATS.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Stops so far (Linux). Stops do not wait for reads, so a request that
+/// arrived before a stop, and is still being read when it runs, is dropped.
+static STOPS: AtomicU64 = AtomicU64::new(0);
+
+/// Where a request stands among stops, taken as it arrives, before any read.
+#[derive(Clone, Copy, Debug)]
+struct Arrival(u64);
+
+fn arrival() -> Arrival {
+    Arrival(STOPS.load(Ordering::SeqCst))
+}
+
+impl Arrival {
+    /// Whether a stop has come since.
+    fn overtaken(self) -> bool {
+        STOPS.load(Ordering::SeqCst) != self.0
+    }
+}
+
+/// Counts a stop before it is posted, so every request that arrived earlier
+/// is dropped wherever it is, and the next one need not wait out the guard.
+fn count_stop() {
+    STOPS.fetch_add(1, Ordering::SeqCst);
+    *repeats() = RepeatGuard::default();
+}
+
+/// Work for the request thread, ending with a post to the main thread.
+type Job = Box<dyn FnOnce() + Send>;
+
+/// Runs `job` on the request thread once the jobs sent before it are done,
+/// so what they post reaches the main thread in the order they were sent.
+fn send_in_order(job: Job) {
+    static REQUESTS: OnceLock<Option<Sender<Job>>> = OnceLock::new();
+    let requests = REQUESTS.get_or_init(|| {
+        let (requests, jobs) = mpsc::channel::<Job>();
+        thread::Builder::new()
+            .name("speech-requests".into())
+            .spawn(move || {
+                for job in jobs {
+                    // One failed request must not stop the ones after it.
+                    if panic::catch_unwind(AssertUnwindSafe(job)).is_err() {
+                        error!("A speech request panicked");
+                    }
+                }
+            })
+            .inspect_err(|e| error!("Failed to start the speech request thread: {e}"))
+            .ok()
+            .map(|_| requests)
+    });
+    if !requests.as_ref().is_some_and(|r| r.send(job).is_ok()) {
+        error!("Failed to queue a speech request");
+    }
+}
+
+fn post(app: &AppHandle, what: &str, f: impl FnOnce() + Send + 'static) {
+    if let Err(e) = app.run_on_main_thread(f) {
+        error!("Failed to schedule {what}: {e}");
+    }
+}
+
+/// Posts `f` to the main thread, after any request still being read.
+fn post_in_order(app: &AppHandle, what: &'static str, f: impl FnOnce() + Send + 'static) {
+    if READ_OFF_MAIN_THREAD {
+        let app = app.clone();
+        send_in_order(Box::new(move || post(&app, what, f)));
+    } else {
+        post(app, what, f);
+    }
+}
+
 /// Whether a release at `released_at` is the echo of a ⌘C sent at
 /// `copied_while_held_at`.
 fn is_copy_echo(released_at: Instant, copied_while_held_at: Option<Instant>) -> bool {
@@ -275,6 +390,32 @@ pub fn speak_file(
     language: Option<ReadingLanguage>,
     source: &str,
 ) {
+    let speak = file_request(app, path, voice, language, source);
+    post_in_order(app, "speech", speak);
+}
+
+/// `speak_file` for the file Mouthy was launched with, on the main thread.
+/// Nothing can be ahead of it, and starting it now lets a stop handed over
+/// straight after find it speaking.
+pub fn speak_launch_file(
+    app: &AppHandle,
+    path: &Path,
+    voice: Option<String>,
+    language: Option<ReadingLanguage>,
+) {
+    let speak = file_request(app, path, voice, language, "CLI");
+    post(app, "speech", speak);
+}
+
+/// Reads the file, then gives what speaks it on the main thread.
+fn file_request(
+    app: &AppHandle,
+    path: &Path,
+    voice: Option<String>,
+    language: Option<ReadingLanguage>,
+    source: &str,
+) -> impl FnOnce() + Send + 'static {
+    let arrived = arrival();
     // Read before posting, so a handed-over file is read off the main thread. A
     // first launch reads on it, bounded by the regular-file check and byte cap.
     let text = read_text_file(path).map_err(|e| {
@@ -286,10 +427,12 @@ pub fn speak_file(
     });
     let handle = app.clone();
     let source = source.to_string();
-    if let Err(e) =
-        app.run_on_main_thread(move || speak_file_on_main(&handle, &source, text, voice, language))
-    {
-        error!("Failed to schedule speech: {e}");
+    move || {
+        if arrived.overtaken() {
+            info!("Not speaking a file a later stop came before ({source})");
+            return;
+        }
+        speak_file_on_main(&handle, &source, text, voice, language)
     }
 }
 
@@ -432,11 +575,29 @@ fn request_speech(app: &AppHandle, source: &str, trigger: Trigger, input: Input)
     let source = source.to_string();
     // Never wait for this: the handy-keys thread calling it is the one the
     // main thread's shortcut commands wait on.
-    if let Err(e) =
-        app.run_on_main_thread(move || speak_selection_on_main(&handle, &source, trigger, input))
-    {
-        error!("Failed to schedule speech: {e}");
+    if READ_OFF_MAIN_THREAD {
+        // Hotkey presses have their own guard against a held key.
+        if trigger == Trigger::Other && !repeats().allow(Instant::now()) {
+            debug!("Ignoring a request too soon after the last one ({source})");
+            return;
+        }
+        let arrived = arrival();
+        send_in_order(Box::new(move || {
+            let read = read_off_main(&handle, input);
+            let app = handle.clone();
+            post(&app, "speech", move || {
+                if arrived.overtaken() {
+                    debug!("Dropping a request a later stop came before ({source})");
+                    return;
+                }
+                speak_selection_on_main(&handle, &source, trigger, input, Some(read))
+            });
+        }));
+        return;
     }
+    post(app, "speech", move || {
+        speak_selection_on_main(&handle, &source, trigger, input, None)
+    });
 }
 
 /// Lets the next hotkey press stop the current speech.
@@ -444,21 +605,85 @@ fn hotkey_released(app: &AppHandle) {
     // Timed before posting: a capture can hold up the main thread for a while.
     let released_at = Instant::now();
     let handle = app.clone();
-    if let Err(e) = app.run_on_main_thread(move || hotkey_released_on_main(&handle, released_at)) {
-        error!("Failed to schedule the hotkey release: {e}");
-    }
+    // In order, so it never overtakes the press before it.
+    post_in_order(app, "the hotkey release", move || {
+        hotkey_released_on_main(&handle, released_at)
+    });
 }
 
 /// Stops any speech in progress and hides the overlay.
 pub fn stop_speaking(app: &AppHandle, source: &str) {
     info!("Stopping speech ({source})");
+    if READ_OFF_MAIN_THREAD {
+        count_stop();
+    }
     let handle = app.clone();
-    if let Err(e) = app.run_on_main_thread(move || stop_speaking_on_main(&handle)) {
-        error!("Failed to schedule stopping speech: {e}");
+    post(app, "stopping speech", move || {
+        stop_speaking_on_main(&handle)
+    });
+}
+
+/// What a press read: its text and when its ⌘C went out with the hotkey
+/// held; or the notice to show instead.
+type Capture = Result<(Option<String>, Option<Instant>), OverlayView>;
+
+/// Captures on the main thread, which ⌘C needs (macOS).
+fn capture_on_main(app: &AppHandle, input: Input, backend: &tts::Backend) -> Capture {
+    match input {
+        Input::Selection => clipboard::capture_selection(app)
+            .map(|selection| (selection.text, selection.copied_while_held_at))
+            .map_err(read_failed),
+        // No ⌘C goes out, so there is no copy echo to ignore.
+        Input::Clipboard => read_clipboard(),
+        // `speak_file` reads a file before posting and never comes here.
+        Input::File => Ok((None, None)),
+        Input::Preview => Ok((Some(preview_sentence(backend).to_string()), None)),
     }
 }
 
-fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, input: Input) {
+/// Reads with wl-paste, which must not run on the main thread (Linux).
+fn read_off_main(app: &AppHandle, input: Input) -> Capture {
+    let started = Instant::now();
+    let read = match input {
+        // A selection can be a whole page, so it is capped like the clipboard.
+        Input::Selection => clipboard::capture_selection(app)
+            .map(|selection| (selection.text.map(|text| cap_text(text, input)), None))
+            .map_err(read_failed),
+        Input::Clipboard => read_clipboard(),
+        // Only selection and clipboard requests are read here.
+        Input::File | Input::Preview => Ok((None, None)),
+    };
+    debug!(
+        "Read the {} in {} ms",
+        input.name(),
+        started.elapsed().as_millis()
+    );
+    read
+}
+
+fn read_clipboard() -> Capture {
+    match clipboard::read_text() {
+        Ok(ClipboardText::Text(text)) => Ok((Some(cap_text(text, Input::Clipboard)), None)),
+        Ok(ClipboardText::Empty) => Ok((None, None)),
+        Ok(ClipboardText::Secret) => Err(OverlayView::ClipboardSecret),
+        Err(e) => Err(read_failed(e)),
+    }
+}
+
+/// Logged where it is shown, so a read dropped for a stop is no error.
+fn read_failed(e: String) -> OverlayView {
+    OverlayView::Error { message: e }
+}
+
+/// Speaks what `input` holds, or stops the speech. `read` is the text when it
+/// was read before posting; otherwise it is captured here.
+fn speak_selection_on_main(
+    app: &AppHandle,
+    source: &str,
+    trigger: Trigger,
+    input: Input,
+    read: Option<Capture>,
+) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
@@ -467,6 +692,9 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
         .as_ref()
         .map(|session| session.released_since_start);
     if let Some(released_since_start) = released {
+        if let Some(Err(OverlayView::Error { message })) = &read {
+            debug!("Dropping a failed read of the {}: {message}", input.name());
+        }
         if should_toggle_stop(released_since_start, trigger) {
             info!("Stopping speech ({source})");
             stop_speaking_on_main(app);
@@ -487,28 +715,14 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
         }
     };
     let capture_started = Instant::now();
-    let captured = match input {
-        Input::Selection => clipboard::capture_selection(app)
-            .map(|selection| (selection.text, selection.copied_while_held_at)),
-        // No ⌘C goes out, so there is no copy echo to ignore.
-        Input::Clipboard => match clipboard::read_text() {
-            Ok(ClipboardText::Text(text)) => Ok((Some(cap_text(text, input)), None)),
-            Ok(ClipboardText::Empty) => Ok((None, None)),
-            Ok(ClipboardText::Secret) => {
-                overlay::show_overlay(app, OverlayView::ClipboardSecret);
-                return;
-            }
-            Err(e) => Err(e),
-        },
-        // `speak_file` reads a file before posting and never comes here.
-        Input::File => Ok((None, None)),
-        Input::Preview => Ok((Some(preview_sentence(&backend).to_string()), None)),
-    };
+    let captured = read.unwrap_or_else(|| capture_on_main(app, input, &backend));
     let (text, copied_while_held_at) = match captured {
         Ok(captured) => captured,
-        Err(e) => {
-            error!("Failed to read the {}: {e}", input.name());
-            overlay::show_overlay(app, OverlayView::Error { message: e });
+        Err(view) => {
+            if let OverlayView::Error { message } = &view {
+                error!("Failed to read the {}: {message}", input.name());
+            }
+            overlay::show_overlay(app, view);
             return;
         }
     };
@@ -1237,6 +1451,50 @@ mod tests {
         for id in settings::get_default_settings().bindings.keys() {
             assert!(ACTION_MAP.contains_key(id), "no action for binding '{id}'");
         }
+    }
+
+    #[test]
+    fn a_held_key_starts_speech_once_and_never_stops_it() {
+        let start = Instant::now();
+        let ms = |n: u64| start + Duration::from_millis(n);
+        let mut guard = RepeatGuard::default();
+        assert!(guard.allow(ms(0)));
+        // The keyboard waits 500 ms, then repeats every 33 ms for two seconds.
+        let mut last = 0;
+        for n in (500..2500).step_by(33) {
+            assert!(!guard.allow(ms(n)), "repeat at {n} ms");
+            last = n;
+        }
+        assert!(!guard.allow(ms(last + 99)), "99 ms after the last repeat");
+        assert!(guard.allow(ms(last + 99 + 100)), "the next press stops it");
+    }
+
+    #[test]
+    fn taps_far_enough_apart_all_go_ahead_and_quick_ones_do_not() {
+        let start = Instant::now();
+        let ms = |n: u64| start + Duration::from_millis(n);
+        let mut guard = RepeatGuard::default();
+        for n in [0, 800, 1600, 2400] {
+            assert!(guard.allow(ms(n)), "tap at {n} ms");
+        }
+        assert!(!guard.allow(ms(2400 + 400)), "400 ms after the last tap");
+        assert!(guard.allow(ms(2400 + 700)), "700 ms after it");
+    }
+
+    /// The only test that touches the shared stop count and guard, so no
+    /// other test's stop can land between its steps.
+    #[test]
+    fn a_stop_drops_what_arrived_before_it_and_lets_the_next_request_through() {
+        let start = Instant::now();
+        let before = arrival();
+        assert!(repeats().allow(start));
+        count_stop();
+        assert!(before.overtaken());
+        assert!(!arrival().overtaken());
+        assert!(
+            repeats().allow(start + Duration::from_millis(250)),
+            "a speak request 250 ms after the first, with a stop between"
+        );
     }
 
     #[test]

@@ -3,7 +3,7 @@
 //! This module provides shortcut functionality using Tauri's built-in
 //! global-shortcut plugin.
 
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use tauri::AppHandle;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -11,8 +11,19 @@ use crate::settings::{self, ShortcutBinding};
 
 use super::handler::handle_shortcut_event;
 
+/// Whether this backend registers nothing: global-hotkey grabs keys through
+/// X11, which on Wayland hears only keys typed into X11 windows. The desktop
+/// runs `mouthy --speak-selection` and the like instead.
+pub fn registers_nothing() -> bool {
+    crate::utils::is_wayland()
+}
+
 /// Initialize shortcuts using Tauri's global-shortcut plugin
 pub fn init_shortcuts(app: &AppHandle) {
+    if registers_nothing() {
+        info!("Shortcuts come from the desktop on Wayland; bind the mouthy commands");
+        return;
+    }
     let default_bindings = settings::get_default_settings().bindings;
     let user_settings = settings::load_or_create_app_settings(app);
 
@@ -68,7 +79,7 @@ pub fn validate_shortcut(raw: &str) -> Result<(), String> {
 
 /// Register a shortcut using Tauri's global-shortcut plugin
 pub fn register_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<(), String> {
-    if binding.is_unbound() {
+    if binding.is_unbound() || registers_nothing() {
         return Ok(());
     }
 
@@ -138,7 +149,7 @@ pub fn register_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<()
 
 /// Unregister a shortcut from Tauri's global-shortcut plugin
 pub fn unregister_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<(), String> {
-    if binding.is_unbound() {
+    if binding.is_unbound() || registers_nothing() {
         return Ok(());
     }
 

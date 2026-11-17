@@ -281,6 +281,20 @@ async fetchTtsVoices() : Promise<Result<string[], string>> {
 async findEspeakNg() : Promise<string | null> {
     return await TAURI_INVOKE("find_espeak_ng");
 },
+/**
+ * Where wl-paste, which reads the selection and clipboard on Linux, is.
+ * Always `None` elsewhere.
+ */
+async findWlPaste() : Promise<string | null> {
+    return await TAURI_INVOKE("find_wl_paste");
+},
+/**
+ * What to bind in the desktop's shortcut settings, when Mouthy's own
+ * shortcuts cannot work (Wayland, unless Event Tap is in use).
+ */
+async shortcutHelp() : Promise<ShortcutHelp | null> {
+    return await TAURI_INVOKE("shortcut_help");
+},
 async getAppDirPath() : Promise<Result<string, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_app_dir_path") };
@@ -612,6 +626,14 @@ uncovered_bindings: string[];
  */
 recorder_blocked: boolean }
 export type ShortcutBinding = { id: string; name: string; description: string; default_binding: string; current_binding: string }
+/**
+ * The commands to bind in the desktop's shortcut settings.
+ */
+export type ShortcutHelp = { 
+/**
+ * What runs Mouthy, ready to have `--speak-selection` and the like added.
+ */
+command: string }
 /**
  * UI appearance mode. `System` follows the OS `prefers-color-scheme`; `Light`
  * and `Dark` force one of the two palettes the app ships.

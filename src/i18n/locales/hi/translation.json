@@ -55,6 +55,17 @@
           "restore": "पहले वाला शॉर्टकट वापस नहीं लाया जा सका",
           "set": "शॉर्टकट सेट नहीं हो सका: {{error}}",
           "reset": "शॉर्टकट को पहले जैसा रीसेट नहीं किया जा सका"
+        },
+        "desktop": {
+          "title": "Desktop shortcuts",
+          "description": "On Wayland, Mouthy's shortcuts are set in your desktop's settings. Bind each command below to a key: in KDE Plasma, System Settings → Keyboard → Shortcuts → Add New → Command or Script. Other desktops are untested.",
+          "stop": "Stop",
+          "notRunning": "A shortcut pressed while Mouthy is not running only starts it; press it again to speak.",
+          "noArguments": "If a shortcut does nothing, the desktop may be dropping the command's arguments: bind a two-line script that runs the command instead.",
+          "eventTap": "To set shortcuts here instead, turn on Experimental Features under Advanced and choose Event Tap. It needs your user in the input group, which lets any program you run read every key you type.",
+          "password": "Password managers seldom mark a copied password on Linux, so Speak Clipboard may read one aloud.",
+          "wlPasteFound": "Using wl-paste at {{path}}",
+          "wlPasteNotFound": "wl-clipboard is not installed, so nothing can be read. Install it with your distribution's package manager, or on an immutable one such as Bazzite with: brew install wl-clipboard"
         }
       }
     },
@@ -239,7 +250,7 @@
       "overlay": {
         "style": {
           "title": "ओवरले",
-          "description": "Choose the overlay: None hides it, Minimal shows a compact pill. On Linux 'None' is recommended.",
+          "description": "Choose the overlay: None hides it, Minimal shows a compact pill.",
           "options": {
             "none": "कोई नहीं",
             "minimal": "मिनिमल"

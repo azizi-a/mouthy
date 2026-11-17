@@ -7,6 +7,8 @@ mod clipboard;
 mod commands;
 mod input;
 mod overlay;
+#[cfg(any(target_os = "linux", test))]
+mod program;
 mod secure_input;
 mod settings;
 mod shortcut;
@@ -21,12 +23,15 @@ pub use cli::CliArgs;
 #[cfg(debug_assertions)]
 use specta_typescript::{BigIntExportBehavior, Typescript};
 use tauri_specta::{collect_commands, Builder};
+#[cfg(target_os = "linux")]
+pub use utils::gdk_backend;
 
 use env_filter::Builder as EnvFilterBuilder;
+use std::panic::{self, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use tauri::image::Image;
 
-use tauri::tray::TrayIconBuilder;
+use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_log::{Builder as LogBuilder, RotationStrategy, Target, TargetKind};
@@ -209,29 +214,42 @@ fn initialize_core_logic(app_handle: &AppHandle) {
         tray_builder = tray_builder.show_menu_on_left_click(true);
     }
 
-    let tray = tray_builder
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "settings" => {
-                show_main_window(app);
-            }
-            "secure_input_warning" => {
-                // Full explanation lives in the settings-window banner
-                show_main_window(app);
-            }
-            "speak_selection" => {
-                actions::speak_selection(app, "tray");
-            }
-            "stop" => {
-                actions::stop_speaking(app, "tray");
-            }
-            "quit" => {
-                app.exit(0);
-            }
-            _ => {}
-        })
-        .build(app_handle)
-        .unwrap();
-    app_handle.manage(tray);
+    let tray_builder = tray_builder.on_menu_event(|app, event| match event.id.as_ref() {
+        "settings" => {
+            show_main_window(app);
+        }
+        "secure_input_warning" => {
+            // Full explanation lives in the settings-window banner
+            show_main_window(app);
+        }
+        "speak_selection" => {
+            actions::speak_selection(app, "tray");
+        }
+        "stop" => {
+            actions::stop_speaking(app, "tray");
+        }
+        "quit" => {
+            app.exit(0);
+        }
+        _ => {}
+    });
+    // Building it panics when no appindicator library loads, as on a Linux
+    // desktop without one. Mouthy runs on without a tray; launching it again
+    // raises Settings.
+    match panic::catch_unwind(AssertUnwindSafe(|| tray_builder.build(app_handle))) {
+        Ok(Ok(tray)) => {
+            app_handle.manage(tray);
+        }
+        Ok(Err(e)) => log::error!("Running without a tray icon: {e}"),
+        Err(payload) => {
+            let reason = payload
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| payload.downcast_ref::<&str>().copied())
+                .unwrap_or("it could not be built");
+            log::error!("Running without a tray icon: {reason}");
+        }
+    }
 
     // Initialize tray menu with idle state
     tray::update_tray_menu(app_handle);
@@ -248,6 +266,54 @@ fn initialize_core_logic(app_handle: &AppHandle) {
 
     // Create the overlay window (hidden by default)
     utils::create_overlay(app_handle);
+}
+
+/// Makes `dir` the working directory, returning the one to go back to.
+#[cfg(target_os = "linux")]
+fn enter_dir(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    let back = std::env::current_dir().ok()?;
+    std::env::set_current_dir(dir).ok()?;
+    Some(back)
+}
+
+fn log_plugin(console_filter: env_filter::Filter) -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    LogBuilder::new()
+        .level(log::LevelFilter::Trace) // Set to most verbose level globally
+        // misaki-rs logs every sentence it reads at debug; keep selected text out of the logs.
+        .level_for("misaki_rs", log::LevelFilter::Warn)
+        .max_file_size(500_000)
+        .rotation_strategy(RotationStrategy::KeepOne)
+        .clear_targets()
+        .targets([
+            // Console output respects RUST_LOG environment variable
+            Target::new(TargetKind::Stdout)
+                .filter(move |metadata| console_filter.enabled(metadata)),
+            // File logs respect the user's settings (stored in FILE_LOG_LEVEL atomic)
+            Target::new(TargetKind::LogDir {
+                file_name: Some("mouthy".into()),
+            })
+            .filter(|metadata| {
+                let file_level = FILE_LOG_LEVEL.load(Ordering::Relaxed);
+                metadata.level() <= level_filter_from_u8(file_level)
+            }),
+            // Stream logs to the webview (via the `log://log` event) so the
+            // debug panel's live log viewer can show them in real time. Only
+            // active while debug mode is on (its sole consumer), and shares the
+            // file log level so the "Log Level" setting controls verbosity.
+            Target::new(TargetKind::Webview).filter(|metadata| {
+                WEBVIEW_LOG_STREAMING.load(Ordering::Relaxed)
+                    && metadata.level()
+                        <= level_filter_from_u8(FILE_LOG_LEVEL.load(Ordering::Relaxed))
+            }),
+        ])
+        .build()
+}
+
+/// Whether a tray icon shows: built, turned on in Settings, and no `--no-tray`.
+fn tray_available(app: &AppHandle) -> bool {
+    get_settings(app).show_tray_icon
+        && !app.try_state::<CliArgs>().is_some_and(|args| args.no_tray)
+        && app.try_state::<TrayIcon>().is_some()
 }
 
 #[tauri::command]
@@ -297,6 +363,8 @@ pub fn run(cli_args: CliArgs) {
         commands::preview_voice,
         commands::fetch_tts_voices,
         commands::find_espeak_ng,
+        commands::find_wl_paste,
+        commands::shortcut_help,
         commands::get_app_dir_path,
         commands::get_app_settings,
         commands::get_default_settings,
@@ -328,50 +396,29 @@ pub fn run(cli_args: CliArgs) {
     let invoke_handler = specta_builder.invoke_handler();
 
     #[allow(unused_mut)]
-    let mut builder = tauri::Builder::default()
-        .device_event_filter(tauri::DeviceEventFilter::Always)
-        .plugin(
-            LogBuilder::new()
-                .level(log::LevelFilter::Trace) // Set to most verbose level globally
-                // misaki-rs logs every sentence it reads at debug; keep selected text out of the logs.
-                .level_for("misaki_rs", log::LevelFilter::Warn)
-                .max_file_size(500_000)
-                .rotation_strategy(RotationStrategy::KeepOne)
-                .clear_targets()
-                .targets([
-                    // Console output respects RUST_LOG environment variable
-                    Target::new(TargetKind::Stdout).filter({
-                        let console_filter = console_filter.clone();
-                        move |metadata| console_filter.enabled(metadata)
-                    }),
-                    // File logs respect the user's settings (stored in FILE_LOG_LEVEL atomic)
-                    Target::new(TargetKind::LogDir {
-                        file_name: Some("mouthy".into()),
-                    })
-                    .filter(|metadata| {
-                        let file_level = FILE_LOG_LEVEL.load(Ordering::Relaxed);
-                        metadata.level() <= level_filter_from_u8(file_level)
-                    }),
-                    // Stream logs to the webview (via the `log://log` event) so the
-                    // debug panel's live log viewer can show them in real time. Only
-                    // active while debug mode is on (its sole consumer), and shares the
-                    // file log level so the "Log Level" setting controls verbosity.
-                    Target::new(TargetKind::Webview).filter(|metadata| {
-                        WEBVIEW_LOG_STREAMING.load(Ordering::Relaxed)
-                            && metadata.level()
-                                <= level_filter_from_u8(FILE_LOG_LEVEL.load(Ordering::Relaxed))
-                    }),
-                ])
-                .build(),
-        );
+    let mut builder =
+        tauri::Builder::default().device_event_filter(tauri::DeviceEventFilter::Always);
 
     #[cfg(target_os = "macos")]
     {
         builder = builder.plugin(tauri_nspanel::init());
     }
 
+    // An AppImage starts Mouthy in the image's `usr` folder, which WebKit finds
+    // its helper programs from. The single-instance plugin hands the working
+    // directory to a running Mouthy, so the caller's is set while plugins
+    // start, before any window opens, and the image's put back after.
+    let launch_dir = utils::launch_dir(
+        std::env::var_os("APPIMAGE").as_deref(),
+        std::env::var_os("OWD").as_deref(),
+    );
+    #[cfg(target_os = "linux")]
+    let image_dir = launch_dir.as_deref().and_then(enter_dir);
+
     // Single-instance forwards CLI args to an already-running Mouthy and exits.
     // The callback runs on an async runtime worker: hand off, never block.
+    // Registered before the log plugin, so a second process exits before it
+    // opens, or rotates away, the running app's log file.
     #[allow(unused_mut)]
     let mut app = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
@@ -395,6 +442,7 @@ pub fn run(cli_args: CliArgs) {
                 show_main_window(app);
             }
         }))
+        .plugin(log_plugin(console_filter))
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_macos_permissions::init())
         .plugin(tauri_plugin_opener::init())
@@ -443,6 +491,8 @@ pub fn run(cli_args: CliArgs) {
                 });
             }
 
+            #[cfg(target_os = "linux")]
+            let new_store = !settings::is_stored(app.handle());
             let mut settings = get_settings(app.handle());
 
             // Apply the persisted appearance theme to the native title bar before
@@ -470,6 +520,18 @@ pub fn run(cli_args: CliArgs) {
 
             initialize_core_logic(&app_handle);
 
+            #[cfg(target_os = "linux")]
+            {
+                log::info!(
+                    "GDK_BACKEND: {}",
+                    std::env::var("GDK_BACKEND").unwrap_or_else(|_| "not set".into())
+                );
+                // Decided once the overlay window exists, and only for a new store.
+                if new_store {
+                    utils::choose_first_overlay_style(&app_handle);
+                }
+            }
+
             // Load the local voice now rather than on the first request.
             actions::preload_local_voice(&app_handle);
 
@@ -490,21 +552,22 @@ pub fn run(cli_args: CliArgs) {
             // If start_hidden but tray is disabled, we must show the window
             // anyway. Without a tray icon, the dock is the only way back in.
             // Keep in sync with `apply_startup_activation_policy` (macOS).
-            let tray_available = settings.show_tray_icon && !cli_args.no_tray;
-            if !should_hide || !tray_available {
+            if !should_hide || !tray_available(&app_handle) {
                 show_main_window(&app_handle);
             }
 
             // The other speak flags only reach a running instance, but a script
             // handing over text expects it spoken even when it launched Mouthy.
-            let cwd = std::env::current_dir().unwrap_or_default();
+            let cwd = launch_dir
+                .clone()
+                .or_else(|| std::env::current_dir().ok())
+                .unwrap_or_default();
             if let Some(request) = cli_args.speak_file_in(&cwd) {
-                actions::speak_file(
+                actions::speak_launch_file(
                     &app_handle,
                     &request.path,
                     request.voice,
                     request.language,
-                    "CLI",
                 );
             }
 
@@ -514,6 +577,12 @@ pub fn run(cli_args: CliArgs) {
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
                 let _res = window.hide();
+
+                // Without a tray there would be no way back, and no Quit.
+                #[cfg(not(target_os = "macos"))]
+                if window.label() == "main" && !tray_available(window.app_handle()) {
+                    window.app_handle().exit(0);
+                }
 
                 #[cfg(target_os = "macos")]
                 {
@@ -542,6 +611,13 @@ pub fn run(cli_args: CliArgs) {
         .invoke_handler(invoke_handler)
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
+
+    #[cfg(target_os = "linux")]
+    if let Some(image_dir) = image_dir {
+        if let Err(e) = std::env::set_current_dir(&image_dir) {
+            log::error!("Cannot return to {}: {e}", image_dir.display());
+        }
+    }
 
     // Must sit between build() and run(): see the doc comment.
     #[cfg(target_os = "macos")]
