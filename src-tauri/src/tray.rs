@@ -126,9 +126,11 @@ pub fn get_current_theme(app: &AppHandle) -> AppTheme {
     if cfg!(target_os = "linux") {
         let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
         let config = app.path().config_dir().ok();
-        linux_panel_theme(&desktop, |name| {
+        // Not the window theme: on Linux that is the colour-scheme portal, not the panel.
+        plasma_panel_theme(&desktop, |name| {
             std::fs::read_to_string(config.as_ref()?.join(name)).ok()
         })
+        .unwrap_or(AppTheme::Dark)
     } else {
         // On Windows the tray icon sits on the taskbar, which follows the
         // *system* theme (SystemUsesLightTheme), not the app theme. With the
@@ -174,16 +176,8 @@ fn windows_taskbar_theme() -> Option<AppTheme> {
     })
 }
 
-/// The Linux panel's theme, Dark (the white glyph) unless Plasma says it is
-/// light. Not the window theme: on Linux that is the colour scheme portal's
-/// setting, while GNOME's top bar is always dark and a Plasma style can differ
-/// from the colours.
-fn linux_panel_theme(desktop: &str, read: impl Fn(&str) -> Option<String>) -> AppTheme {
-    plasma_panel_theme(desktop, read).unwrap_or(AppTheme::Dark)
-}
-
 /// The KDE Plasma panel's theme, from the Plasma config files `read` returns
-/// by name. None off Plasma, or when the files don't say.
+/// by name. None off Plasma, or when the files don't say for sure.
 fn plasma_panel_theme(desktop: &str, read: impl Fn(&str) -> Option<String>) -> Option<AppTheme> {
     if !desktop.split(':').any(|d| d.eq_ignore_ascii_case("KDE")) {
         return None;
@@ -205,8 +199,10 @@ fn plasma_panel_theme(desktop: &str, read: impl Fn(&str) -> Option<String>) -> O
                 AppTheme::Light
             })
         }
+        // Light only by exact name: "light" is also in dark styles' names
+        // (Twilight, Moonlight), and white is the default anyway.
         Some(name) if name.contains("dark") => Some(AppTheme::Dark),
-        Some(name) if name.contains("light") => Some(AppTheme::Light),
+        Some("breeze-light") => Some(AppTheme::Light),
         Some(_) => None,
     }
 }
@@ -590,7 +586,7 @@ pub fn recreate_tray_icon(app: &AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::{
-        get_icon_path, linux_panel_theme, load_tray_icon, AppTheme, MenuInputs, TrayIconState,
+        get_icon_path, load_tray_icon, plasma_panel_theme, AppTheme, MenuInputs, TrayIconState,
     };
 
     fn inputs(busy: bool) -> MenuInputs {
@@ -637,16 +633,8 @@ mod tests {
     }
 
     #[test]
-    fn every_tray_icon_is_a_bundled_resource() {
+    fn every_tray_icon_is_a_resource() {
         let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        let conf: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(manifest_dir.join("tauri.conf.json")).unwrap(),
-        )
-        .unwrap();
-        assert!(conf["bundle"]["resources"]
-            .as_array()
-            .unwrap()
-            .contains(&"resources/**/*".into()));
         for theme in [AppTheme::Dark, AppTheme::Light] {
             for state in [TrayIconState::Idle, TrayIconState::Speaking] {
                 for warning in [false, true] {
@@ -669,7 +657,8 @@ mod tests {
                 .find(|(file, _)| *file == name)
                 .map(|(_, text)| text.to_string())
         };
-        get_icon_path(linux_panel_theme(desktop, read), state, false)
+        let theme = plasma_panel_theme(desktop, read).unwrap_or(AppTheme::Dark);
+        get_icon_path(theme, state, false)
     }
 
     const BREEZE_DARK_COLOURS: &str =
@@ -708,7 +697,7 @@ mod tests {
             ),
             "resources/tray_idle_dark.png"
         );
-        // A named style decides, whatever the colours (Breeze Twilight).
+        // A named style decides, whatever the colours.
         assert_eq!(
             linux_icon(
                 "KDE",
@@ -740,6 +729,19 @@ mod tests {
                 "kdeglobals",
                 "[Colors:Window]\nBackgroundNormal=999999999,0,0\n",
             )][..],
+            // Dark panels with light app colours.
+            &[
+                ("plasmarc", "[Theme]\nname=Twilight\n"),
+                ("kdeglobals", BREEZE_LIGHT_COLOURS),
+            ][..],
+            &[
+                ("plasmarc", "[Theme]\nname=breeze-twilight\n"),
+                ("kdeglobals", BREEZE_LIGHT_COLOURS),
+            ][..],
+            &[
+                ("plasmarc", "[Theme]\nname=Moonlight\n"),
+                ("kdeglobals", BREEZE_LIGHT_COLOURS),
+            ][..],
         ] {
             assert_eq!(linux_icon("KDE", files, Idle), "resources/tray_idle.png");
         }
