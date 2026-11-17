@@ -118,3 +118,11 @@ Não sei se vou conseguir chegar às oito. O ônibus estava cheio, e o trânsito
 आज मौसम बहुत अच्छा है। कल शायद बारिश होगी, इसलिए छाता ज़रूर ले जाना। मैं iPhone use करता हूँ। मेरे पास 25 रुपये हैं।
 
 You should hear each paragraph in its own language, with nothing spelled letter by letter: the times as "diez treinta", "huit heures" and "dieci e trenta"; "tres coma cinco por ciento"; the questions rising; a pause at each comma and a full stop at each `।`; and "iPhone use" in English inside the Hindi sentence. With espeak-ng uninstalled, these voices show a notice instead of speaking.
+
+## Part 6: Japanese
+
+Select only this part's paragraph, with a Japanese voice such as `jf_alpha` or `jm_kumo`.
+
+きょうも、いいてんきですね。あさごはんをたべてから、こうえんまでさんぽにいきました。ベンチにすわって、コーヒーをのみながら、ちょっとだけほんをよみました。ラジオからきこえてくるおんがくが、とてもきもちよかったです。あしたもまた、いっしょにいきませんか？
+
+You should hear five Japanese sentences, the last one a question: the small っ in ちょっと and いっしょ as a short catch, ー in コーヒー as a long vowel, ん in さんぽ as "m". Words run together a little, since Mouthy has no dictionary to find word boundaries. A paragraph that is mostly kanji shows "Japanese text with kanji is not supported yet" instead.

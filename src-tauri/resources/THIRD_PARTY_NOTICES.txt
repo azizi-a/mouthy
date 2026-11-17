@@ -1,4 +1,4 @@
-# Assembled by hand from: the repository LICENSE and NOTICE; each crate's licence file as published on crates.io; hexgrad/misaki's LICENSE; the Kokoro-82M model cards; microsoft/onnxruntime's LICENSE and ThirdPartyNotices.txt at tag v1.31.0.
+# Assembled by hand from: the repository LICENSE and NOTICE; each crate's licence file as published on crates.io; hexgrad/misaki's LICENSE; polm/cutlet's and Greatdane/Convert-Numbers-to-Japanese's LICENSE; the Kokoro-82M model cards; microsoft/onnxruntime's LICENSE and ThirdPartyNotices.txt at tag v1.31.0.
 
 MOUTHY: LICENCE AND THIRD-PARTY NOTICES
 
@@ -142,7 +142,8 @@ Licence: Apache-2.0
 Copyright: hexgrad
 Source: https://github.com/hexgrad/misaki
 
-Origin of the English lexicons and tagger that misaki-rs bundles.
+Origin of the English lexicons and tagger that misaki-rs bundles, and of the
+Japanese kana table Mouthy ports (from cutlet and num2kana, both below).
 The Apache License 2.0 text below also applies to cpal and Kokoro-82M,
 and is one of the two licences offered by ort, ort-sys and rodio.
 
@@ -349,6 +350,74 @@ and is one of the two licences offered by ort, ort-sys and rodio.
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+==============================================================================
+cutlet
+==============================================================================
+
+Licence: MIT
+Copyright: (c) 2020 Paul O'Leary McCann
+Source: https://github.com/polm/cutlet
+
+Mouthy's Japanese kana table is ported from misaki's adaptation of cutlet.
+
+------------------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2020 Paul O'Leary McCann
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+==============================================================================
+Convert-Numbers-to-Japanese
+==============================================================================
+
+Licence: MIT
+Copyright: (c) 2018 David Wilson
+Source: https://github.com/Greatdane/Convert-Numbers-to-Japanese
+
+Mouthy reads numbers in Japanese text with a port of misaki's copy of it
+(num2kana).
+
+------------------------------------------------------------------------------
+
+The MIT License (MIT)
+Copyright (c) 2018 David Wilson, https://github.com/Greatdane
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 ==============================================================================
 language-tokenizer

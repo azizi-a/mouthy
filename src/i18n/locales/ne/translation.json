@@ -93,6 +93,7 @@
           "description": "List voices you have not downloaded yet, with a Download button for each."
         },
         "otherGroup": "Other",
+        "englishOnly": "Reads English text only, with this language's accent.",
         "other": {
           "show": "Other…",
           "title": "Other voice or blend",
@@ -161,7 +162,7 @@
       },
       "voices": {
         "title": "Voices",
-        "description": "English voices read English, British ones with British pronunciation and American ones with American. Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language and need espeak-ng installed. Other voices read text as American English. With Reading Language set to English, every voice reads English.",
+        "description": "English voices read English (British voices with British pronunciation, the rest American); Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language and need espeak-ng; Japanese voices read Japanese kana but not kanji yet; Chinese voices read English for now.",
         "female": "Female",
         "male": "Male",
         "language": {
