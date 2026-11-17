@@ -192,7 +192,8 @@ impl ModelFiles {
                 .collect()
         });
         // A blend reads in its first voice's language, as Kokoro-FastAPI does.
-        // A custom voice's unknown prefix reads as American English.
+        // A custom voice's unknown prefix, or a language this build cannot
+        // read, reads as American English.
         let language = voices
             .as_ref()
             .and_then(|voices| voices.first())
@@ -209,15 +210,14 @@ impl ModelFiles {
         .reading_as(language)
     }
 
-    /// Reads the text in `language`, or in American English when this build
-    /// cannot read that language.
+    /// Reads the text in `language`, or keeps the language it had when this
+    /// build cannot read that one.
     pub fn reading_as(self, language: VoiceLanguage) -> Self {
-        let language = if native(language) {
-            language
+        if native(language) {
+            Self { language, ..self }
         } else {
-            VoiceLanguage::AmericanEnglish
-        };
-        Self { language, ..self }
+            self
+        }
     }
 
     pub fn language(&self) -> VoiceLanguage {
@@ -1551,9 +1551,11 @@ mod tests {
             read_as(VoiceLanguage::AmericanEnglish),
             VoiceLanguage::AmericanEnglish
         );
+        // A British voice stays British when asked for a language this build
+        // cannot read.
         assert_eq!(
             read_as(VoiceLanguage::Spanish),
-            VoiceLanguage::AmericanEnglish
+            VoiceLanguage::BritishEnglish
         );
         let dora = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "ef_dora");
         assert_eq!(
