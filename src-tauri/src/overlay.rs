@@ -129,6 +129,28 @@ fn init_gtk_layer_shell(overlay_window: &tauri::webview::WebviewWindow) -> bool 
     false
 }
 
+/// Stops the window manager focusing the fallback overlay when it shows, which
+/// would take the keyboard from the app being typed in. `.focusable(false)`
+/// only clears the X11 input hint; GTK still offers `WM_TAKE_FOCUS`, so KWin
+/// and Mutter focus the window anyway. Both hints are read at map, so set them
+/// before the first show. Native Wayland has no equivalent: the compositor
+/// decides.
+#[cfg(target_os = "linux")]
+fn refuse_focus_on_map(overlay_window: &tauri::webview::WebviewWindow) {
+    use gtk::prelude::GtkWindowExt;
+
+    match overlay_window.gtk_window() {
+        Ok(gtk_window) => {
+            // Maps with _NET_WM_USER_TIME 0, which asks not to be focused.
+            gtk_window.set_focus_on_map(false);
+            // A notification is never focused on map, even once a click on
+            // its buttons has given the window a newer user time.
+            gtk_window.set_type_hint(gtk::gdk::WindowTypeHint::Notification);
+        }
+        Err(error) => log::error!("Failed to access GTK overlay window: {error}"),
+    }
+}
+
 /// Forces a window to be topmost using Win32 API (Windows only)
 /// This is more reliable than Tauri's set_always_on_top which can be overridden
 #[cfg(target_os = "windows")]
@@ -404,6 +426,7 @@ pub fn create_overlay(app_handle: &AppHandle) {
                     debug!("GTK layer shell initialized for overlay window");
                 } else {
                     debug!("GTK layer shell not available, falling back to regular window");
+                    refuse_focus_on_map(&window);
                 }
             }
 
@@ -723,8 +746,8 @@ pub fn choose_first_overlay_style(app_handle: &AppHandle) {
 }
 
 /// The bar at the screen's edge where the compositor offers the layer shell
-/// (KDE Plasma). Elsewhere the overlay is an ordinary window that takes focus,
-/// so none.
+/// (KDE Plasma). Elsewhere the overlay is an ordinary window, which a Wayland
+/// compositor may focus, so none.
 #[cfg(any(target_os = "linux", test))]
 fn first_overlay_style(layer_shell: bool) -> OverlayStyle {
     if layer_shell {

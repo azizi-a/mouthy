@@ -29,6 +29,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - On Linux, Mouthy runs without a tray icon when no appindicator library is installed, instead of failing to start.
 - On Linux and Windows, closing Settings quits Mouthy whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), since there is no other way to quit.
 - When the Settings window fails to start, it shows the error instead of staying empty.
+- On Linux under X11 or XWayland (the AppImage's default), the overlay no longer takes the keyboard from the app you are typing in when it shows.
 
 ## 0.5.0 — 2026-11-02
 
