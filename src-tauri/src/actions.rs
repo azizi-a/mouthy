@@ -1,7 +1,7 @@
 use crate::audio_out;
 use crate::clipboard::{self, ClipboardText};
 use crate::overlay::{self, OverlayView};
-use crate::settings::{self, AppSettings, TtsBackend};
+use crate::settings::{self, AppSettings, ReadingLanguage, TtsBackend};
 use crate::tray::{self, TrayIconState};
 use crate::tts;
 use crate::tts::catalog::VoiceLanguage;
@@ -89,9 +89,9 @@ struct Session {
     copied_while_held_at: Option<Instant>,
     /// What it reads, for the notice when none of it was speakable.
     input: Input,
-    /// Reads in a voice other than the settings voice, which is loaded again
-    /// when it ends so the next hotkey does not wait for it.
-    other_voice: bool,
+    /// Reads in another voice or language than the settings give, so theirs is
+    /// loaded again when it ends and the next hotkey does not wait for it.
+    other_reading: bool,
 }
 
 impl Session {
@@ -101,19 +101,19 @@ impl Session {
             released_since_start: false,
             copied_while_held_at,
             input,
-            other_voice: false,
+            other_reading: false,
         }
     }
 
     /// A voice preview or a file. No hotkey started it, so the first press
     /// stops it.
-    fn without_hotkey(stop: Arc<AtomicBool>, input: Input, other_voice: bool) -> Self {
+    fn without_hotkey(stop: Arc<AtomicBool>, input: Input, other_reading: bool) -> Self {
         Self {
             stop,
             released_since_start: true,
             copied_while_held_at: None,
             input,
-            other_voice,
+            other_reading,
         }
     }
 
@@ -265,10 +265,16 @@ pub fn speak_clipboard(app: &AppHandle, source: &str) {
     request_speech(app, source, Trigger::Other, Input::Clipboard);
 }
 
-/// Speaks the text file at absolute `path` in `voice`, or the settings voice,
-/// cutting off any speech. A file that cannot be spoken still stops the
-/// speech, then says why.
-pub fn speak_file(app: &AppHandle, path: &Path, voice: Option<String>, source: &str) {
+/// Speaks the text file at absolute `path` in `voice` and `language`, or the
+/// settings ones, cutting off any speech. A file that cannot be spoken still
+/// stops the speech, then says why.
+pub fn speak_file(
+    app: &AppHandle,
+    path: &Path,
+    voice: Option<String>,
+    language: Option<ReadingLanguage>,
+    source: &str,
+) {
     // Read before posting, so a handed-over file is read off the main thread. A
     // first launch reads on it, bounded by the regular-file check and byte cap.
     let text = read_text_file(path).map_err(|e| {
@@ -281,26 +287,28 @@ pub fn speak_file(app: &AppHandle, path: &Path, voice: Option<String>, source: &
     let handle = app.clone();
     let source = source.to_string();
     if let Err(e) =
-        app.run_on_main_thread(move || speak_file_on_main(&handle, &source, text, voice))
+        app.run_on_main_thread(move || speak_file_on_main(&handle, &source, text, voice, language))
     {
         error!("Failed to schedule speech: {e}");
     }
 }
 
-/// What speaking a file's text needs and the voice it is read in, or the
-/// notice to show instead.
+/// What speaking a file's text needs and the voice and language it is read
+/// in, or the notice to show instead.
 fn file_speech(
     app: &AppHandle,
     text: Result<String, OverlayView>,
     voice: Option<&str>,
-) -> Result<(AppSettings, Speech, String), OverlayView> {
+    language: Option<ReadingLanguage>,
+) -> Result<(AppSettings, Speech, String, ReadingLanguage), OverlayView> {
     let text = text?;
     let settings = settings::get_settings(app);
     let voice = match voice {
         Some(requested) => file_voice(app, &settings, requested),
         None => settings.tts_voice.clone(),
     };
-    let backend = speech_backend(app, &settings, &voice)?;
+    let language = file_language(&settings, language);
+    let backend = speech_backend(app, &settings, &voice, language)?;
     let split_started = Instant::now();
     let text = tts::text::normalize(&text);
     let sentences = sentences_for(&text, &backend);
@@ -319,7 +327,7 @@ fn file_speech(
         backend,
         captured_at,
     };
-    Ok((settings, speech, voice))
+    Ok((settings, speech, voice, language))
 }
 
 /// The voice `--voice` asked for, written as the voice setting would be, or
@@ -376,8 +384,8 @@ pub fn preview_voice(app: &AppHandle, voice: &str) -> Result<(), String> {
     if voice.is_empty() {
         return Err("No voice to preview".into());
     }
-    let backend =
-        speech_backend(app, &settings, &voice).map_err(|view| preview_error(view, &voice))?;
+    let backend = speech_backend(app, &settings, &voice, settings.tts_language)
+        .map_err(|view| preview_error(view, &voice))?;
     info!("Previewing the voice {voice}");
     let speech = Speech {
         sentences: sentences_for(&tts::text::normalize(preview_sentence(&backend)), &backend),
@@ -456,7 +464,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
     info!("Speaking the {} ({source})", input.name());
     let settings = settings::get_settings(app);
     // Checked before the copy: without its files the local voice cannot speak.
-    let backend = match speech_backend(app, &settings, &settings.tts_voice) {
+    let backend = match speech_backend(app, &settings, &settings.tts_voice, settings.tts_language) {
         Ok(backend) => backend,
         Err(view) => {
             overlay::show_overlay(app, view);
@@ -533,10 +541,10 @@ fn preview_on_main(app: &AppHandle, settings: AppSettings, speech: Speech) -> Re
     started
 }
 
-/// Loads the settings voice again when `replaced` read in another voice and
-/// no session took over to load its own.
+/// Loads the settings voice again when `replaced` read in another voice or
+/// language and no session took over to load its own.
 fn preload_after(app: &AppHandle, replaced: Option<&Session>) {
-    if replaced.is_some_and(|session| session.other_voice) {
+    if replaced.is_some_and(|session| session.other_reading) {
         preload_local_voice(app);
     }
 }
@@ -546,6 +554,7 @@ fn speak_file_on_main(
     source: &str,
     text: Result<String, OverlayView>,
     voice: Option<String>,
+    language: Option<ReadingLanguage>,
 ) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
@@ -554,13 +563,20 @@ fn speak_file_on_main(
     if replaced.is_some() {
         info!("Stopping speech for a file ({source})");
     }
-    match file_speech(app, text, voice.as_deref()) {
+    match file_speech(app, text, voice.as_deref(), language) {
         // No preload for a replaced session unless this one fails to load its own voice.
-        Ok((settings, speech, voice)) => {
-            info!("Speaking the file in {voice} ({source})");
-            let other_voice = voice != settings.tts_voice;
-            let session =
-                Session::without_hotkey(Arc::new(AtomicBool::new(false)), Input::File, other_voice);
+        Ok((settings, speech, voice, language)) => {
+            let read_as = match (&speech.backend, language) {
+                (tts::Backend::Local(_), ReadingLanguage::English) => " as English",
+                _ => "",
+            };
+            info!("Speaking the file in {voice}{read_as} ({source})");
+            let other_reading = reads_unlike_settings(&settings, &voice, language);
+            let session = Session::without_hotkey(
+                Arc::new(AtomicBool::new(false)),
+                Input::File,
+                other_reading,
+            );
             // A failure to start is on the overlay already.
             if start_session_on_main(app, &state, settings, speech, session).is_err() {
                 preload_after(app, replaced.as_ref());
@@ -622,7 +638,7 @@ fn stop_speaking_on_main(app: &AppHandle) {
     let Some(state) = app.try_state::<TtsState>() else {
         return;
     };
-    if stop_session_on_main(app, &state).is_some_and(|session| session.other_voice) {
+    if stop_session_on_main(app, &state).is_some_and(|session| session.other_reading) {
         preload_local_voice(app);
     }
     overlay::hide_overlay(app);
@@ -643,7 +659,9 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
         return;
     };
     let Some(Session {
-        input, other_voice, ..
+        input,
+        other_reading,
+        ..
     }) = state
         .lock()
         .take_if(|session| Arc::ptr_eq(&session.stop, stop))
@@ -672,7 +690,7 @@ fn end_session_on_main(app: &AppHandle, stop: &Arc<AtomicBool>, end: PlaybackEnd
     };
     tray::set_tray_state(app, TrayIconState::Idle);
     emit_speech_state(app, SessionPhase::Ended, input, error);
-    if other_voice {
+    if other_reading {
         preload_local_voice(app);
     }
 }
@@ -748,11 +766,13 @@ fn speech_backend(
     app: &AppHandle,
     settings: &AppSettings,
     voice: &str,
+    language: ReadingLanguage,
 ) -> Result<tts::Backend, OverlayView> {
     match settings.tts_backend {
+        // The server reads in whatever language it decides.
         TtsBackend::Http => Ok(http_backend(settings, voice)),
         TtsBackend::Local => {
-            let files = local_model_files(app, settings, voice)
+            let files = local_model_files(app, settings, voice, language)
                 .map_err(|message| OverlayView::Error { message })?;
             if let Some(missing) = files.missing() {
                 info!("The local voice is missing {missing}");
@@ -777,13 +797,41 @@ fn local_model_files(
     app: &AppHandle,
     settings: &AppSettings,
     voice: &str,
+    language: ReadingLanguage,
 ) -> Result<tts::local::ModelFiles, String> {
     let models_dir = crate::commands::models_dir(app)?;
-    Ok(
-        tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, voice)
-            .with_english_fallback(settings.tts_espeak_fallback)
-            .with_espeak(tts::espeak::find_if_enabled(settings.tts_espeak_fallback)),
-    )
+    let files = tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, voice);
+    Ok(read_in(files, language)
+        .with_english_fallback(settings.tts_espeak_fallback)
+        .with_espeak(tts::espeak::find_if_enabled(settings.tts_espeak_fallback)))
+}
+
+/// `files` read in the language `choice` gives.
+fn read_in(files: tts::local::ModelFiles, choice: ReadingLanguage) -> tts::local::ModelFiles {
+    let language = reading_language(files.language(), choice);
+    files.reading_as(language)
+}
+
+/// The language a voice that reads `voice_language` reads in under `choice`.
+/// English keeps a British voice British and reads American otherwise.
+fn reading_language(voice_language: VoiceLanguage, choice: ReadingLanguage) -> VoiceLanguage {
+    match (choice, voice_language) {
+        (ReadingLanguage::Voice, language) => language,
+        (ReadingLanguage::English, VoiceLanguage::BritishEnglish) => VoiceLanguage::BritishEnglish,
+        (ReadingLanguage::English, _) => VoiceLanguage::AmericanEnglish,
+    }
+}
+
+/// The language `--lang` asked for, or the settings one.
+fn file_language(settings: &AppSettings, requested: Option<ReadingLanguage>) -> ReadingLanguage {
+    requested.unwrap_or(settings.tts_language)
+}
+
+/// Whether reading in `voice` and `language` loads something other than the
+/// settings do. The server ignores the language.
+fn reads_unlike_settings(settings: &AppSettings, voice: &str, language: ReadingLanguage) -> bool {
+    voice != settings.tts_voice
+        || (settings.tts_backend == TtsBackend::Local && language != settings.tts_language)
 }
 
 /// Loads the local voice in the background when the settings select it, so
@@ -799,9 +847,10 @@ pub fn preload_local_voice(app: &AppHandle) {
                 if settings.tts_backend != TtsBackend::Local {
                     return None;
                 }
-                let files = local_model_files(&app, &settings, &settings.tts_voice)
-                    .inspect_err(|e| warn!("Cannot find the local voice: {e}"))
-                    .ok()?;
+                let files =
+                    local_model_files(&app, &settings, &settings.tts_voice, settings.tts_language)
+                        .inspect_err(|e| warn!("Cannot find the local voice: {e}"))
+                        .ok()?;
                 if let Some(missing) = files.missing() {
                     info!("The local voice is missing {missing}");
                     return None;
@@ -1373,6 +1422,131 @@ mod tests {
             "my_server_voice"
         );
         assert!(usable_voice(&settings, no_models, "  ").is_err());
+    }
+
+    const ALL_LANGUAGES: [VoiceLanguage; 9] = [
+        VoiceLanguage::AmericanEnglish,
+        VoiceLanguage::BritishEnglish,
+        VoiceLanguage::Spanish,
+        VoiceLanguage::French,
+        VoiceLanguage::Hindi,
+        VoiceLanguage::Italian,
+        VoiceLanguage::Japanese,
+        VoiceLanguage::BrazilianPortuguese,
+        VoiceLanguage::Mandarin,
+    ];
+
+    #[test]
+    fn a_voice_reads_its_own_language_unless_english_is_chosen() {
+        for language in ALL_LANGUAGES {
+            assert_eq!(reading_language(language, ReadingLanguage::Voice), language);
+            let english = if language == VoiceLanguage::BritishEnglish {
+                VoiceLanguage::BritishEnglish
+            } else {
+                VoiceLanguage::AmericanEnglish
+            };
+            assert_eq!(
+                reading_language(language, ReadingLanguage::English),
+                english,
+                "{language:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn lang_beats_the_reading_language_setting() {
+        let mut settings = local_settings("ef_dora");
+        assert_eq!(file_language(&settings, None), ReadingLanguage::Voice);
+        assert_eq!(
+            file_language(&settings, Some(ReadingLanguage::English)),
+            ReadingLanguage::English
+        );
+        settings.tts_language = ReadingLanguage::English;
+        assert_eq!(file_language(&settings, None), ReadingLanguage::English);
+        assert_eq!(
+            file_language(&settings, Some(ReadingLanguage::Voice)),
+            ReadingLanguage::Voice
+        );
+    }
+
+    fn files(voice: &str) -> tts::local::ModelFiles {
+        tts::local::ModelFiles::new(Path::new("models"), settings::ModelVariant::Int8, voice)
+    }
+
+    #[test]
+    fn english_keeps_a_british_voice_british_and_reads_any_other_as_american() {
+        let english = |voice| read_in(files(voice), ReadingLanguage::English).language();
+        for voice in ["bf_emma", "bm_lewis", "bm_lewis+ef_dora"] {
+            assert_eq!(english(voice), VoiceLanguage::BritishEnglish, "{voice}");
+        }
+        for voice in [
+            "af_alloy",
+            "ef_dora",
+            "ff_siwis",
+            "hf_alpha",
+            "if_sara",
+            "jf_alpha",
+            "pf_dora",
+            "zf_xiaobei",
+            "ef_dora+bf_emma",
+            "xx_custom",
+        ] {
+            assert_eq!(english(voice), VoiceLanguage::AmericanEnglish, "{voice}");
+        }
+    }
+
+    #[test]
+    fn the_voice_choice_leaves_the_voices_language_alone() {
+        for voice in ["af_alloy", "bf_emma", "ef_dora", "jf_alpha", "zf_xiaobei"] {
+            assert_eq!(
+                read_in(files(voice), ReadingLanguage::Voice).language(),
+                files(voice).language(),
+                "{voice}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_non_english_voice_read_as_english_previews_in_english() {
+        let backend = tts::Backend::Local(read_in(files("jf_alpha"), ReadingLanguage::English));
+        assert_eq!(
+            preview_sentence(&backend),
+            preview_text(VoiceLanguage::AmericanEnglish)
+        );
+    }
+
+    #[test]
+    fn a_file_in_another_voice_or_language_than_the_settings_reloads_them_after() {
+        let settings = local_settings("ef_dora");
+        assert!(!reads_unlike_settings(
+            &settings,
+            "ef_dora",
+            ReadingLanguage::Voice
+        ));
+        assert!(reads_unlike_settings(
+            &settings,
+            "bf_emma",
+            ReadingLanguage::Voice
+        ));
+        assert!(reads_unlike_settings(
+            &settings,
+            "ef_dora",
+            ReadingLanguage::English
+        ));
+        let server = AppSettings {
+            tts_backend: TtsBackend::Http,
+            ..settings
+        };
+        assert!(!reads_unlike_settings(
+            &server,
+            "ef_dora",
+            ReadingLanguage::English
+        ));
+        assert!(reads_unlike_settings(
+            &server,
+            "bf_emma",
+            ReadingLanguage::Voice
+        ));
     }
 
     fn local_backend(voice: &str) -> tts::Backend {
