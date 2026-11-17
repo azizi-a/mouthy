@@ -117,9 +117,9 @@ pub enum VoiceLanguage {
 }
 
 impl VoiceLanguage {
-    /// From the id's first letter, as Kokoro names its voices.
-    fn of(voice: &str) -> Option<Self> {
-        Some(match voice.chars().next()? {
+    /// From the id's first letter in either case, as Kokoro names its voices.
+    pub(crate) fn of(voice: &str) -> Option<Self> {
+        Some(match voice.chars().next()?.to_ascii_lowercase() {
             'a' => Self::AmericanEnglish,
             'b' => Self::BritishEnglish,
             'j' => Self::Japanese,
@@ -264,6 +264,18 @@ mod tests {
             ("pf_dora", VoiceLanguage::BrazilianPortuguese),
         ] {
             assert_eq!(find(Path::new("/m"), id).unwrap().language, Some(language));
+        }
+    }
+
+    #[test]
+    fn a_voice_name_in_capitals_has_its_language_and_an_unknown_prefix_none() {
+        assert_eq!(
+            VoiceLanguage::of("BM_Lewis"),
+            Some(VoiceLanguage::BritishEnglish)
+        );
+        assert_eq!(VoiceLanguage::of("Ef_dora"), Some(VoiceLanguage::Spanish));
+        for voice in ["xx_custom", "", "_af", "éf_x"] {
+            assert_eq!(VoiceLanguage::of(voice), None, "{voice:?}");
         }
     }
 

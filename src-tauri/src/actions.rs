@@ -4,6 +4,7 @@ use crate::overlay::{self, OverlayView};
 use crate::settings::{self, AppSettings, TtsBackend};
 use crate::tray::{self, TrayIconState};
 use crate::tts;
+use crate::tts::catalog::VoiceLanguage;
 use log::{debug, error, info, warn};
 use once_cell::sync::Lazy;
 use rodio::buffer::SamplesBuffer;
@@ -42,9 +43,39 @@ const TEXT_CHAR_CAP: usize = 20_000;
 /// Most bytes read from a file: a UTF-8 character is at most four bytes, so
 /// these always hold `TEXT_CHAR_CAP` whole characters when the file has them.
 const FILE_BYTE_CAP: u64 = TEXT_CHAR_CAP as u64 * 4;
-/// What a voice preview reads. English in every app language, since every
-/// voice reads English.
-const PREVIEW_TEXT: &str = "Hi. This is how I sound when I read your text aloud.";
+
+/// What a voice preview reads in `language`, whatever the app's language.
+fn preview_text(language: VoiceLanguage) -> &'static str {
+    match language {
+        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish => {
+            "Hi. This is how I sound when I read your text aloud."
+        }
+        VoiceLanguage::Spanish => "Hola. Así sueno cuando leo tu texto en voz alta.",
+        VoiceLanguage::French => {
+            "Bonjour. Voici comment je parle quand je lis votre texte à haute voix."
+        }
+        VoiceLanguage::Italian => "Ciao. Ecco come suono quando leggo il tuo testo ad alta voce.",
+        VoiceLanguage::BrazilianPortuguese => {
+            "Oi. É assim que a minha voz soa quando leio o seu texto em voz alta."
+        }
+        VoiceLanguage::Hindi => "नमस्ते। आपका टेक्स्ट ज़ोर से पढ़ते समय मेरी आवाज़ ऐसी सुनाई देती है।",
+        // Kana only, and no は or へ particle: kanji and those particles need a
+        // dictionary to read right.
+        VoiceLanguage::Japanese => {
+            "どうも。これが、あなたのテキストをよみあげるときの、わたしのこえです。"
+        }
+        VoiceLanguage::Mandarin => "你好。这就是我朗读你的文字时的声音。",
+    }
+}
+
+/// The preview sentence in the language `backend` reads. The server gets
+/// English, as it always has.
+fn preview_sentence(backend: &tts::Backend) -> &'static str {
+    preview_text(match backend {
+        tts::Backend::Local(files) => files.language(),
+        tts::Backend::Http { .. } => VoiceLanguage::AmericanEnglish,
+    })
+}
 
 type Chunk = Result<Vec<i16>, String>;
 
@@ -115,7 +146,7 @@ enum Input {
     Clipboard,
     /// A text file named on the command line.
     File,
-    /// `PREVIEW_TEXT`, in the voice being previewed.
+    /// The preview sentence, in the voice being previewed.
     Preview,
 }
 
@@ -332,9 +363,9 @@ fn usable_voice(
     }
 }
 
-/// Reads `PREVIEW_TEXT` in `voice`, stopping any speech first. Fails, stopping
-/// nothing, when the voice is not valid or the local engine lacks a file it
-/// needs.
+/// Reads the preview sentence in `voice`, stopping any speech first. Fails,
+/// stopping nothing, when the voice is not valid or the local engine lacks a
+/// file it needs.
 pub fn preview_voice(app: &AppHandle, voice: &str) -> Result<(), String> {
     let settings = settings::get_settings(app);
     // Checked as `change_tts_voice_setting` checks a voice before storing it.
@@ -349,7 +380,7 @@ pub fn preview_voice(app: &AppHandle, voice: &str) -> Result<(), String> {
         speech_backend(app, &settings, &voice).map_err(|view| preview_error(view, &voice))?;
     info!("Previewing the voice {voice}");
     let speech = Speech {
-        sentences: sentences_for(&tts::text::normalize(PREVIEW_TEXT), &backend),
+        sentences: sentences_for(&tts::text::normalize(preview_sentence(&backend)), &backend),
         backend,
         captured_at: Instant::now(),
     };
@@ -448,7 +479,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
         },
         // `speak_file` reads a file before posting and never comes here.
         Input::File => Ok((None, None)),
-        Input::Preview => Ok((Some(PREVIEW_TEXT.to_string()), None)),
+        Input::Preview => Ok((Some(preview_sentence(&backend).to_string()), None)),
     };
     let (text, copied_while_held_at) = match captured {
         Ok(captured) => captured,
@@ -701,11 +732,14 @@ fn emit_speech_state(app: &AppHandle, state: SessionPhase, input: Input, error: 
 
 /// Normalised `text` cut into the requests `backend` gets.
 fn sentences_for(text: &str, backend: &tts::Backend) -> Vec<tts::text::Chunk> {
-    let sentences = tts::text::split_sentences(text, backend.max_chunk_chars());
-    if matches!(backend, tts::Backend::Local(_)) {
-        tts::text::split_first_clause(sentences)
-    } else {
-        sentences
+    let max_chars = backend.max_chunk_chars();
+    match backend {
+        tts::Backend::Http { .. } => tts::text::split_sentences(text, max_chars),
+        tts::Backend::Local(files) => {
+            let marks = files.marks();
+            let sentences = tts::text::split_sentences_with(text, max_chars, marks);
+            tts::text::split_first_clause(sentences, marks)
+        }
     }
 }
 
@@ -720,11 +754,12 @@ fn speech_backend(
         TtsBackend::Local => {
             let files = local_model_files(app, settings, voice)
                 .map_err(|message| OverlayView::Error { message })?;
-            match files.missing() {
-                Some(missing) => {
-                    info!("The local voice is missing {missing}");
-                    Err(OverlayView::ModelMissing)
-                }
+            if let Some(missing) = files.missing() {
+                info!("The local voice is missing {missing}");
+                return Err(OverlayView::ModelMissing);
+            }
+            match files.unmet_requirement() {
+                Some(message) => Err(OverlayView::Error { message }),
                 None => Ok(tts::Backend::Local(files)),
             }
         }
@@ -746,6 +781,7 @@ fn local_model_files(
     let models_dir = crate::commands::models_dir(app)?;
     Ok(
         tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, voice)
+            .with_english_fallback(settings.tts_espeak_fallback)
             .with_espeak(tts::espeak::find_if_enabled(settings.tts_espeak_fallback)),
     )
 }
@@ -766,13 +802,15 @@ pub fn preload_local_voice(app: &AppHandle) {
                 let files = local_model_files(&app, &settings, &settings.tts_voice)
                     .inspect_err(|e| warn!("Cannot find the local voice: {e}"))
                     .ok()?;
-                match files.missing() {
-                    Some(missing) => {
-                        info!("The local voice is missing {missing}");
-                        None
-                    }
-                    None => Some(files),
+                if let Some(missing) = files.missing() {
+                    info!("The local voice is missing {missing}");
+                    return None;
                 }
+                if let Some(requirement) = files.unmet_requirement() {
+                    info!("The local voice cannot load: {requirement}");
+                    return None;
+                }
+                Some(files)
             });
             if let Err(message) = result {
                 info!("The local voice is not loaded: {message}");
@@ -1337,22 +1375,187 @@ mod tests {
         assert!(usable_voice(&settings, no_models, "  ").is_err());
     }
 
-    #[test]
-    fn both_engines_speak_the_preview_sentence() {
-        let text = tts::text::normalize(PREVIEW_TEXT);
-        let http = http_backend(&settings::get_default_settings(), "af_alloy");
-        let local = tts::Backend::Local(tts::local::ModelFiles::new(
+    fn local_backend(voice: &str) -> tts::Backend {
+        tts::Backend::Local(tts::local::ModelFiles::new(
             std::path::Path::new("models"),
             settings::ModelVariant::Int8,
-            "af_alloy",
-        ));
-        for backend in [http, local] {
+            voice,
+        ))
+    }
+
+    #[test]
+    fn every_language_has_a_preview_sentence() {
+        let languages = [
+            VoiceLanguage::AmericanEnglish,
+            VoiceLanguage::BritishEnglish,
+            VoiceLanguage::Japanese,
+            VoiceLanguage::Mandarin,
+            VoiceLanguage::Spanish,
+            VoiceLanguage::French,
+            VoiceLanguage::Hindi,
+            VoiceLanguage::Italian,
+            VoiceLanguage::BrazilianPortuguese,
+        ];
+        let sentences: std::collections::HashSet<_> =
+            languages.into_iter().map(preview_text).collect();
+        assert_eq!(
+            sentences.len(),
+            languages.len() - 1,
+            "both Englishes share one"
+        );
+        for language in languages {
+            let text = tts::text::normalize(preview_text(language));
+            assert!(!text.is_empty(), "{language:?}");
+        }
+        let is_kanji = |c: char| ('\u{4e00}'..='\u{9fff}').contains(&c);
+        assert!(!preview_text(VoiceLanguage::Japanese).contains(is_kanji));
+    }
+
+    #[test]
+    fn a_voice_this_build_cannot_read_previews_in_english() {
+        let english = preview_text(VoiceLanguage::AmericanEnglish);
+        for voice in ["ef_dora", "jf_alpha", "zf_xiaobei", "hf_alpha", "xx_custom"] {
+            assert_eq!(preview_sentence(&local_backend(voice)), english, "{voice}");
+        }
+        let server = http_backend(&settings::get_default_settings(), "ef_dora");
+        assert_eq!(preview_sentence(&server), english);
+    }
+
+    #[test]
+    fn the_server_gets_chinese_and_hindi_cut_as_before() {
+        let server = http_backend(&settings::get_default_settings(), "zf_xiaobei");
+        for text in [
+            "今天的天气非常好，我们一起去公园散步吧。明天可能会下大雨，所以要带伞。",
+            "आज मौसम बहुत अच्छा है। कल शायद बारिश होगी, तो छाता ज़रूर ले जाना॥ क्या आप आना चाहेंगे?",
+        ] {
+            assert_eq!(
+                sentences_for(text, &server),
+                tts::text::split_sentences(text, 300),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn both_engines_speak_the_preview_sentence() {
+        let http = http_backend(&settings::get_default_settings(), "af_alloy");
+        for backend in [http, local_backend("af_alloy")] {
+            let text = tts::text::normalize(preview_sentence(&backend));
             let sentences = sentences_for(&text, &backend);
             assert!(!sentences.is_empty());
             assert!(sentences
                 .iter()
                 .all(|s| s.text.chars().count() <= backend.max_chunk_chars()));
         }
+    }
+
+    /// What the English pin reads: the listening test as it stood when the pin
+    /// was made, so later edits to that guide leave it alone, and then each of
+    /// `ENGLISH_LINES` on its own, as a selection would be.
+    const ENGLISH_TEXT: &str = include_str!("tts/fixtures/english-text.txt");
+    const ENGLISH_PHONEMES: &str = include_str!("tts/fixtures/english-phonemes.txt");
+    const ENGLISH_LINES: &[&str] = &[
+        "The naïve café served crème brûlée and a jalapeño.",
+        "Œuvre, Straße, æsthetics and the ﬁnal ﬂoor plan.",
+        "Señor Muñoz flew from Zürich to Kraków and São Paulo.",
+        "Cafe\u{301} and re\u{301}sume\u{301} are typed with separate accents.",
+        "She said “no” twice, and it’s the user’s fault, isn’t it?",
+        "„Quoted“ and ‘single’ quotes don’t split a word.",
+        "Dr. Smith and Mrs. Jones met Prof. Brown on Baker St. at 9 a.m.",
+        "Cats vs. dogs, approx. forty of each, etc.",
+        "See No. 5, Capt. Hook and Smith Jr. at St. Paul's.",
+        "Ms. Smith met Dr Who, Gen Z and Gen. Patton.",
+        "Tools, e.g. hammers, i.e. the heavy ones, at 7 a.m. or 5 p.m.",
+        "The API, URL and HTTP specs are on GitHub.",
+        "IDs, URLs and PDFs: the U.S. and the U.K. agree.",
+        "macOS, iOS, HTMLParser and camelCase names read as words.",
+        "Node.js, README.md and ort.pyke.io are names, not sentences.",
+        "It costs $3.2 billion, £45 or €10.50 each.",
+        "Version 2.0.1 fixed 37 bugs on 1 April 2027.",
+        "The 1990s, the '80s and the 21st century.",
+        "At 10:30 or 7.30pm, about 45% of us left.",
+        "Read pages 10-12, then 1914–1918, then 9:00–17:00.",
+        "Prices fell by \u{2212}5 percent, from 1,500 to 1,425.",
+        "He came 3rd, then 2nd, then 1st.",
+        "Call 020-7946-0958 before 2026-10-13.",
+        "Tea — or coffee – is fine, well—maybe.",
+        "Use [the API docs][1] and (see [the FAQ]).",
+        "Soft\u{ad}ware, zero\u{200b}width and no\u{a0}break spaces vanish.",
+        "Wait... what? Really!",
+        "日本語 and emoji 🎉 pass through untouched.",
+        "When the meeting finally ended, after a long day of talks about the budget, everyone went home.",
+        "The report, which the committee had asked for in the spring, ran to more than two hundred pages, \
+         covered every branch of the library from the smallest reading room to the main hall, listed the \
+         books that had been lost, damaged or never returned, set out what each repair would cost and how \
+         long it would take, and ended with a long list of recommendations that the members argued about \
+         for most of the summer, until the chair finally called a vote in September and the plan was \
+         approved by a narrow margin.",
+    ];
+
+    /// One `ends_sentence<TAB>phonemes` line per chunk `voice` reads the
+    /// English pin's text as.
+    fn english_reading(voice: &str) -> Vec<String> {
+        let backend = local_backend(voice);
+        let chunks: Vec<tts::text::Chunk> = std::iter::once(ENGLISH_TEXT)
+            .chain(ENGLISH_LINES.iter().copied())
+            .flat_map(|text| sentences_for(&tts::text::normalize(text), &backend))
+            .collect();
+        let tts::Backend::Local(files) = &backend else {
+            unreachable!()
+        };
+        let texts: Vec<String> = chunks.iter().map(|chunk| chunk.text.clone()).collect();
+        let phonemes = tts::local::phonemes_without_espeak(files, &texts);
+        chunks
+            .iter()
+            .zip(phonemes)
+            .map(|(chunk, phonemes)| format!("{}\t{phonemes}", chunk.ends_sentence))
+            .collect()
+    }
+
+    /// One `voice<TAB>ends_sentence<TAB>phonemes` line per chunk.
+    fn english_phonemes() -> String {
+        ["bm_lewis", "af_alloy"]
+            .into_iter()
+            .flat_map(|voice| {
+                english_reading(voice)
+                    .into_iter()
+                    .map(move |line| format!("{voice}\t{line}\n"))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_voice_in_a_language_this_build_cannot_read_reads_as_american_english() {
+        let american = english_reading("af_alloy");
+        for voice in ["zf_xiaobei", "ef_dora", "jm_kumo", "hf_alpha"] {
+            let read = english_reading(voice);
+            assert_eq!(read.len(), american.len(), "{voice}");
+            for (read, american) in read.iter().zip(&american) {
+                assert_eq!(read, american, "{voice}");
+            }
+        }
+    }
+
+    /// English as the local voice reads it must not move unless on purpose:
+    /// then run `cargo test -- --ignored write_the_english_phonemes` and
+    /// review the fixture's diff.
+    #[test]
+    fn english_reads_as_the_fixture_says() {
+        let read = english_phonemes();
+        for (line, (read, expected)) in read.lines().zip(ENGLISH_PHONEMES.lines()).enumerate() {
+            assert_eq!(read, expected, "fixture line {}", line + 1);
+        }
+        assert_eq!(read, ENGLISH_PHONEMES);
+    }
+
+    #[test]
+    #[ignore = "rewrites the English fixture"]
+    fn write_the_english_phonemes() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/tts/fixtures/english-phonemes.txt"
+        );
+        std::fs::write(path, english_phonemes()).unwrap();
     }
 
     #[test]

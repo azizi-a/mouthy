@@ -4,8 +4,9 @@
 //! export) and `voices/<voice>.bin`. The loaded model stays in memory between
 //! sessions; one session at a time holds it.
 
+use super::catalog::VoiceLanguage;
 use super::espeak;
-use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out};
+use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out, Marks};
 use super::voice::{is_voice_name, VoiceSpec};
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
@@ -111,8 +112,16 @@ static LOADED: Mutex<Option<LocalSynth>> = Mutex::new(None);
 /// the settings page can read it while a session holds the model.
 static PRELOAD_ERROR: Mutex<Option<String>> = Mutex::new(None);
 
-/// Which misaki lexicon a voice needs: `b*` voices are British English,
-/// every other voice is read as American English.
+/// Whether this build can read text in `language`. A voice in any other
+/// language reads as American English.
+fn native(language: VoiceLanguage) -> bool {
+    matches!(
+        language,
+        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish
+    )
+}
+
+/// Which misaki lexicon English text is read with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Dialect {
     British,
@@ -120,11 +129,12 @@ pub(super) enum Dialect {
 }
 
 impl Dialect {
-    fn for_voice(voice: &str) -> Self {
-        if voice.starts_with(['b', 'B']) {
-            Dialect::British
-        } else {
-            Dialect::American
+    /// British English reads with the British lexicon, any other language
+    /// with the American one.
+    fn of(language: VoiceLanguage) -> Self {
+        match language {
+            VoiceLanguage::BritishEnglish => Dialect::British,
+            _ => Dialect::American,
         }
     }
 
@@ -151,7 +161,11 @@ pub struct ModelFiles {
     voice_id: String,
     /// `None` when the setting is not a voice or blend.
     voices: Option<Vec<VoiceFile>>,
-    /// The espeak-ng that reads words the lexicon lacks, if any.
+    /// The language the text is read in; always one this build can read.
+    language: VoiceLanguage,
+    /// Whether espeak-ng reads the English words the lexicon lacks.
+    english_fallback: bool,
+    /// The espeak-ng to run, if any.
     espeak: Option<PathBuf>,
 }
 
@@ -165,7 +179,7 @@ struct VoiceFile {
 
 impl ModelFiles {
     pub fn new(models_dir: &Path, variant: ModelVariant, voice: &str) -> Self {
-        let voices = VoiceSpec::parse(voice).ok().and_then(|spec| {
+        let voices: Option<Vec<VoiceFile>> = VoiceSpec::parse(voice).ok().and_then(|spec| {
             spec.parts()
                 .iter()
                 .map(|(id, weight)| {
@@ -177,16 +191,63 @@ impl ModelFiles {
                 })
                 .collect()
         });
+        // A blend reads in its first voice's language, as Kokoro-FastAPI does.
+        // A custom voice's unknown prefix, or a language this build cannot
+        // read, reads as American English.
+        let language = voices
+            .as_ref()
+            .and_then(|voices| voices.first())
+            .and_then(|first| VoiceLanguage::of(&first.id))
+            .unwrap_or(VoiceLanguage::AmericanEnglish);
         Self {
             model: model_path(models_dir, variant),
             voice_id: voice.to_string(),
             voices,
+            language: VoiceLanguage::AmericanEnglish,
+            english_fallback: false,
             espeak: None,
+        }
+        .reading_as(language)
+    }
+
+    /// Reads the text in `language`, or keeps the language it had when this
+    /// build cannot read that one.
+    pub fn reading_as(self, language: VoiceLanguage) -> Self {
+        if native(language) {
+            Self { language, ..self }
+        } else {
+            self
+        }
+    }
+
+    pub fn language(&self) -> VoiceLanguage {
+        self.language
+    }
+
+    pub fn with_english_fallback(self, english_fallback: bool) -> Self {
+        Self {
+            english_fallback,
+            ..self
         }
     }
 
     pub fn with_espeak(self, espeak: Option<PathBuf>) -> Self {
         Self { espeak, ..self }
+    }
+
+    /// What reading this language needs that is not installed, as a notice.
+    /// English needs nothing beyond the model files.
+    pub fn unmet_requirement(&self) -> Option<String> {
+        None
+    }
+
+    /// Where this language's text is cut into sentences and clauses.
+    pub fn marks(&self) -> &'static Marks {
+        match self.language {
+            VoiceLanguage::Japanese | VoiceLanguage::Mandarin => &Marks::CJK,
+            VoiceLanguage::Hindi => &Marks::HINDI,
+            _ => &Marks::DEFAULT,
+        }
     }
 
     /// The first file that is not there, described for the log.
@@ -222,10 +283,12 @@ impl ModelFiles {
         missing
     }
 
-    /// A blend reads with its first voice's lexicon, as Kokoro-FastAPI does.
-    fn dialect(&self) -> Option<Dialect> {
-        let first = self.voices.as_ref()?.first()?;
-        Some(Dialect::for_voice(&first.id))
+    fn reading(&self) -> Reading {
+        Reading {
+            language: self.language,
+            english_fallback: self.english_fallback,
+            espeak: self.espeak.clone(),
+        }
     }
 }
 
@@ -384,12 +447,12 @@ fn lock_loaded() -> MutexGuard<'static, Option<LocalSynth>> {
 /// Makes `loaded` match `files`, reloading only what changed on disk.
 fn ensure_loaded(loaded: &mut Option<LocalSynth>, files: &ModelFiles) -> Result<(), String> {
     let model = FileStamp::of(&files.model, "Kokoro model")?;
-    let not_a_voice = || format!("'{}' is not a voice or blend", files.voice_id);
-    let voice = voice_stamps(files.voices.as_deref().ok_or_else(not_a_voice)?)?;
-    let reading = Reading {
-        dialect: files.dialect().ok_or_else(not_a_voice)?,
-        espeak: files.espeak.clone(),
-    };
+    let voices = files
+        .voices
+        .as_deref()
+        .ok_or_else(|| format!("'{}' is not a voice or blend", files.voice_id))?;
+    let voice = voice_stamps(voices)?;
+    let reading = files.reading();
 
     match loaded {
         // Each part is swapped only once its replacement has loaded, so a
@@ -433,11 +496,21 @@ impl FileStamp {
     }
 }
 
-/// How the G2P reads text: which lexicon, and what reads the words it lacks.
+/// How the G2P reads text: in which language, and whether espeak-ng reads the
+/// English words the lexicon lacks.
 #[derive(Debug, PartialEq, Eq)]
 struct Reading {
-    dialect: Dialect,
+    language: VoiceLanguage,
+    english_fallback: bool,
     espeak: Option<PathBuf>,
+}
+
+impl Reading {
+    /// The espeak-ng that reads English words the lexicon lacks: none unless
+    /// the fallback is on.
+    fn english_espeak(&self) -> Option<&PathBuf> {
+        self.espeak.as_ref().filter(|_| self.english_fallback)
+    }
 }
 
 struct LocalSynth {
@@ -493,7 +566,7 @@ impl LocalSynth {
         ends_sentence: bool,
         run_options: &RunOptions,
     ) -> Result<Vec<i16>, String> {
-        let (ids, dropped) = text_to_ids(&self.g2p, self.reading.dialect, text)?;
+        let (ids, dropped) = text_to_ids(&self.g2p, self.reading.language, text)?;
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
@@ -582,8 +655,8 @@ fn build_session(environment: &Environment, path: &Path) -> ort::Result<Session>
 
 fn build_g2p(reading: &Reading) -> G2P {
     let started = Instant::now();
-    let dialect = reading.dialect;
-    let (g2p, unknown_words) = match &reading.espeak {
+    let dialect = Dialect::of(reading.language);
+    let (g2p, unknown_words) = match reading.english_espeak() {
         Some(program) => (espeak::g2p(dialect, program.clone()), "espeak-ng"),
         None => (G2P::new(dialect.language()), "spelling"),
     };
@@ -734,18 +807,53 @@ fn style_row(rows: &[f32], tokens: usize) -> &[f32] {
 }
 
 /// Kokoro ids for `text`, and how many symbols had no id.
-fn text_to_ids(g2p: &G2P, dialect: Dialect, text: &str) -> Result<(Vec<i64>, usize), String> {
-    let (raw, _) = g2p
-        .g2p(&reading(g2p, text))
-        .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
-    Ok(token_ids(&to_kokoro_phonemes(&raw, dialect)))
+fn text_to_ids(
+    g2p: &G2P,
+    language: VoiceLanguage,
+    text: &str,
+) -> Result<(Vec<i64>, usize), String> {
+    Ok(token_ids(&text_to_phonemes(g2p, language, text)?))
 }
 
-/// `text` as misaki-rs should get it: plain characters, abbreviations and
-/// numbers in words and initialisms spelled.
-fn reading(g2p: &G2P, text: &str) -> String {
-    let words = expand_numbers(&expand_abbreviations(&plain_text(text)));
+/// Kokoro's symbols for `text`, before they become ids.
+fn text_to_phonemes(g2p: &G2P, language: VoiceLanguage, text: &str) -> Result<String, String> {
+    let (raw, _) = g2p
+        .g2p(&reading(g2p, text, language))
+        .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
+    Ok(to_kokoro_phonemes(&raw, Dialect::of(language)))
+}
+
+/// The symbols the local voice for `files` reads each of `texts` as, without
+/// espeak-ng, so every machine gives the same.
+#[cfg(test)]
+pub(crate) fn phonemes_without_espeak(files: &ModelFiles, texts: &[String]) -> Vec<String> {
+    let reading = Reading {
+        espeak: None,
+        ..files.reading()
+    };
+    let g2p = build_g2p(&reading);
+    texts
+        .iter()
+        .map(|text| text_to_phonemes(&g2p, reading.language, text).unwrap())
+        .collect()
+}
+
+/// `text` as misaki-rs should get it: plain characters and, in English,
+/// abbreviations and numbers in words and initialisms spelled.
+fn reading(g2p: &G2P, text: &str, language: VoiceLanguage) -> String {
+    let plain = plain_text(text, language);
+    if !is_english(language) {
+        return plain;
+    }
+    let words = expand_numbers(&expand_abbreviations(&plain));
     spell_out(&words, &g2p.lexicon)
+}
+
+fn is_english(language: VoiceLanguage) -> bool {
+    matches!(
+        language,
+        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish
+    )
 }
 
 /// Initialisms read as misaki reads a proper noun it spells: each letter's
@@ -835,8 +943,10 @@ const FOLDS: &[(&str, &str)] = &[
 
 /// Text as misaki-rs reads it best. It splits a word at a curly apostrophe
 /// ("don’t" → "don", "❓", "t"), spells an unknown word letter by letter and
-/// reads a dash as a plain space.
-fn plain_text(text: &str) -> String {
+/// reads a dash as a plain space. Only English loses its accents: other
+/// languages need their letters as written.
+fn plain_text(text: &str, language: VoiceLanguage) -> String {
+    let fold = is_english(language);
     let mut out = String::with_capacity(text.len());
     for (i, c) in text.char_indices() {
         match c {
@@ -849,7 +959,7 @@ fn plain_text(text: &str) -> String {
             // Minus sign.
             '\u{2212}' => out.push('-'),
             // Accents typed as a separate mark after the letter ("e" + U+0301).
-            '\u{300}'..='\u{36f}' if out.ends_with(|c: char| c.is_ascii_alphabetic()) => {}
+            '\u{300}'..='\u{36f}' if fold && out.ends_with(|c: char| c.is_ascii_alphabetic()) => {}
             // Soft hyphen, zero-width space, byte order mark.
             '\u{ad}' | '\u{200b}' | '\u{feff}' => {}
             '\u{a0}' => out.push(' '),
@@ -860,7 +970,7 @@ fn plain_text(text: &str) -> String {
                     out.push(',');
                 }
             }
-            c if c.is_ascii() => out.push(c),
+            c if c.is_ascii() || !fold => out.push(c),
             c => match FOLDS.iter().find(|(from, _)| from.contains(c)) {
                 Some((_, to)) => out.push_str(to),
                 None => out.push(c),
@@ -1115,6 +1225,35 @@ mod tests {
         (g2p, unknown)
     }
 
+    fn plain_english(text: &str) -> String {
+        plain_text(text, VoiceLanguage::BritishEnglish)
+    }
+
+    #[test]
+    fn only_english_loses_its_accents() {
+        let text = "Él dijo “sí” — mañana, cafe\u{301} y ça va.";
+        assert_eq!(
+            plain_text(text, VoiceLanguage::Spanish),
+            "Él dijo \"sí\", mañana, cafe\u{301} y ça va."
+        );
+        assert_eq!(
+            plain_text(text, VoiceLanguage::AmericanEnglish),
+            "El dijo \"si\", manana, cafe y ca va."
+        );
+    }
+
+    #[test]
+    fn only_english_has_numbers_abbreviations_and_initialisms_rewritten() {
+        let g2p = G2P::new(Language::EnglishUS);
+        let text = "Dr. Smith paid $5 for the API.";
+        assert_eq!(reading(&g2p, text, VoiceLanguage::Spanish), text);
+        let english = reading(&g2p, text, VoiceLanguage::AmericanEnglish);
+        assert!(
+            english.starts_with("Doctor Smith paid five dollars for the [API]("),
+            "{english}"
+        );
+    }
+
     #[test]
     fn curly_apostrophes_and_accents_read_as_plain_words() {
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
@@ -1129,7 +1268,7 @@ mod tests {
             ("donʼt", "don't"),
             ("‘Café’", "'Cafe'"),
         ] {
-            let (read, _) = g2p.g2p(&plain_text(typed)).unwrap();
+            let (read, _) = g2p.g2p(&plain_english(typed)).unwrap();
             let (expected, _) = g2p.g2p(plain).unwrap();
             assert_eq!(read, expected, "{typed}");
             assert!(!read.contains('❓'), "{typed} -> {read}");
@@ -1141,26 +1280,25 @@ mod tests {
     fn decomposed_accents_read_as_plain_words() {
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
         for (typed, plain) in [("cafe\u{301}", "cafe"), ("re\u{301}sume\u{301}", "resume")] {
-            assert_eq!(plain_text(typed), plain);
-            let (read, _) = g2p.g2p(&plain_text(typed)).unwrap();
+            assert_eq!(plain_english(typed), plain);
+            let (read, _) = g2p.g2p(&plain_english(typed)).unwrap();
             let (expected, _) = g2p.g2p(plain).unwrap();
             assert_eq!(read, expected, "{typed}");
         }
         assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
         // Not after a plain letter: left for misaki-rs.
-        assert_eq!(plain_text("日\u{301}"), "日\u{301}");
+        assert_eq!(plain_english("日\u{301}"), "日\u{301}");
     }
 
     /// Kokoro symbols for `text` as the local voice reads it.
-    fn read(g2p: &G2P, dialect: Dialect, text: &str) -> String {
-        let (raw, _) = g2p.g2p(&reading(g2p, text)).unwrap();
-        to_kokoro_phonemes(&raw, dialect)
+    fn read(g2p: &G2P, language: VoiceLanguage, text: &str) -> String {
+        text_to_phonemes(g2p, language, text).unwrap()
     }
 
     #[test]
     fn initialisms_read_as_letter_names() {
         let gb = G2P::new(Language::EnglishGB);
-        let read_gb = |text| read(&gb, Dialect::British, text);
+        let read_gb = |text| read(&gb, VoiceLanguage::BritishEnglish, text);
         assert_eq!(read_gb("Your ID"), "jˌɔː ˌIdˈiː");
         assert_eq!(read_gb("the API URL"), "ði ˌApˌiːˈI jˌuːˌɑːˈɛl");
         // Spaced letters would get the article's "ɐ" for this "A".
@@ -1170,8 +1308,9 @@ mod tests {
         assert_eq!(read_gb("the US government"), "ði jˌuːˈɛs ɡˈʌvənmənt");
         assert_eq!(read_gb("at 7 a.m."), "at sˈɛvən ˌAˈɛm.");
         let us = G2P::new(Language::EnglishUS);
-        assert_eq!(read(&us, Dialect::American, "Your ID"), "jˌʊɹ ˌIdˈi");
-        assert_eq!(read(&us, Dialect::American, "macOS"), "mˈæk ˌOˈɛs");
+        let read_us = |text| read(&us, VoiceLanguage::AmericanEnglish, text);
+        assert_eq!(read_us("Your ID"), "jˌʊɹ ˌIdˈi");
+        assert_eq!(read_us("macOS"), "mˈæk ˌOˈɛs");
     }
 
     #[test]
@@ -1188,7 +1327,7 @@ mod tests {
         ] {
             let (raw, _) = g2p.g2p(text).unwrap();
             assert_eq!(
-                read(&g2p, Dialect::British, text),
+                read(&g2p, VoiceLanguage::BritishEnglish, text),
                 to_kokoro_phonemes(&raw, Dialect::British),
                 "{text}"
             );
@@ -1198,7 +1337,7 @@ mod tests {
     #[test]
     fn camel_case_reads_as_its_words() {
         let g2p = G2P::new(Language::EnglishGB);
-        let read_gb = |text| read(&g2p, Dialect::British, text);
+        let read_gb = |text| read(&g2p, VoiceLanguage::BritishEnglish, text);
         assert_eq!(read_gb("GitHub"), read_gb("Git Hub"));
         assert_eq!(read_gb("HTMLParser"), "ˌAʧtˌiːˌɛmˈɛl pˈɑːsə");
         assert_eq!(read_gb("iPhone"), "ˈI fˈQn");
@@ -1209,7 +1348,7 @@ mod tests {
     #[test]
     fn a_stop_inside_a_name_is_no_sentence_end() {
         let g2p = G2P::new(Language::EnglishGB);
-        let read_gb = |text| read(&g2p, Dialect::British, text);
+        let read_gb = |text| read(&g2p, VoiceLanguage::BritishEnglish, text);
         assert_eq!(
             read_gb("Use Node.js today."),
             "jˈuːs nˈQd dˈɒt ʤˌAˈɛs tədˈA."
@@ -1234,10 +1373,10 @@ mod tests {
         let g2p = G2P::new(Language::EnglishGB);
         let sentence = "Dr. Smith met Mr. Jones at 7.30pm.";
         assert_eq!(
-            reading(&g2p, sentence),
+            reading(&g2p, sentence, VoiceLanguage::BritishEnglish),
             "Doctor Smith met Mister Jones at seven thirty PM."
         );
-        let read_gb = |text| read(&g2p, Dialect::British, text);
+        let read_gb = |text| read(&g2p, VoiceLanguage::BritishEnglish, text);
         assert_eq!(read_gb(sentence).matches('.').count(), 1);
         assert_eq!(read_gb("Ms. Smith"), "mˈɪz smˈɪθ");
         assert_eq!(read_gb("Baker St. is long."), "bˈAkə stɹˈiːt ɪz lˈɒŋ.");
@@ -1247,7 +1386,7 @@ mod tests {
     #[test]
     fn brackets_in_the_text_keep_their_words() {
         let g2p = G2P::new(Language::EnglishGB);
-        let read_gb = |text| read(&g2p, Dialect::British, text);
+        let read_gb = |text| read(&g2p, VoiceLanguage::BritishEnglish, text);
         for (text, parenthesised) in [
             (
                 "He said [the CEO] would resign.",
@@ -1298,14 +1437,14 @@ mod tests {
     #[test]
     fn a_minus_sign_reads_as_minus() {
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let ids = |text| text_to_ids(&g2p, Dialect::British, text).unwrap();
+        let ids = |text| text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text).unwrap();
         assert_eq!(ids("\u{2212}5 degrees"), ids("minus five degrees"));
     }
 
     #[test]
     fn curly_double_quotes_read_as_straight_ones() {
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let ids = |text| text_to_ids(&g2p, Dialect::British, text).unwrap();
+        let ids = |text| text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text).unwrap();
         let (curly, dropped) = ids("She said “no” twice.");
         assert_eq!(dropped, 0);
         assert_eq!((curly.clone(), dropped), ids("She said \"no\" twice."));
@@ -1313,14 +1452,14 @@ mod tests {
             !curly.windows(2).any(|pair| pair == [SPACE_ID, SPACE_ID]),
             "{curly:?}"
         );
-        assert_eq!(plain_text("„no“"), "\"no\"");
+        assert_eq!(plain_english("„no“"), "\"no\"");
     }
 
     #[test]
     fn a_sentence_with_curly_apostrophes_loses_no_symbol() {
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
         let text = "I don’t think it’s the user’s fault that the naïve café shuts at nine o’clock.";
-        let (ids, dropped) = text_to_ids(&g2p, Dialect::British, text).unwrap();
+        let (ids, dropped) = text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text).unwrap();
         assert_eq!(dropped, 0);
         assert!(has_phonemes(&ids));
         assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
@@ -1329,47 +1468,130 @@ mod tests {
     #[test]
     fn invisible_characters_go_and_no_break_spaces_become_spaces() {
         assert_eq!(
-            plain_text("soft\u{ad}ware\u{200b} \u{feff}ten\u{a0}pounds"),
+            plain_english("soft\u{ad}ware\u{200b} \u{feff}ten\u{a0}pounds"),
             "software ten pounds"
         );
-        assert_eq!(plain_text("Straße Œuvre ﬂoor"), "Strasse OEuvre floor");
-        assert_eq!(plain_text("日本 🎉"), "日本 🎉");
+        assert_eq!(plain_english("Straße Œuvre ﬂoor"), "Strasse OEuvre floor");
+        assert_eq!(plain_english("日本 🎉"), "日本 🎉");
     }
 
     #[test]
     fn a_spaced_dash_becomes_a_comma() {
         assert_eq!(
-            plain_text("Tea — or coffee – is fine"),
+            plain_english("Tea — or coffee – is fine"),
             "Tea, or coffee, is fine"
         );
-        assert_eq!(plain_text("Wait, — no."), "Wait, no.");
+        assert_eq!(plain_english("Wait, — no."), "Wait, no.");
         for kept in ["well—maybe", "1914 – 1918", "£5 – £10", "— Yes", "fine —"] {
-            assert_eq!(plain_text(kept), kept);
+            assert_eq!(plain_english(kept), kept);
         }
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let (ids, _) = text_to_ids(&g2p, Dialect::British, "Tea — or coffee").unwrap();
+        let (ids, _) = text_to_ids(&g2p, VoiceLanguage::BritishEnglish, "Tea — or coffee").unwrap();
         assert!(ids.contains(&3), "a comma id: {ids:?}");
     }
 
+    fn language_of(voice: &str) -> VoiceLanguage {
+        ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice).language
+    }
+
     #[test]
-    fn voice_prefix_picks_the_dialect() {
-        assert_eq!(Dialect::for_voice("bm_lewis"), Dialect::British);
-        assert_eq!(Dialect::for_voice("bf_emma"), Dialect::British);
-        assert_eq!(Dialect::for_voice("BM_Lewis"), Dialect::British);
-        assert_eq!(Dialect::for_voice("af_heart"), Dialect::American);
-        assert_eq!(Dialect::for_voice("am_adam"), Dialect::American);
-        for voice in ["ef_dora", "jf_alpha", "zm_yunyang", "hf_alpha", "pf_dora"] {
-            assert_eq!(Dialect::for_voice(voice), Dialect::American, "{voice}");
+    fn a_voice_reads_in_its_language_when_this_build_can() {
+        for voice in ["bm_lewis", "bf_emma", "BM_Lewis", "bob_custom"] {
+            assert_eq!(language_of(voice), VoiceLanguage::BritishEnglish, "{voice}");
+        }
+        for voice in ["af_heart", "am_adam", "AF_Heart"] {
+            assert_eq!(
+                language_of(voice),
+                VoiceLanguage::AmericanEnglish,
+                "{voice}"
+            );
         }
     }
 
     #[test]
-    fn a_blend_reads_with_its_first_voices_dialect() {
-        let dialect = |voice| ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice).dialect();
-        assert_eq!(dialect("bm_lewis+af_alloy"), Some(Dialect::British));
-        assert_eq!(dialect("af_alloy(9)+bm_lewis"), Some(Dialect::American));
-        assert_eq!(dialect("zf_xiaobei+bf_emma"), Some(Dialect::American));
-        assert_eq!(dialect("bm_lewis-af_alloy"), None);
+    fn an_unknown_or_unread_language_reads_as_american_english() {
+        for voice in [
+            "xx_custom",
+            "ef_dora",
+            "ff_siwis",
+            "hf_alpha",
+            "im_nicola",
+            "jf_alpha",
+            "pf_dora",
+            "zm_yunyang",
+            "Zf_xiaobei",
+        ] {
+            assert_eq!(
+                language_of(voice),
+                VoiceLanguage::AmericanEnglish,
+                "{voice}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_blend_reads_in_its_first_voices_language() {
+        assert_eq!(
+            language_of("bm_lewis+af_alloy"),
+            VoiceLanguage::BritishEnglish
+        );
+        assert_eq!(
+            language_of("af_alloy(9)+bm_lewis"),
+            VoiceLanguage::AmericanEnglish
+        );
+        assert_eq!(
+            language_of("zf_xiaobei+bf_emma"),
+            VoiceLanguage::AmericanEnglish
+        );
+        // Not a voice or blend: loading fails on the voices, not the language.
+        assert_eq!(
+            language_of("bm_lewis-af_alloy"),
+            VoiceLanguage::AmericanEnglish
+        );
+    }
+
+    #[test]
+    fn reading_as_takes_only_a_language_this_build_reads() {
+        let lewis = || ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "bm_lewis");
+        let read_as = |language| lewis().reading_as(language).language;
+        assert_eq!(
+            read_as(VoiceLanguage::AmericanEnglish),
+            VoiceLanguage::AmericanEnglish
+        );
+        // A British voice stays British when asked for a language this build
+        // cannot read.
+        assert_eq!(
+            read_as(VoiceLanguage::Spanish),
+            VoiceLanguage::BritishEnglish
+        );
+        let dora = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "ef_dora");
+        assert_eq!(
+            dora.reading_as(VoiceLanguage::BritishEnglish).language,
+            VoiceLanguage::BritishEnglish
+        );
+    }
+
+    #[test]
+    fn a_chinese_voice_has_its_text_cut_as_english_until_this_build_reads_chinese() {
+        let xiaobei = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "zf_xiaobei");
+        assert_eq!(xiaobei.marks(), &Marks::DEFAULT);
+    }
+
+    #[test]
+    fn espeak_reads_unknown_english_words_only_with_the_fallback_on() {
+        let program = PathBuf::from("/opt/homebrew/bin/espeak-ng");
+        let reading = |english_fallback, espeak| Reading {
+            language: VoiceLanguage::BritishEnglish,
+            english_fallback,
+            espeak,
+        };
+        assert_eq!(
+            reading(true, Some(program.clone())).english_espeak(),
+            Some(&program)
+        );
+        assert_eq!(reading(false, Some(program.clone())).english_espeak(), None);
+        assert_eq!(reading(true, None).english_espeak(), None);
+        assert_eq!(reading(false, None).english_espeak(), None);
     }
 
     fn numbered_rows(count: usize) -> Vec<f32> {
@@ -1571,7 +1793,11 @@ mod tests {
     #[test]
     fn a_long_sentence_is_read_in_one_inference() {
         let g2p = G2P::new(Language::EnglishGB);
-        let ids = |text: &str| text_to_ids(&g2p, Dialect::British, text).unwrap().0;
+        let ids = |text: &str| {
+            text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text)
+                .unwrap()
+                .0
+        };
         let sentence = "The committee that met on the first floor of the old library building \
                         every Thursday afternoon decided after a long and careful discussion \
                         that the annual report should be rewritten from the beginning in plain \
@@ -1829,14 +2055,16 @@ mod tests {
         let plain = G2P::new(Language::EnglishGB);
         let (mut oov, mut read_by_espeak) = (0, 0);
         for text in CORPUS {
-            let (raw, _) = g2p.g2p(&reading(&g2p, text)).unwrap();
+            let (raw, _) = g2p
+                .g2p(&reading(&g2p, text, VoiceLanguage::BritishEnglish))
+                .unwrap();
             let phonemes = to_kokoro_phonemes(&raw, Dialect::British);
             let words = std::mem::take(&mut *unknown.lock().unwrap());
             println!("{text}\n  {phonemes}\n  not in the lexicon: {words:?}");
             assert_eq!(token_ids(&phonemes).1, 0, "{text}");
             oov += words.len();
             let Some(espeak) = &espeak else { continue };
-            let (ids, dropped) = text_to_ids(espeak, Dialect::British, text).unwrap();
+            let (ids, dropped) = text_to_ids(espeak, VoiceLanguage::BritishEnglish, text).unwrap();
             assert_eq!(dropped, 0, "{text}");
             assert!(has_phonemes(&ids));
             for word in &words {
@@ -1872,20 +2100,17 @@ mod tests {
     fn local_voice_reads_initialisms() {
         let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
         let stop = Arc::new(AtomicBool::new(false));
-        for (voice, language) in [
-            ("bm_lewis", Language::EnglishGB),
-            ("af_alloy", Language::EnglishUS),
-        ] {
-            let g2p = G2P::new(language);
-            let dialect = Dialect::for_voice(voice);
+        for voice in ["bm_lewis", "af_alloy"] {
             let files = ModelFiles::new(&models, ModelVariant::Int8, voice);
+            let language = files.language;
+            let g2p = G2P::new(Dialect::of(language).language());
             let mut loaded = open(&files, &stop).unwrap();
             let mut seconds = |text: &str| {
                 let samples = loaded.synthesize(text, 1.0, true).unwrap();
                 let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
                 println!(
                     "{voice} {text:32} {seconds:.2} s  {}",
-                    read(&g2p, dialect, text)
+                    read(&g2p, language, text)
                 );
                 seconds
             };
@@ -1899,7 +2124,7 @@ mod tests {
             ] {
                 assert!(seconds(text) > 0.5, "{text}");
             }
-            let titles = read(&g2p, dialect, "Dr. Smith met Mr. Jones at 7.30pm.");
+            let titles = read(&g2p, language, "Dr. Smith met Mr. Jones at 7.30pm.");
             assert_eq!(titles.matches('.').count(), 1, "{titles}");
             // Letter names take longer than the one syllable of "earl".
             let spelled = seconds("URL");
@@ -1973,7 +2198,7 @@ mod tests {
             .unwrap()
             .synthesize(names, 1.0, true)
             .unwrap();
-        let files = files.with_espeak(Some(program));
+        let files = files.with_english_fallback(true).with_espeak(Some(program));
         let read = open(&files, &stop)
             .unwrap()
             .synthesize(names, 1.0, true)
