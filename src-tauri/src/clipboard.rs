@@ -25,7 +25,9 @@ fn with_enigo<T>(
 #[cfg(target_os = "macos")]
 const COPY_HOLD_MS: u64 = 30;
 /// How long to wait for the copy to land on the clipboard.
+#[cfg(target_os = "macos")]
 const COPY_TIMEOUT: Duration = Duration::from_millis(200);
+#[cfg(target_os = "macos")]
 const COPY_POLL_INTERVAL: Duration = Duration::from_millis(10);
 /// How long to wait for the hotkey's ⌥/⌃/⇧ to come up before copying anyway.
 /// Held, they can turn the copy into ⌥⌘C, and the hotkey listener takes our
@@ -118,6 +120,7 @@ pub fn capture_selection(_app_handle: &AppHandle) -> Result<Selection, String> {
 
 /// What the clipboard holds, as far as reading it aloud goes.
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub enum ClipboardText {
     Text(String),
     /// No plain text.
@@ -152,6 +155,7 @@ fn marks_secret(types: &[String]) -> bool {
 
 /// Calls `probe` every `interval` until it returns a value, giving up once
 /// `timeout` has passed. Always probes at least once.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn poll<T>(
     timeout: Duration,
     interval: Duration,

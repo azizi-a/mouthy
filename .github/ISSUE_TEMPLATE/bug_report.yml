@@ -3,12 +3,31 @@ description: Something in Mouthy does not work as expected
 labels: [bug]
 body:
   - type: input
-    id: macos
+    id: os
     attributes:
-      label: macOS version
-      placeholder: "15.1"
+      label: macOS version, or Linux distribution and version
+      placeholder: "15.1, or Bazzite 42"
     validations:
       required: true
+  - type: dropdown
+    id: desktop
+    attributes:
+      label: Linux desktop
+      description: Linux only.
+      options:
+        - KDE Plasma
+        - GNOME
+        - Other (say which in the steps)
+  - type: dropdown
+    id: package
+    attributes:
+      label: Linux package
+      description: Linux only.
+      options:
+        - AppImage
+        - rpm
+        - deb
+        - Built from source
   - type: input
     id: version
     attributes:

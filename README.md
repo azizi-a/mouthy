@@ -77,6 +77,10 @@ Mouthy uses about 350 MB of memory once the voice has loaded, and up to about 1.
 
 Words the voice's dictionary lacks, such as many names and product terms, are spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say them instead. Each new unknown word delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
 
+## Languages
+
+Every voice reads text as English for now (see Voices).
+
 ## Using a speech server instead
 
 Set Settings → General → Speech Engine to **HTTP server** to send the text to a local OpenAI-compatible speech server with `POST /v1/audio/speech` and `pcm` output, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI). Mouthy expects it at `http://127.0.0.1:8880` with the voice `af_alloy` by default; the voice list then shows the server's voices. Check the server is up:
@@ -90,6 +94,12 @@ Plain `http://` is unencrypted, so use `https://` for a server on another machin
 ## Settings
 
 Open Settings from the tray. Besides the hotkeys and voices above, General sets launch at login, start hidden, the overlay, speed (0.5×–2×), volume and the output device. Advanced hides the tray icon and, under experimental features, changes the shortcut backend. About sets the language and theme, opens the app data and log folders, and opens the third-party licences.
+
+## Linux
+
+x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need glibc 2.38 or newer: Ubuntu 24.04, Fedora 39 or later, Debian 13; not Ubuntu 22.04 or Debian 12. To build one yourself, see [BUILD.md](BUILD.md#linux).
+
+On Linux, install [espeak-ng](#better-pronunciation-of-unknown-words) with your distribution's package manager, or with `brew install espeak-ng` on an immutable distribution such as Bazzite.
 
 ## Known issues
 

@@ -17,3 +17,9 @@ Mouthy is not signed or notarised by Apple, so check the dmg against the `SHA256
 ```sh
 shasum -a 256 -c SHA256SUMS --ignore-missing
 ```
+
+The Linux bundles are checked against `SHA256SUMS-linux`:
+
+```sh
+sha256sum -c SHA256SUMS-linux --ignore-missing
+```

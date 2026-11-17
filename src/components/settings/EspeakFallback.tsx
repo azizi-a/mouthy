@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { platform } from "@tauri-apps/plugin-os";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { useSettings } from "../../hooks/useSettings";
 import { commands } from "@/bindings";
@@ -48,7 +49,11 @@ export const EspeakFallback: React.FC<EspeakFallbackProps> = ({
         <p className="px-4 pb-2 text-xs text-mid-gray">
           {program
             ? t("settings.speech.espeak.found", { path: program })
-            : t("settings.speech.espeak.notFound")}
+            : t(
+                platform() === "linux"
+                  ? "settings.speech.espeak.notFoundLinux"
+                  : "settings.speech.espeak.notFound",
+              )}
         </p>
       )}
     </div>
