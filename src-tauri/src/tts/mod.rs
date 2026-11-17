@@ -6,6 +6,8 @@ pub mod espeak;
 pub mod http;
 pub mod local;
 pub mod text;
+#[cfg(test)]
+mod text_fuzz_tests;
 pub mod voice;
 
 use std::sync::atomic::AtomicBool;
