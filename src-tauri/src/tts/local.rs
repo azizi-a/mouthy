@@ -220,6 +220,10 @@ impl ModelFiles {
         Self { language, ..self }
     }
 
+    pub fn language(&self) -> VoiceLanguage {
+        self.language
+    }
+
     pub fn with_english_fallback(self, english_fallback: bool) -> Self {
         Self {
             english_fallback,

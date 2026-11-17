@@ -4,6 +4,7 @@ use crate::overlay::{self, OverlayView};
 use crate::settings::{self, AppSettings, TtsBackend};
 use crate::tray::{self, TrayIconState};
 use crate::tts;
+use crate::tts::catalog::VoiceLanguage;
 use log::{debug, error, info, warn};
 use once_cell::sync::Lazy;
 use rodio::buffer::SamplesBuffer;
@@ -42,9 +43,39 @@ const TEXT_CHAR_CAP: usize = 20_000;
 /// Most bytes read from a file: a UTF-8 character is at most four bytes, so
 /// these always hold `TEXT_CHAR_CAP` whole characters when the file has them.
 const FILE_BYTE_CAP: u64 = TEXT_CHAR_CAP as u64 * 4;
-/// What a voice preview reads. English in every app language, since every
-/// voice reads English.
-const PREVIEW_TEXT: &str = "Hi. This is how I sound when I read your text aloud.";
+
+/// What a voice preview reads in `language`, whatever the app's language.
+fn preview_text(language: VoiceLanguage) -> &'static str {
+    match language {
+        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish => {
+            "Hi. This is how I sound when I read your text aloud."
+        }
+        VoiceLanguage::Spanish => "Hola. Así sueno cuando leo tu texto en voz alta.",
+        VoiceLanguage::French => {
+            "Bonjour. Voici comment je parle quand je lis votre texte à haute voix."
+        }
+        VoiceLanguage::Italian => "Ciao. Ecco come suono quando leggo il tuo testo ad alta voce.",
+        VoiceLanguage::BrazilianPortuguese => {
+            "Oi. É assim que a minha voz soa quando leio o seu texto em voz alta."
+        }
+        VoiceLanguage::Hindi => "नमस्ते। आपका टेक्स्ट ज़ोर से पढ़ते समय मेरी आवाज़ ऐसी सुनाई देती है।",
+        // Kana only, and no は or へ particle: kanji and those particles need a
+        // dictionary to read right.
+        VoiceLanguage::Japanese => {
+            "どうも。これが、あなたのテキストをよみあげるときの、わたしのこえです。"
+        }
+        VoiceLanguage::Mandarin => "你好。这就是我朗读你的文字时的声音。",
+    }
+}
+
+/// The preview sentence in the language `backend` reads. The server gets
+/// English, as it always has.
+fn preview_sentence(backend: &tts::Backend) -> &'static str {
+    preview_text(match backend {
+        tts::Backend::Local(files) => files.language(),
+        tts::Backend::Http { .. } => VoiceLanguage::AmericanEnglish,
+    })
+}
 
 type Chunk = Result<Vec<i16>, String>;
 
@@ -115,7 +146,7 @@ enum Input {
     Clipboard,
     /// A text file named on the command line.
     File,
-    /// `PREVIEW_TEXT`, in the voice being previewed.
+    /// The preview sentence, in the voice being previewed.
     Preview,
 }
 
@@ -332,9 +363,9 @@ fn usable_voice(
     }
 }
 
-/// Reads `PREVIEW_TEXT` in `voice`, stopping any speech first. Fails, stopping
-/// nothing, when the voice is not valid or the local engine lacks a file it
-/// needs.
+/// Reads the preview sentence in `voice`, stopping any speech first. Fails,
+/// stopping nothing, when the voice is not valid or the local engine lacks a
+/// file it needs.
 pub fn preview_voice(app: &AppHandle, voice: &str) -> Result<(), String> {
     let settings = settings::get_settings(app);
     // Checked as `change_tts_voice_setting` checks a voice before storing it.
@@ -349,7 +380,7 @@ pub fn preview_voice(app: &AppHandle, voice: &str) -> Result<(), String> {
         speech_backend(app, &settings, &voice).map_err(|view| preview_error(view, &voice))?;
     info!("Previewing the voice {voice}");
     let speech = Speech {
-        sentences: sentences_for(&tts::text::normalize(PREVIEW_TEXT), &backend),
+        sentences: sentences_for(&tts::text::normalize(preview_sentence(&backend)), &backend),
         backend,
         captured_at: Instant::now(),
     };
@@ -448,7 +479,7 @@ fn speak_selection_on_main(app: &AppHandle, source: &str, trigger: Trigger, inpu
         },
         // `speak_file` reads a file before posting and never comes here.
         Input::File => Ok((None, None)),
-        Input::Preview => Ok((Some(PREVIEW_TEXT.to_string()), None)),
+        Input::Preview => Ok((Some(preview_sentence(&backend).to_string()), None)),
     };
     let (text, copied_while_held_at) = match captured {
         Ok(captured) => captured,
@@ -1342,16 +1373,57 @@ mod tests {
         assert!(usable_voice(&settings, no_models, "  ").is_err());
     }
 
-    #[test]
-    fn both_engines_speak_the_preview_sentence() {
-        let text = tts::text::normalize(PREVIEW_TEXT);
-        let http = http_backend(&settings::get_default_settings(), "af_alloy");
-        let local = tts::Backend::Local(tts::local::ModelFiles::new(
+    fn local_backend(voice: &str) -> tts::Backend {
+        tts::Backend::Local(tts::local::ModelFiles::new(
             std::path::Path::new("models"),
             settings::ModelVariant::Int8,
-            "af_alloy",
-        ));
-        for backend in [http, local] {
+            voice,
+        ))
+    }
+
+    #[test]
+    fn every_language_has_a_preview_sentence() {
+        let languages = [
+            VoiceLanguage::AmericanEnglish,
+            VoiceLanguage::BritishEnglish,
+            VoiceLanguage::Japanese,
+            VoiceLanguage::Mandarin,
+            VoiceLanguage::Spanish,
+            VoiceLanguage::French,
+            VoiceLanguage::Hindi,
+            VoiceLanguage::Italian,
+            VoiceLanguage::BrazilianPortuguese,
+        ];
+        let sentences: std::collections::HashSet<_> =
+            languages.into_iter().map(preview_text).collect();
+        assert_eq!(
+            sentences.len(),
+            languages.len() - 1,
+            "both Englishes share one"
+        );
+        for language in languages {
+            let text = tts::text::normalize(preview_text(language));
+            assert!(!text.is_empty(), "{language:?}");
+        }
+        let is_kanji = |c: char| ('\u{4e00}'..='\u{9fff}').contains(&c);
+        assert!(!preview_text(VoiceLanguage::Japanese).contains(is_kanji));
+    }
+
+    #[test]
+    fn a_voice_this_build_cannot_read_previews_in_english() {
+        let english = preview_text(VoiceLanguage::AmericanEnglish);
+        for voice in ["ef_dora", "jf_alpha", "zf_xiaobei", "hf_alpha", "xx_custom"] {
+            assert_eq!(preview_sentence(&local_backend(voice)), english, "{voice}");
+        }
+        let server = http_backend(&settings::get_default_settings(), "ef_dora");
+        assert_eq!(preview_sentence(&server), english);
+    }
+
+    #[test]
+    fn both_engines_speak_the_preview_sentence() {
+        let http = http_backend(&settings::get_default_settings(), "af_alloy");
+        for backend in [http, local_backend("af_alloy")] {
+            let text = tts::text::normalize(preview_sentence(&backend));
             let sentences = sentences_for(&text, &backend);
             assert!(!sentences.is_empty());
             assert!(sentences
