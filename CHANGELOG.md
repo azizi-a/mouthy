@@ -11,7 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Languages
 
-- Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language.
+- Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language where Mouthy can read it.
 
 ## 0.5.0 — 2026-11-02
 

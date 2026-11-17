@@ -84,7 +84,7 @@ Words the voice's dictionary lacks, such as many names and product terms, are sp
 
 Every voice reads text as English for now (see Voices).
 
-Settings → General → **Reading Language** chooses whether a voice reads text in its own language (the default) or as English. With English, a voice of another language reads English text with its accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
+Settings → General → **Reading Language** matters only for a voice whose language Mouthy can read (see Voices); any other voice reads English either way. For such a voice it chooses between its own language (the default) and English, read with the voice's accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
 
 ## Using a speech server instead
 
