@@ -302,7 +302,7 @@ mod wayland {
 
     /// wl-paste's output as text (invalid UTF-8 replaced, as from an X11 app's
     /// Latin-1), `None` when it said there was nothing to read, or why it failed.
-    fn pasted(run: Result<Output, String>) -> Result<Option<String>, String> {
+    fn pasted(run: Result<Output, program::Error>) -> Result<Option<String>, String> {
         let output = run.map_err(|e| format!("wl-paste: {e}"))?;
         // No status: stopped once it had printed all that is read.
         if output.status.is_none_or(|status| status.success()) {

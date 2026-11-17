@@ -7,7 +7,6 @@ mod clipboard;
 mod commands;
 mod input;
 mod overlay;
-#[cfg(any(target_os = "linux", test))]
 mod program;
 mod secure_input;
 mod settings;

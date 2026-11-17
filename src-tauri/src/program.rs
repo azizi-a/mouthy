@@ -2,6 +2,7 @@
 //! with a deadline.
 
 use std::ffi::OsString;
+use std::fmt;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
@@ -76,6 +77,23 @@ pub struct Output {
     pub stderr: Vec<u8>,
 }
 
+/// Why a program gave no output.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Error {
+    /// The deadline passed first.
+    Late,
+    Other(String),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Late => f.write_str("no answer in time"),
+            Self::Other(e) => f.write_str(e),
+        }
+    }
+}
+
 /// Runs `program` without a shell or stdin and returns its output, killing it
 /// once `timeout` has passed. Output is read while it runs, since a program
 /// that fills a pipe's buffer (64 KiB on Linux) waits for it to be read. Past
@@ -88,7 +106,20 @@ pub fn run(
     args: &[&str],
     timeout: Duration,
     max_bytes: usize,
-) -> Result<Output, String> {
+) -> Result<Output, Error> {
+    run_in(program, args, timeout, max_bytes, |name| {
+        std::env::var_os(name)
+    })
+}
+
+/// `run`, with Mouthy's environment read through `var`.
+fn run_in(
+    program: &Path,
+    args: &[&str],
+    timeout: Duration,
+    max_bytes: usize,
+    var: impl Fn(&str) -> Option<OsString>,
+) -> Result<Output, Error> {
     let deadline = Instant::now() + timeout;
     let mut command = Command::new(program);
     command
@@ -96,8 +127,8 @@ pub fn run(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    if let Some(appdir) = std::env::var_os("APPDIR").filter(|dir| !dir.is_empty()) {
-        for (name, value) in host_environment(Path::new(&appdir), |name| std::env::var_os(name)) {
+    if let Some(appdir) = var("APPDIR").filter(|dir| !dir.is_empty()) {
+        for (name, value) in host_environment(Path::new(&appdir), &var) {
             match value {
                 Some(value) => command.env(name, value),
                 None => command.env_remove(name),
@@ -106,16 +137,13 @@ pub fn run(
     }
     let mut child = command
         .spawn()
-        .map_err(|e| format!("cannot start {}: {e}", program.display()))?;
+        .map_err(|e| Error::Other(format!("cannot start {}: {e}", program.display())))?;
     let output = collect(&mut child, deadline, max_bytes);
     if output.is_err() {
         let _ = child.kill();
         let _ = child.wait();
     }
-    output.map_err(|e| match e {
-        Failure::Late => "no answer in time".to_string(),
-        Failure::Other(e) => e,
-    })
+    output
 }
 
 /// What a host program's environment needs changed when Mouthy runs from an
@@ -160,12 +188,7 @@ fn host_environment(
     changes
 }
 
-enum Failure {
-    Late,
-    Other(String),
-}
-
-fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Output, Failure> {
+fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Output, Error> {
     let stdout = child
         .stdout
         .take()
@@ -182,8 +205,8 @@ fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Out
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() < deadline => thread::sleep(POLL),
-            Ok(None) => return Err(Failure::Late),
-            Err(e) => return Err(Failure::Other(format!("cannot wait for it: {e}"))),
+            Ok(None) => return Err(Error::Late),
+            Err(e) => return Err(Error::Other(format!("cannot wait for it: {e}"))),
         }
     };
     // Output cut short is what was asked for: a helper still holding the
@@ -246,18 +269,18 @@ fn read_up_to(
 fn received(
     reading: Option<io::Result<Reading>>,
     deadline: Instant,
-) -> Result<(Vec<u8>, bool), Failure> {
+) -> Result<(Vec<u8>, bool), Error> {
     let reading = match reading {
         None => return Ok((Vec::new(), false)),
         Some(reading) => {
-            reading.map_err(|e| Failure::Other(format!("cannot read its output: {e}")))?
+            reading.map_err(|e| Error::Other(format!("cannot read its output: {e}")))?
         }
     };
     match reading.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
-        Ok(read) => read.map_err(|e| Failure::Other(format!("cannot read its output: {e}"))),
-        Err(RecvTimeoutError::Timeout) => Err(Failure::Late),
+        Ok(read) => read.map_err(|e| Error::Other(format!("cannot read its output: {e}"))),
+        Err(RecvTimeoutError::Timeout) => Err(Error::Late),
         Err(RecvTimeoutError::Disconnected) => {
-            Err(Failure::Other("its output reader stopped".into()))
+            Err(Error::Other("its output reader stopped".into()))
         }
     }
 }
@@ -268,7 +291,7 @@ mod tests {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
-    fn sh(script: &str, timeout: Duration, max_bytes: usize) -> Result<Output, String> {
+    fn sh(script: &str, timeout: Duration, max_bytes: usize) -> Result<Output, Error> {
         run(Path::new("/bin/sh"), &["-c", script], timeout, max_bytes)
     }
 
@@ -335,7 +358,7 @@ mod tests {
             1024,
         )
         .unwrap_err();
-        assert_eq!(error, "no answer in time");
+        assert_eq!(error, Error::Late);
         assert!(started.elapsed() < Duration::from_secs(5));
     }
 
@@ -373,7 +396,8 @@ mod tests {
             Duration::from_secs(1),
             1024,
         )
-        .unwrap_err();
+        .unwrap_err()
+        .to_string();
         assert!(
             error.starts_with("cannot start /nonexistent/wl-paste"),
             "{error}"
@@ -439,6 +463,55 @@ mod tests {
         let path = std::env::join_paths([real_bin.as_path(), Path::new("/usr/bin")]).unwrap();
         let changes = host_environment(&link, |name| (name == "PATH").then(|| path.clone()));
         assert_eq!(changes, vec![("PATH", Some(OsString::from("/usr/bin")))]);
+    }
+
+    /// A stand-in program running `body` as a shell script. A child process
+    /// writes it: had this one, a test forking meanwhile could hold the file
+    /// open for writing, failing its exec with "Text file busy".
+    fn script(dir: &Path, name: &str, body: &str) -> PathBuf {
+        let path = dir.join(name);
+        let written = Command::new("/bin/sh")
+            .args(["-c", r#"printf '%s\n' "$1" > "$2" && chmod 755 "$2""#, "sh"])
+            .arg(format!("#!/bin/sh\n{body}"))
+            .arg(&path)
+            .status()
+            .unwrap();
+        assert!(written.success());
+        path
+    }
+
+    #[test]
+    fn a_program_started_from_an_appimage_gets_the_hosts_libraries() {
+        let dir = tempfile::tempdir().unwrap();
+        let espeak = script(
+            dir.path(),
+            "espeak-ng",
+            r#"printf '%s|' "$@"; printf '%s' "$LD_LIBRARY_PATH""#,
+        );
+        let vars = [
+            ("APPDIR", "/tmp/.mount_Mouthy1"),
+            (
+                "LD_LIBRARY_PATH",
+                "/tmp/.mount_Mouthy1/usr/lib/:/opt/host/lib",
+            ),
+        ];
+        let var = |name: &str| {
+            vars.iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| OsString::from(value))
+        };
+        let output = run_in(
+            &espeak,
+            &["-q", "--ipa=3", "-v", "es", "--", "Hola"],
+            Duration::from_secs(10),
+            1024,
+            var,
+        )
+        .unwrap();
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            "-q|--ipa=3|-v|es|--|Hola|/opt/host/lib"
+        );
     }
 
     #[test]
