@@ -116,6 +116,8 @@ enum Kind {
 /// The notice for `text` when too much of it is kanji to read without the
 /// dictionary.
 pub(super) fn refusal(text: &str) -> Option<&'static str> {
+    // As it will be read: NFKC turns "㍿" into four kanji.
+    let text = normalize(text);
     let letters = text.chars().filter(|c| c.is_alphabetic()).count();
     let kanji = text.chars().filter(|&c| is_kanji(c)).count();
     (kanji * 100 > letters * MAX_KANJI_PERCENT).then_some(KANJI_REFUSAL)
@@ -1025,6 +1027,12 @@ mod tests {
         assert_eq!(refusal("本あいうえ"), None);
         assert_eq!(refusal("本日あいうえ"), Some(KANJI_REFUSAL));
         assert_eq!(refusal("123。"), None);
+        // A squared form counts as the kanji it is read as: ㍿ is 株式会社.
+        assert_eq!(refusal("㍿あいうえおかきくけこさしすせそた"), None);
+        assert_eq!(
+            refusal("㍿あいうえおかきくけこさしすせそ"),
+            Some(KANJI_REFUSAL)
+        );
     }
 
     // With the dictionary. Readings are NAIST-jdic's pronunciations, checked
@@ -1126,6 +1134,7 @@ mod tests {
         assert_eq!(reads_tagged("か\u{3099}"), "ɡa");
         assert_eq!(reads_tagged("ｶﾞｷﾞ"), "ɡa ɡʲi");
         assert_eq!(reads_tagged("ﾃｽﾄ"), reads_tagged("テスト"));
+        assert_eq!(reads_tagged("㍿"), reads_tagged("株式会社"));
     }
 
     #[test]

@@ -39,11 +39,14 @@ impl Marks {
         closers: CLOSERS,
     };
     /// Chinese and Japanese.
+    /// The half-width `｡` `､` `｣` count too: NFKC comes after the cut.
     pub const CJK: Marks = Marks {
-        terminators: &['.', '!', '?', '…', '。', '！', '？'],
-        clause_breaks: &[',', ';', ':', '、', '，', '；', '：'],
-        unspaced: &['。', '！', '？', '、', '，', '；', '：'],
-        closers: &['"', '\'', '”', '’', ')', ']', '»', '」', '』', '）', '】'],
+        terminators: &['.', '!', '?', '…', '。', '！', '？', '｡'],
+        clause_breaks: &[',', ';', ':', '、', '，', '；', '：', '､'],
+        unspaced: &['。', '！', '？', '、', '，', '；', '：', '｡', '､'],
+        closers: &[
+            '"', '\'', '”', '’', ')', ']', '»', '」', '』', '）', '】', '｣',
+        ],
     };
     pub const HINDI: Marks = Marks {
         terminators: &['.', '!', '?', '…', '।', '॥'],
@@ -3189,6 +3192,11 @@ mod tests {
             "あしたはあめがふるかもしれないので、かさをもっていってね！",
         ];
         assert_eq!(sentences_in(&japanese.concat(), &Marks::CJK), japanese);
+        let half_width = [
+            "ｷｮｳﾊﾄﾃﾓｲｲﾃﾝｷﾅﾉﾃﾞ､ｺｳｴﾝﾆｲｷﾏｼｮｳ｡",
+            "｢ｱｼﾀﾊｱﾒｶﾞﾌﾙｶﾓｼﾚﾅｲﾉﾃﾞ､ｶｻｦﾓｯﾃｲｯﾃﾈ｡｣",
+        ];
+        assert_eq!(sentences_in(&half_width.concat(), &Marks::CJK), half_width);
     }
 
     #[test]
