@@ -120,6 +120,7 @@ pub fn capture_selection(_app_handle: &AppHandle) -> Result<Selection, String> {
 
 /// What the clipboard holds, as far as reading it aloud goes.
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub enum ClipboardText {
     Text(String),
     /// No plain text.
