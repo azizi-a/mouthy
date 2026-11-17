@@ -101,6 +101,41 @@ x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need 
 
 On Linux, install [espeak-ng](#better-pronunciation-of-unknown-words) with your distribution's package manager, or with `brew install espeak-ng` on an immutable distribution such as Bazzite.
 
+Mouthy runs on Wayland and is tried on KDE Plasma; GNOME is untested, and X11 sessions are not supported.
+
+### Install on Linux
+
+- **AppImage**, best on immutable distributions such as Bazzite: keep it at a path that will not change, such as `~/Applications/Mouthy.AppImage`, because desktop shortcuts and Launch on Startup store that path. Make it executable with `chmod +x ~/Applications/Mouthy.AppImage`.
+- **rpm** on Fedora: `sudo dnf install ./Mouthy-*.x86_64.rpm`.
+- **deb** on Ubuntu or Debian: `sudo apt install ./Mouthy_*_amd64.deb`.
+
+Mouthy reads the highlighted text and the clipboard with `wl-paste` from **wl-clipboard**, which it does not bundle. Install it with your distribution's package manager, or with `brew install wl-clipboard` on an immutable distribution. Settings → General says whether Mouthy found it.
+
+### Shortcuts on Wayland
+
+Wayland does not let an app listen for a hotkey of its own, so you bind Mouthy's commands to keys in the desktop's settings. Settings → General lists them with the right path, ready to copy:
+
+```bash
+mouthy --speak-selection   # read the highlighted text, or stop if speaking
+mouthy --speak-clipboard   # read the clipboard, or stop if speaking
+mouthy --stop
+```
+
+For the AppImage, use its full path instead of `mouthy`, such as `/home/you/Applications/Mouthy.AppImage --speak-selection`. In KDE Plasma, open System Settings → Keyboard → Shortcuts → Add New → Command or Script, enter the command and choose a key. A shortcut pressed while Mouthy is not running only starts it, so turn on Launch on Startup.
+
+The highlighted text is the PRIMARY selection: whatever you last highlighted in any app. Some apps, such as terminals and browsers, keep it after you click elsewhere, so a press can read text you highlighted earlier.
+
+On Linux most password managers do not mark a password they copy. Mouthy refuses to read the clipboard only when it carries KDE's password hint, so Speak Clipboard may read a copied password aloud.
+
+**In-app hotkeys (optional).** The Event Tap shortcut backend (Settings → Advanced → Experimental Features, then Keyboard Implementation) reads the keyboard itself, which needs your user in the `input` group. Membership lets any program you run read every key you type, passwords included. Add yourself with `sudo usermod -aG input $USER`, then log out and back in. On Fedora Atomic desktops such as Bazzite, copy the group into `/etc/group` first: `grep -E '^input:' /usr/lib/group | sudo tee -a /etc/group`.
+
+### Overlay, tray and sound on Linux
+
+- The overlay sits at the screen's edge on desktops with the GTK layer shell, such as KDE Plasma, and starts on there. Elsewhere it would be an ordinary window that takes focus, so it starts off; Settings → General turns it on. With it off, notices such as "Nothing selected" go only to the log.
+- The tray icon needs an appindicator library; the AppImage carries one, and the rpm and deb install it. Without one Mouthy runs without a tray: launch it again to open Settings.
+- The AppImage runs under XWayland. To try native Wayland, start it with `MOUTHY_GDK_BACKEND=wayland`.
+- Sound goes through ALSA, which PipeWire serves on current desktops.
+
 ## Known issues
 
 - **⌥⎋ clashes with macOS "Speak selection",** which uses the same key by default. If it is on in System Settings → Accessibility → Spoken Content, turn it off or change either hotkey.
