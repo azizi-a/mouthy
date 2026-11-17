@@ -802,13 +802,15 @@ pub fn preload_local_voice(app: &AppHandle) {
                 let files = local_model_files(&app, &settings, &settings.tts_voice)
                     .inspect_err(|e| warn!("Cannot find the local voice: {e}"))
                     .ok()?;
-                match files.missing() {
-                    Some(missing) => {
-                        info!("The local voice is missing {missing}");
-                        None
-                    }
-                    None => Some(files),
+                if let Some(missing) = files.missing() {
+                    info!("The local voice is missing {missing}");
+                    return None;
                 }
+                if let Some(requirement) = files.unmet_requirement() {
+                    info!("The local voice cannot load: {requirement}");
+                    return None;
+                }
+                Some(files)
             });
             if let Err(message) = result {
                 info!("The local voice is not loaded: {message}");
