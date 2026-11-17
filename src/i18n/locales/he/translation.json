@@ -377,6 +377,10 @@
   "errors": {
     "loadDirectory": "שגיאה בטעינת תיקייה: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "שפת האפליקציה",
     "description": "שנה את שפת הממשק של Mouthy"

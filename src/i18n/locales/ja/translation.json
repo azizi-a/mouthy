@@ -377,6 +377,10 @@
   "errors": {
     "loadDirectory": "ディレクトリの読み込みエラー: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "アプリの言語",
     "description": "Mouthy インターフェースの言語を変更"

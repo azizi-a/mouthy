@@ -377,6 +377,10 @@
   "errors": {
     "loadDirectory": "Kesalahan saat memuat direktori: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "Bahasa Aplikasi",
     "description": "Ubah bahasa antarmuka Mouthy"

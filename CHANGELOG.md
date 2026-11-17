@@ -28,6 +28,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - A command such as `mouthy --stop` no longer opens, or rotates away, the running app's log file.
 - On Linux, Mouthy runs without a tray icon when no appindicator library is installed, instead of failing to start.
 - On Linux and Windows, closing Settings quits Mouthy whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), since there is no other way to quit.
+- When the Settings window fails to start, it shows the error instead of staying empty.
 
 ## 0.5.0 — 2026-11-02
 
