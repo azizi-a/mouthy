@@ -22,7 +22,7 @@ interface VoiceBlendProps {
   onEditOther: () => void;
 }
 
-/** Blends the voice in use with one other, the first voice keeping its accent. */
+/** Blends the voice in use with one other, the first voice keeping its language and accent. */
 export const VoiceBlend: React.FC<VoiceBlendProps> = ({
   parts,
   candidates,
