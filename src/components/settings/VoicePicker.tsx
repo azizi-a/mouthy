@@ -229,11 +229,6 @@ export const VoicePicker: React.FC<VoicePickerProps> = ({
                     ? t("settings.speech.voice.otherGroup")
                     : t(`settings.models.voices.language.${group.key}`)}
                 </h4>
-                {group.key !== OTHER_GROUP && !ENGLISH.includes(group.key) && (
-                  <p className="text-xs text-mid-gray">
-                    {t("settings.speech.voice.englishOnly")}
-                  </p>
-                )}
               </div>
               <div className="divide-y divide-mid-gray/20">
                 {group.voices.map((id) => row(id, id))}

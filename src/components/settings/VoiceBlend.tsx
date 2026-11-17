@@ -158,7 +158,7 @@ export const VoiceBlend: React.FC<VoiceBlendProps> = ({
         )}
         {second && first[0] !== second[0] && (
           <p className="text-xs text-mid-gray">
-            {t("settings.speech.voice.blend.accent")}
+            {t("settings.speech.voice.blend.language")}
           </p>
         )}
         {second && <PreviewNotice voice={spec} />}
