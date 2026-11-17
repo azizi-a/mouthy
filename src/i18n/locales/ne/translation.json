@@ -371,6 +371,10 @@
   "errors": {
     "loadDirectory": "डाइरेक्टरी लोड गर्दा त्रुटि: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "एपको भाषा",
     "description": "Mouthy इन्टरफेसको भाषा परिवर्तन गर्नुहोस्"
