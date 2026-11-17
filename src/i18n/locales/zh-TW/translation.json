@@ -360,6 +360,10 @@
   "errors": {
     "loadDirectory": "載入目錄時發生錯誤: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "應用程式語言",
     "description": "變更 Mouthy 介面的語言"

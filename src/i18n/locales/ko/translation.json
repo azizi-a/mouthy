@@ -360,6 +360,10 @@
   "errors": {
     "loadDirectory": "디렉토리 로딩 오류: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "애플리케이션 언어",
     "description": "Mouthy 인터페이스의 언어를 변경하세요"

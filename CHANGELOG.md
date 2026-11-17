@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - Japanese voices (`jf_*`, `jm_*`) read Japanese written in kana, with its numbers in Japanese and any English in it as English. Kanji cannot be read yet: they are skipped, and text that is mostly kanji is refused with a notice.
 - **Changed:** Japanese voices read kana as Japanese rather than dropping it; text with no Japanese in it reads exactly as before.
 
+### Fixed
+
+- When the Settings window fails to start, it shows the error instead of staying empty.
+
 ## 0.5.0 — 2026-11-02
 
 For scripts: a tool such as a Claude Code skill can have Mouthy read each of its replies aloud, each new one cutting off the last. Mouthy is still not signed or notarised and does not update itself.

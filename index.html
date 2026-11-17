@@ -8,6 +8,87 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // If the interface has drawn nothing after a few seconds, say why
+      // instead of leaving a blank window. Inline, so it runs even when the
+      // app's own script cannot load.
+      (function () {
+        var root = document.getElementById("root");
+        var errors = [];
+        var panel = null;
+
+        function describe(event) {
+          var target = event.target;
+          if (target && target !== window && (target.src || target.href)) {
+            return "Could not load " + (target.src || target.href);
+          }
+          var where = event.filename
+            ? " (" + [event.filename, event.lineno, event.colno].join(":") + ")"
+            : "";
+          var stack = event.error && event.error.stack;
+          return (
+            (event.message || "Error") + where + (stack ? "\n" + stack : "")
+          );
+        }
+
+        function render() {
+          panel.textContent = [
+            "Mouthy's interface did not start.",
+            "",
+            errors.length ? errors.join("\n\n") : "No error was reported.",
+            "",
+            "Script started: " +
+              ("scriptStarted" in document.documentElement.dataset
+                ? "yes"
+                : "no"),
+            "User agent: " + navigator.userAgent,
+          ].join("\n");
+        }
+
+        function onError(event) {
+          errors.push(describe(event));
+          if (panel) render();
+        }
+
+        function onRejection(event) {
+          var reason = event.reason;
+          errors.push(
+            "Unhandled rejection: " +
+              String(reason) +
+              (reason && reason.stack ? "\n" + reason.stack : ""),
+          );
+          if (panel) render();
+        }
+
+        function show() {
+          panel = document.createElement("pre");
+          panel.style.cssText =
+            "position:fixed;inset:0;margin:0;padding:24px;overflow:auto;" +
+            "white-space:pre-wrap;word-break:break-word;user-select:text;" +
+            "-webkit-user-select:text;font:12px/1.5 ui-monospace,monospace;" +
+            "color-scheme:light dark;" +
+            "background:var(--color-background,Canvas);" +
+            "color:var(--color-text,CanvasText)";
+          document.body.appendChild(panel);
+          render();
+        }
+
+        var timer = setTimeout(show, 5000);
+        var observer = new MutationObserver(function () {
+          if (!root.firstElementChild) return;
+          clearTimeout(timer);
+          observer.disconnect();
+          window.removeEventListener("error", onError, true);
+          window.removeEventListener("unhandledrejection", onRejection);
+          if (panel) panel.remove();
+        });
+
+        // Capture phase also sees a script or stylesheet that fails to load.
+        window.addEventListener("error", onError, true);
+        window.addEventListener("unhandledrejection", onRejection);
+        observer.observe(root, { childList: true });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

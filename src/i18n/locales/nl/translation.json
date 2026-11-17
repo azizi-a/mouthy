@@ -360,6 +360,10 @@
   "errors": {
     "loadDirectory": "Fout bij laden van map: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "Interfacetaal",
     "description": "Wijzig de taal van de Mouthy-interface"
