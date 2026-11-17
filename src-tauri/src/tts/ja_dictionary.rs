@@ -281,24 +281,44 @@ pub(crate) fn install_placeholder(models_dir: &Path) {
 /// unless `MOUTHY_REQUIRE_JA_DICTIONARY` is set, as on Linux CI.
 #[cfg(test)]
 pub(crate) fn tagger_for_test() -> Option<&'static Tagger> {
+    use std::io::Write;
     static TAGGER: std::sync::OnceLock<Option<Tagger>> = std::sync::OnceLock::new();
     let tagger = TAGGER
         .get_or_init(|| {
-            let downloaded = PathBuf::from(std::env::var_os("MOUTHY_JA_ARCHIVE")?);
-            // Kept between runs, so a run unpacks only once.
-            let models = std::env::temp_dir().join("mouthy-test-models");
-            if !installed(&dir(&models)) {
-                let pinned = super::catalog::all(&models)
-                    .into_iter()
-                    .find(|file| file.kind == super::catalog::ModelFileKind::Dictionary)
-                    .unwrap();
+            let Some(downloaded) = std::env::var_os("MOUTHY_JA_ARCHIVE").map(PathBuf::from) else {
+                // Past the test harness, which hides what a passing test prints.
+                let note = "MOUTHY_JA_ARCHIVE is not set, so the tests reading kanji check nothing";
+                let _ = writeln!(io::stderr(), "{note}");
+                return None;
+            };
+            let root = std::env::temp_dir().join("mouthy-test-dictionary");
+            let pinned = super::catalog::all(&root)
+                .into_iter()
+                .find(|file| file.kind == super::catalog::ModelFileKind::Dictionary)
+                .unwrap()
+                .sha256;
+            // Kept between runs and named after the archive, so a run unpacks
+            // only once and a new archive unpacks afresh.
+            let cache = root.join(&pinned);
+            if !installed(&cache) {
                 let actual = download::sha256_file(&downloaded).unwrap();
-                assert_eq!(actual, pinned.sha256, "{}", downloaded.display());
+                assert_eq!(actual, pinned, "{}", downloaded.display());
+                // Unpacked apart from any other test run, then moved in whole.
+                let models = root.join(format!("{pinned}.{}", std::process::id()));
+                remove_dir(&models).unwrap();
                 fs::create_dir_all(&models).unwrap();
                 fs::copy(&downloaded, archive(&models)).unwrap();
                 unpack(&models).unwrap();
+                if fs::rename(dir(&models), &cache).is_err() {
+                    assert!(
+                        installed(&cache),
+                        "{} is damaged: delete it",
+                        cache.display()
+                    );
+                }
+                remove_dir(&models).unwrap();
             }
-            Some(load(&dir(&models)).unwrap())
+            Some(load(&cache).unwrap())
         })
         .as_ref();
     if tagger.is_none() {
@@ -306,7 +326,6 @@ pub(crate) fn tagger_for_test() -> Option<&'static Tagger> {
             std::env::var_os("MOUTHY_REQUIRE_JA_DICTIONARY").is_none(),
             "the Japanese dictionary is required here: set MOUTHY_JA_ARCHIVE"
         );
-        eprintln!("MOUTHY_JA_ARCHIVE is not set, so this test checks nothing");
     }
     tagger
 }
