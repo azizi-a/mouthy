@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-24.04
     concurrency:
       group: linux-check-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - &checkout
         uses: actions/checkout@v7
@@ -38,15 +38,15 @@ jobs:
             libxtst-dev libxrandr-dev libssl-dev pkg-config
       # The Mac's toolchain; bump by hand.
       - &rust
-        uses: dtolnay/rust-toolchain@1.99.1
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
         with:
+          toolchain: 1.99.1
           components: clippy
-      - &rust-cache
-        uses: swatinem/rust-cache@v2
+      - uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri
       - &bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.4
       - &frontend
@@ -64,13 +64,12 @@ jobs:
   bundle:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
+    timeout-minutes: 90
     steps:
       - *checkout
       - *apt
+      # No cargo cache: a cache saved by another ref must not reach release binaries.
       - *rust
-      - *rust-cache
       - *bun
       - *frontend
       - name: Bundle deb, rpm and AppImage
@@ -88,6 +87,9 @@ jobs:
       - name: Show package dependencies
         working-directory: ${{ runner.temp }}/linux
         run: |
+          echo "::group::Highest glibc symbol the binary needs"
+          objdump -T "$GITHUB_WORKSPACE/src-tauri/target/release/mouthy" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1
+          echo "::endgroup::"
           sudo apt-get install -y rpm
           echo "::group::rpm -qpR"
           rpm -qpR ./*.rpm
@@ -111,19 +113,40 @@ jobs:
           name: mouthy-linux
           path: ${{ runner.temp }}/linux/*
           if-no-files-found: error
+          overwrite: true
+
+  attach:
+    needs: bundle
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Download the bundles
+        run: gh run download "$GITHUB_RUN_ID" -n mouthy-linux -D "$RUNNER_TEMP/linux"
       - name: Attach to the draft release
-        if: startsWith(github.ref, 'refs/tags/v')
         working-directory: ${{ runner.temp }}/linux
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-        # The tag can be pushed before the draft release exists.
+        # The tag can be pushed before the draft exists; a published release is never changed.
         run: |
           for _ in $(seq 30); do
-            if gh release view "$TAG" > /dev/null 2>&1; then
+            if draft="$(gh release view "$TAG" --json isDraft --jq .isDraft 2> view.err)"; then
+              if [ "$draft" != "true" ]; then
+                echo "::error::Release $TAG is already published; nothing was uploaded."
+                exit 1
+              fi
               gh release upload "$TAG" --clobber -- *.deb *.rpm *.AppImage SHA256SUMS-linux
               exit 0
+            fi
+            if ! grep -q "not found" view.err; then
+              cat view.err
+              echo "::error::Could not read release $TAG."
+              exit 1
             fi
             sleep 60
           done
