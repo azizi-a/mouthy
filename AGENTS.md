@@ -6,7 +6,7 @@ This file provides guidance to AI coding assistants working with code in this re
 
 **Prerequisites:**
 
-- An Apple Silicon Mac on macOS 13.4 or later: ONNX Runtime's prebuilt macOS archive is arm64 only, so Intel and universal builds fail to link. Or x86_64 Linux with the packages listed in [BUILD.md](BUILD.md#linux)
+- An Apple Silicon Mac on macOS 13.4 or later: ONNX Runtime's prebuilt macOS archive is arm64 only, so Intel and universal builds fail to link. Or x86_64 Linux with glibc 2.38 or newer (pyke's prebuilt ONNX Runtime needs it) and the packages listed in [BUILD.md](BUILD.md#linux)
 - [Rust](https://rustup.rs/) 1.92 or newer (`ort` rc.14's `rust-version`)
 - [Bun](https://bun.sh/) package manager
 - Network for the first `cargo build`: `ort-sys` downloads ONNX Runtime (~10 MB) from `cdn.pyke.io` into `~/Library/Caches/ort.pyke.io` (`~/.cache/ort.pyke.io` on Linux)
@@ -176,7 +176,7 @@ Access debug features: `Cmd+Shift+D` (macOS) or `Ctrl+Shift+D` (Windows/Linux)
 ## Platform Notes
 
 - **macOS** (primary target): Accessibility permission is required to send ⌘C. Under `tauri dev` it is charged to the terminal, not Mouthy. After rebuilding a bundled app, re-grant with `tccutil reset Accessibility com.azizi.mouthy`. The default hotkey ⌥⎋ is also macOS "Speak selection" (Accessibility → Spoken Content).
-- **Linux** (Wayland only): `.github/workflows/linux.yml` runs `cargo test` and `cargo clippy --all-targets -- -D warnings` on ubuntu-22.04 x86_64 for every pull request, and builds the deb, rpm and AppImage on a `v*` tag or by hand; it is the only Linux compiler agents have, so Linux-only code is proven there. Not yet tried on a desktop. The overlay uses GTK layer shell (disable with `MOUTHY_NO_GTK_LAYER_SHELL=1`).
+- **Linux** (Wayland only): `.github/workflows/linux.yml` runs `cargo test` and `cargo clippy --all-targets -- -D warnings` on ubuntu-24.04 x86_64 for every pull request, and builds the deb, rpm and AppImage on a `v*` tag or by hand; it is the only Linux compiler agents have, so Linux-only code is proven there. Not yet tried on a desktop. The overlay uses GTK layer shell (disable with `MOUTHY_NO_GTK_LAYER_SHELL=1`).
 - **Windows**: kept compiling where cheap, not tested.
 
 ## Commits

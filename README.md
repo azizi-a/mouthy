@@ -97,7 +97,7 @@ Open Settings from the tray. Besides the hotkeys and voices above, General sets 
 
 ## Linux
 
-x86_64 builds (AppImage, rpm and deb) are not released or tested yet. To build one yourself, see [BUILD.md](BUILD.md#linux).
+x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need glibc 2.38 or newer: Ubuntu 24.04, Fedora 39 or later, Debian 13; not Ubuntu 22.04 or Debian 12. To build one yourself, see [BUILD.md](BUILD.md#linux).
 
 ## Known issues
 

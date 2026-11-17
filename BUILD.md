@@ -38,7 +38,9 @@ bun run tauri build --bundles app
 
 ## Linux
 
-On Ubuntu 22.04 or later (the CI runner's list; other distributions need the same libraries):
+Linux builds need glibc 2.38 or newer (Ubuntu 24.04, Fedora 39+, Debian 13; not Ubuntu 22.04 or Debian 12): the prebuilt ONNX Runtime that `ort-sys` downloads links against it and GCC 13's libstdc++.
+
+On Ubuntu 24.04 (the CI runner's list; other distributions need the same libraries):
 
 ```bash
 sudo apt-get install -y \
