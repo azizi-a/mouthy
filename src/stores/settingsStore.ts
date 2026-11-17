@@ -85,6 +85,7 @@ const settingUpdaters: {
     commands.changeTtsModelVariantSetting(value as string),
   tts_espeak_fallback: (value) =>
     commands.changeTtsEspeakFallbackSetting(value as boolean),
+  tts_language: (value) => commands.changeTtsLanguageSetting(value as string),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

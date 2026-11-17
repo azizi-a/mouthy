@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Languages
 
+- Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language where Mouthy can read it.
 - Japanese voices (`jf_*`, `jm_*`) read Japanese written in kana, with numbers in Japanese and Latin words in English. Kanji cannot be read yet: they are skipped, and text that is mostly kanji is refused with a notice.
 - **Changed:** Japanese voices read kana as Japanese rather than dropping it; English text in a Japanese voice still reads as English.
 

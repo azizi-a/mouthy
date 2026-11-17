@@ -1,4 +1,7 @@
-use clap::Parser;
+use crate::settings::ReadingLanguage;
+use clap::builder::PossibleValue;
+use clap::{Parser, ValueEnum};
+use log::warn;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug, Clone, Default)]
@@ -40,6 +43,16 @@ pub struct CliArgs {
     )]
     pub voice: Option<String>,
 
+    /// Language for --speak-file, overriding the Settings reading language
+    #[arg(
+        long,
+        value_enum,
+        value_name = "LANG",
+        requires = "speak_file",
+        conflicts_with_all = ["speak_selection", "speak_clipboard", "stop"]
+    )]
+    pub lang: Option<ReadingLanguage>,
+
     /// Stop speaking (sent to running instance)
     #[arg(long)]
     pub stop: bool,
@@ -49,11 +62,27 @@ pub struct CliArgs {
     pub debug: bool,
 }
 
-/// A `--speak-file` request: the file and the voice asked for, if any.
+impl ValueEnum for ReadingLanguage {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[ReadingLanguage::English, ReadingLanguage::Voice]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(match self {
+            ReadingLanguage::English => {
+                PossibleValue::new("en").help("English, in the voice's accent")
+            }
+            ReadingLanguage::Voice => PossibleValue::new("voice").help("The voice's own language"),
+        })
+    }
+}
+
+/// A `--speak-file` request: the file, and the voice and language asked for.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpeakFile {
     pub path: PathBuf,
     pub voice: Option<String>,
+    pub language: Option<ReadingLanguage>,
 }
 
 impl CliArgs {
@@ -63,15 +92,26 @@ impl CliArgs {
         self.speak_file.as_ref().map(|path| SpeakFile {
             path: cwd.join(path),
             voice: self.voice.clone(),
+            language: self.lang,
         })
     }
 
     /// The `--speak-file` request in a command line another launch handed
     /// over, its path resolved against that launch's working directory.
     pub fn handed_over_speak_file(args: &[String], cwd: &str) -> Option<SpeakFile> {
-        Self::try_parse_from(args)
-            .ok()?
-            .speak_file_in(Path::new(cwd))
+        match Self::try_parse_from(args) {
+            Ok(parsed) => parsed.speak_file_in(Path::new(cwd)),
+            Err(e) => {
+                // A newer binary can hand over a flag this version lacks.
+                if args
+                    .iter()
+                    .any(|arg| arg == "--speak-file" || arg.starts_with("--speak-file="))
+                {
+                    warn!("Ignoring a handed-over --speak-file: {:?}", e.kind());
+                }
+                None
+            }
+        }
     }
 }
 
@@ -156,11 +196,62 @@ mod tests {
     }
 
     #[test]
+    fn lang_comes_with_speak_file_as_en_or_voice() {
+        let lang = |list: &[&str]| CliArgs::try_parse_from(list).map(|args| args.lang);
+        assert_eq!(
+            lang(&["mouthy", "--speak-file", "/tmp/m.txt", "--lang", "en"]).unwrap(),
+            Some(ReadingLanguage::English)
+        );
+        assert_eq!(
+            lang(&["mouthy", "--lang=voice", "--speak-file=/tmp/m.txt"]).unwrap(),
+            Some(ReadingLanguage::Voice)
+        );
+        assert_eq!(
+            lang(&["mouthy", "--speak-file", "/tmp/m.txt"]).unwrap(),
+            None
+        );
+        for list in [
+            &["mouthy", "--speak-file", "/tmp/m.txt", "--lang", "es"][..],
+            &["mouthy", "--speak-file", "/tmp/m.txt", "--lang", "english"],
+            &["mouthy", "--speak-file", "/tmp/m.txt", "--lang"],
+            &["mouthy", "--speak-file", "/tmp/m.txt", "--lang", "EN"],
+            &["mouthy", "--lang", "en"],
+            &["mouthy", "--lang", "en", "--stop"],
+            &["mouthy", "--lang", "en", "--voice", "bm_lewis"],
+            &["mouthy", "--lang=en", "--speak-clipboard"],
+            &["mouthy", "--lang", "en", "--speak-selection"],
+            &[
+                "mouthy",
+                "--speak-file",
+                "/tmp/m.txt",
+                "--lang",
+                "en",
+                "--stop",
+            ],
+        ] {
+            assert!(lang(list).is_err(), "{list:?}");
+        }
+    }
+
+    #[test]
+    fn lang_codes_are_the_stored_setting_values() {
+        for language in ReadingLanguage::value_variants() {
+            let code = language.to_possible_value().unwrap();
+            assert_eq!(
+                serde_json::to_value(language).unwrap(),
+                code.get_name(),
+                "{language:?}"
+            );
+        }
+    }
+
+    #[test]
     fn a_handed_over_speak_file_resolves_against_the_launch_directory() {
         let args = |list: &[&str]| list.iter().map(|a| a.to_string()).collect::<Vec<_>>();
         let request = |path: &str, voice: Option<&str>| SpeakFile {
             path: PathBuf::from(path),
             voice: voice.map(str::to_string),
+            language: None,
         };
         assert_eq!(
             CliArgs::handed_over_speak_file(&args(&["mouthy", "--speak-file", "m.txt"]), "/work"),
@@ -178,12 +269,37 @@ mod tests {
             Some(request("/work/m.txt", Some("bf_emma")))
         );
         assert_eq!(
+            CliArgs::handed_over_speak_file(
+                &args(&[
+                    "mouthy",
+                    "--speak-file",
+                    "m.txt",
+                    "--voice",
+                    "ef_dora",
+                    "--lang",
+                    "en"
+                ]),
+                "/work"
+            ),
+            Some(SpeakFile {
+                language: Some(ReadingLanguage::English),
+                ..request("/work/m.txt", Some("ef_dora"))
+            })
+        );
+        assert_eq!(
             CliArgs::handed_over_speak_file(&args(&["mouthy", "--speak-file", "m.txt"]), ""),
             Some(request("m.txt", None)),
             "with no working directory the path stays relative, for the reader to refuse"
         );
         assert_eq!(
             CliArgs::handed_over_speak_file(&args(&["mouthy", "--stop"]), "/work"),
+            None
+        );
+        assert_eq!(
+            CliArgs::handed_over_speak_file(
+                &args(&["mouthy", "--speak-file", "m.txt", "--from-a-newer-build"]),
+                "/work"
+            ),
             None
         );
     }

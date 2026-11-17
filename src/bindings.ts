@@ -200,6 +200,14 @@ async changeTtsEspeakFallbackSetting(enabled: boolean) : Promise<Result<null, st
     else return { status: "error", error: e  as any };
 }
 },
+async changeTtsLanguageSetting(language: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_tts_language_setting", { language }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Start key recording mode
  */
@@ -470,7 +478,11 @@ tts_speed?: number; tts_volume?: number; tts_backend?: TtsBackend; tts_model_var
 /**
  * Read words the lexicon lacks with a separately installed espeak-ng.
  */
-tts_espeak_fallback?: boolean }
+tts_espeak_fallback?: boolean; 
+/**
+ * The language local voices read text in; the server decides its own.
+ */
+tts_language?: ReadingLanguage }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 /**
@@ -543,6 +555,20 @@ export type OverlayPosition = "top" | "bottom"
  * Which overlay to display: `Minimal` is the compact pill, `None` hides it.
  */
 export type OverlayStyle = "none" | "minimal"
+/**
+ * The language the local voice reads text in. Stored as the code `--lang`
+ * takes.
+ */
+export type ReadingLanguage = 
+/**
+ * The voice's own language.
+ */
+"voice" | 
+/**
+ * English, so a non-English voice can read English text; a British voice
+ * stays British, any other reads American English.
+ */
+"en"
 export type SecureInputStatus = { 
 /**
  * Secure input is currently enabled (live check)
