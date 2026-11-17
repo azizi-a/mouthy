@@ -37,7 +37,7 @@ bm_lewis	true	ˈiː θɹˈiː hˈʌndɹɪd ˈAt mɪsmˈaʧt tˈIps ɪn ˈɛs ˈ�
 bm_lewis	true	ˈiː fˈɔː hˈʌndɹɪd twˈɛnti fˈIv kˈanɒt fˈInd vˈaljuː fˈuː ɪn ðɪs skˈQp hˈɪə
 bm_lewis	true	ðə splˈɪtə tɹˈiːts ˈɛvɹɪ lˈIn bɹˈAk az ði ˈɛnd ɒv ɐ sˈɛntəns, sˌQ ˈiːʧ ɹˈapt lˈIn ɒv ɐ tˈɜːmɪnᵊl sɪlˈɛkʃən ɡˈɛts ɪts ˈQn pˈɔːz.
 bm_lewis	true	ðˌat ɹˈuːl ɛɡzˈɪsts sˌQ hˈɛdɪŋz and bˈʊlɪts wɪðˌWt pˌʌŋkʧuːˈAʃən stˈɪl ɹˈiːd az sˈɛntənsɪz.
-bm_lewis	true	bˈaʃ ɡˈɪt lˈɒɡ ˈQ ˈɛn ˈiː ˈɛl ˈI ˈɛn ˈiː mˈInəs θɹˈiː
+bm_lewis	true	bˈaʃ ɡˈɪt lˈɒɡ wˈɒnlˌIn mˈInəs θɹˈiː
 bm_lewis	true	ɐ wˈɒn bˈiː tˈuː sˈiː θɹˈiː dˈiː fˈɪks: ɹɪflˈQ ɹˈapt lˈInz bɪfˌɔː sˈɛntəns splˈɪtɪŋ
 bm_lewis	true	nˈIn ˈɛf ˈAt ˈiː sˈɛvən dˈiː sˈɪks fˈiːt: dɪfˈɒlt vˈYs ˈalY fɔː fɹˈɛʃ ɪnstˈɔːlz
 bm_lewis	true	ˈiː fˈɔː ˈɛf fˈIv ɐ sˈɪks bˈiː ʧˈɔː: bˈʌmp vˈɜːʃən tə zˈɪəɹQ pˈYnt tˈuː pˈYnt zˈɪəɹQ fɔː ðə ɹɪlˈiːs
@@ -69,7 +69,7 @@ bm_lewis	true	dˈɒktə smˈɪθ and mˈɪsəs ʤˈQnz mˈɛt pɹəfˈɛsə bɹ�
 bm_lewis	true	kˈats vˈɜːsɪz dˈɒɡz, ɐpɹˈɒksɪmətli fˈɔːti ɒv ˈiːʧ, ˈɛt sˈɛtəɹə.
 bm_lewis	true	sˈiː nˈʌmbə fˈIv, kˈaptɪn hˈʊk and smˈɪθ ʤˈuːnjə at sˈAnt pˈɔːlz.
 bm_lewis	true	mˈɪz smˈɪθ mˈɛt dˈɒktə hˌuː,
-bm_lewis	true	ʤˈɛn zˈiː and ʤˈɛnəɹᵊl pˈiː ɐ tˈiː tˈiː ˈQ ˈɛn.
+bm_lewis	true	ʤˈɛn zˈiː and ʤˈɛnəɹᵊl pˈattˌʌn.
 bm_lewis	true	tˈuːlz, ˌiːʤˈiː hˈaməz,
 bm_lewis	true	ˌIˈiː ðə hˈɛvi wˈɒnz, at sˈɛvən ˌAˈɛm ɔːɹ fˈIv pˌiːˈɛm.
 bm_lewis	true	ði ˌApˌiːˈI, jˌuːˌɑːˈɛl and ˌAʧtˌiːtˌiːpˈiː spˈɛks ɑːɹ ˌɒn ɡˈɪt hˈʌb.
@@ -87,7 +87,7 @@ bm_lewis	true	hˌiː kˈAm θˈɜːd, ðˈɛn sˈɛkənd, ðˈɛn fˈɜːst.
 bm_lewis	true	kˈɔːl twˈɛnti sˈɛvən θˈWzənd nˈIn hˈʌndɹɪd and fˈɔːti sˈɪks nˈIn hˈʌndɹɪd fˈɪfti ˈAt bɪfˌɔː tˈuː θˈWzənd and twˈɛnti sˈɪks tˈɛn θˈɜːtiːn.
 bm_lewis	true	tˈiː, ɔːɹ kˈɒfi, ɪz fˈIn, wˈɛl mˈAbiː.
 bm_lewis	true	jˈuːs ði ˌApˌiːˈI dˈɒks wˈɒn and sˈiː ðə ˌɛfˌAkjˈuː.
-bm_lewis	true	sˈɒftwɛː, zˈɛd ˈiː ˈɑː ˈQ dˈʌbᵊljˌuː ˈI dˈiː tˈiː ˈAʧ and nˈQ bɹˈAk spˈAsɪz vˈanɪʃ.
+bm_lewis	true	sˈɒftwɛː, zˈɪəɹQwˌɪtθ and nˈQ bɹˈAk spˈAsɪz vˈanɪʃ.
 bm_lewis	true	wˈAt... wɒt? ɹˈɪəlɪ!
 bm_lewis	true	❓ ❓ ❓ and ɪmˈQʤi ❓ pˈas θɹuː ʌntˈʌʧt.
 bm_lewis	true	wˌɛn ðə mˈiːtɪŋ fˈInᵊli ˈɛndɪd,
@@ -134,7 +134,7 @@ af_alloy	true	ˈi θɹˈi hˈʌndɹɪd ˈAt mɪsmˈæʧt tˈIps ɪn ˈɛs ˈɑɹ
 af_alloy	true	ˈi fˈɔɹ hˈʌndɹɪd twˈɛnti fˈIv kænˈɑt fˈInd vˈælju fˈu ɪn ðɪs skˈOp hˈɪɹ
 af_alloy	true	ðə splˈɪɾɚ tɹˈits ˈɛvɹi lˈIn bɹˈAk æz ði ˈɛnd ʌv ɐ sˈɛntəns, sˌO ˈiʧ ɹˈæpt lˈIn ʌv ɐ tˈɜmɪnᵊl sᵻlˈɛkʃən ɡˈɛts ɪts ˈOn pˈɔz.
 af_alloy	true	ðˌæt ɹˈul ɛɡzˈɪsts sˌO hˈɛdɪŋz ænd bˈʊlɪts wɪðˌWt pˌʌŋkʧuˈAʃən stˈɪl ɹˈid æz sˈɛntənsᵻz.
-af_alloy	true	bˈæʃ ɡˈɪt lˈɔɡ ˈO ˈɛn ˈi ˈɛl ˈI ˈɛn ˈi mˈInəs θɹˈi
+af_alloy	true	bˈæʃ ɡˈɪt lˈɔɡ wˈʌnlˌIn mˈInəs θɹˈi
 af_alloy	true	ɐ wˈʌn bˈi tˈu sˈi θɹˈi dˈi fˈɪks: ɹᵻflˈO ɹˈæpt lˈInz bᵻfˌɔɹ sˈɛntəns splˈɪɾɪŋ
 af_alloy	true	nˈIn ˈɛf ˈAt ˈi sˈɛvən dˈi sˈɪks fˈit: dᵻfˈɔlt vˈYs ˈælY fɔɹ fɹˈɛʃ ɪnstˈɔlz
 af_alloy	true	ˈi fˈɔɹ ˈɛf fˈIv ɐ sˈɪks bˈi ʧˈɔɹ: bˈʌmp vˈɜʒən tə zˈiəɹO pˈYnt tˈu pˈYnt zˈiəɹO fɔɹ ðə ɹᵻlˈis
@@ -166,7 +166,7 @@ af_alloy	true	dˈɑktɚ smˈɪθ ænd mˈɪsəs ʤˈOnz mˈɛt pɹəfˈɛsɚ bɹ
 af_alloy	true	kˈæts vˈɜsᵻz dˈɑɡz, ɐpɹˈɑksɪmətli fˈɔɹɾi ʌv ˈiʧ, ˈɛt sˈɛɾɚɹə.
 af_alloy	true	sˈi nˈʌmbɚ fˈIv, kˈæptɪn hˈʊk ænd smˈɪθ ʤˈunjɚ æɾ sˈAnt pˈɔlz.
 af_alloy	true	mˈɪz smˈɪθ mˈɛt dˈɑktɚ hˌu,
-af_alloy	true	ʤˈɛn zˈi ænd ʤˈɛnɚɹᵊl pˈi ɐ tˈi tˈi ˈO ˈɛn.
+af_alloy	true	ʤˈɛn zˈi ænd ʤˈɛnɚɹᵊl pˈættˌʌn.
 af_alloy	true	tˈulz, ˌiʤˈi hˈæmɚz,
 af_alloy	true	ˌIˈi ðə hˈɛvi wˈʌnz, æɾ sˈɛvən ˌAˈɛm ɔɹ fˈIv pˌiˈɛm.
 af_alloy	true	ði ˌApˌiˈI, jˌuˌɑɹˈɛl ænd ˌAʧtˌitˌipˈi spˈɛks ɑɹ ˌɔn ɡˈɪt hˈʌb.
@@ -184,7 +184,7 @@ af_alloy	true	hˌi kˈAm θˈɜd, ðˈɛn sˈɛkənd, ðˈɛn fˈɜst.
 af_alloy	true	kˈɔl twˈɛnti sˈɛvən θˈWzənd nˈIn hˈʌndɹɪd ænd fˈɔɹɾi sˈɪks nˈIn hˈʌndɹɪd fˈɪfti ˈAt bᵻfˌɔɹ tˈu θˈWzənd ænd twˈɛnti sˈɪks tˈɛn θˈɜtin.
 af_alloy	true	tˈi, ɔɹ kˈɔfi, ɪz fˈIn, wˈɛl mˈAbi.
 af_alloy	true	jˈus ði ˌApˌiˈI dˈɑks wˈʌn ænd sˈi ðə ˌɛfˌAkjˈu.
-af_alloy	true	sˈɔftwɛɹ, zˈi ˈi ˈɑɹ ˈO dˈʌbᵊljˌu ˈI dˈi tˈi ˈAʧ ænd nˈO bɹˈAk spˈAsᵻz vˈænɪʃ.
+af_alloy	true	sˈɔftwɛɹ, zˈiəɹOwˌɪtθ ænd nˈO bɹˈAk spˈAsᵻz vˈænɪʃ.
 af_alloy	true	wˈAt... wʌt? ɹˈiəli!
 af_alloy	true	❓ ❓ ❓ ænd ɪmˈOʤi ❓ pˈæs θɹu ʌntˈʌʧt.
 af_alloy	true	wˌɛn ðə mˈiɾɪŋ fˈInᵊli ˈɛndᵻd,
