@@ -79,7 +79,7 @@ pub(super) fn phonemes(
     text: &str,
     mut english: impl FnMut(&str) -> Result<String, String>,
 ) -> Result<(String, usize), String> {
-    let text = punctuation(&numerals(&without_space_after_marks(text)));
+    let text = punctuation(&numerals(&halfwidth(&without_space_after_marks(text))));
     let dictionaries = dictionaries();
     let mut out = String::with_capacity(text.len() * 3);
     let mut skipped = 0;
@@ -141,6 +141,21 @@ fn runs(text: &str) -> Vec<(bool, &str)> {
         runs.push((han, &text[start..]));
     }
     runs
+}
+
+/// Full-width digits, letters and the ideographic space as ASCII, as misaki's
+/// later frontend folds them (cn2an already reads full-width digits). Not
+/// NFKC: full-width `，。！？：；` must stay for `punctuation` to space them.
+fn halfwidth(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '０'..='９' | 'Ａ'..='Ｚ' | 'ａ'..='ｚ' => {
+                char::from_u32(c as u32 - 0xfee0).unwrap_or(c)
+            }
+            '\u{3000}' => ' ',
+            c => c,
+        })
+        .collect()
 }
 
 /// Drops the space the splitter puts after a mark that `punctuation` spaces
@@ -559,14 +574,7 @@ fn full_final_spelling(syllable: &str) -> String {
 /// them wrongly: a number past 16 digits is read digit by digit; "1,500" is one
 /// number; and a hyphen after a letter or digit ("COVID-19") is not a minus.
 fn numerals(text: &str) -> String {
-    let text: String = text
-        .chars()
-        .map(|c| match c {
-            '０'..='９' => char::from_u32(c as u32 - 0xfee0).unwrap_or(c),
-            c => c,
-        })
-        .collect();
-    let text = ungrouped(&text);
+    let text = ungrouped(text);
     let text = each_match(&text, range, |m| {
         let (start, end) = m.split_once('-').unwrap_or((m, ""));
         format!("{}到{}", low(start), low(end))
@@ -883,8 +891,8 @@ mod tests {
     fn numbers_read_as_cn2an_writes_them() {
         let wrong: Vec<_> = fixture(include_str!("fixtures/mandarin-numbers.txt"))
             .into_iter()
-            .filter(|(text, chinese)| numerals(text) != *chinese)
-            .map(|(text, chinese)| (text, chinese, numerals(text)))
+            .filter(|(text, chinese)| numerals(&halfwidth(text)) != *chinese)
+            .map(|(text, chinese)| (text, chinese, numerals(&halfwidth(text))))
             .collect();
         assert!(wrong.is_empty(), "{wrong:#?}");
     }
@@ -966,6 +974,20 @@ mod tests {
         let (phonemes, skipped) = phonemes(text, |english| Ok(format!("<{english}>"))).unwrap();
         assert_eq!(skipped, 0, "{text}");
         phonemes
+    }
+
+    #[test]
+    fn full_width_letters_and_digits_read_as_ascii_and_full_width_marks_stay() {
+        // misaki's v1.0 path passes the letters through, for Kokoro to drop.
+        assert_eq!(
+            marked("我用ｉＰｈｏｎｅ１５拍照。"),
+            marked("我用iPhone15拍照。")
+        );
+        assert_eq!(marked("你好，ＯＫ！"), "ni↓xau↓, <OK>!");
+        assert_eq!(
+            halfwidth("ＡＢＣ　１２３，。！？：；"),
+            "ABC 123，。！？：；"
+        );
     }
 
     #[test]
