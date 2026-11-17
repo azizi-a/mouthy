@@ -505,6 +505,14 @@ struct Reading {
     espeak: Option<PathBuf>,
 }
 
+impl Reading {
+    /// The espeak-ng that reads English words the lexicon lacks: none unless
+    /// the fallback is on.
+    fn english_espeak(&self) -> Option<&PathBuf> {
+        self.espeak.as_ref().filter(|_| self.english_fallback)
+    }
+}
+
 struct LocalSynth {
     session: Session,
     model: FileStamp,
@@ -648,8 +656,7 @@ fn build_session(environment: &Environment, path: &Path) -> ort::Result<Session>
 fn build_g2p(reading: &Reading) -> G2P {
     let started = Instant::now();
     let dialect = Dialect::of(reading.language);
-    let espeak = reading.espeak.as_ref().filter(|_| reading.english_fallback);
-    let (g2p, unknown_words) = match espeak {
+    let (g2p, unknown_words) = match reading.english_espeak() {
         Some(program) => (espeak::g2p(dialect, program.clone()), "espeak-ng"),
         None => (G2P::new(dialect.language()), "spelling"),
     };
@@ -1596,24 +1603,21 @@ mod tests {
         }
     }
 
-    #[cfg(unix)]
     #[test]
     fn espeak_reads_unknown_english_words_only_with_the_fallback_on() {
-        use std::os::unix::fs::PermissionsExt;
-        let dir = tempfile::tempdir().unwrap();
-        let program = dir.path().join("espeak-ng");
-        fs::write(&program, "#!/bin/sh\necho zˈɪks\n").unwrap();
-        fs::set_permissions(&program, fs::Permissions::from_mode(0o755)).unwrap();
-        let read = |english_fallback| {
-            let reading = Reading {
-                language: VoiceLanguage::BritishEnglish,
-                english_fallback,
-                espeak: Some(program.clone()),
-            };
-            text_to_phonemes(&build_g2p(&reading), reading.language, "Zxqvb").unwrap()
+        let program = PathBuf::from("/opt/homebrew/bin/espeak-ng");
+        let reading = |english_fallback, espeak| Reading {
+            language: VoiceLanguage::BritishEnglish,
+            english_fallback,
+            espeak,
         };
-        assert_eq!(read(true), "zˈɪks");
-        assert_ne!(read(false), "zˈɪks");
+        assert_eq!(
+            reading(true, Some(program.clone())).english_espeak(),
+            Some(&program)
+        );
+        assert_eq!(reading(false, Some(program.clone())).english_espeak(), None);
+        assert_eq!(reading(true, None).english_espeak(), None);
+        assert_eq!(reading(false, None).english_espeak(), None);
     }
 
     fn numbered_rows(count: usize) -> Vec<f32> {
