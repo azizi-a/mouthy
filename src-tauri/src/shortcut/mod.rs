@@ -811,6 +811,7 @@ pub fn change_tts_language_setting(app: AppHandle, language: String) -> Result<(
         }
     };
     settings::write_settings(&app, settings);
+    crate::commands::models::files_changed(&app);
     crate::actions::preload_local_voice(&app);
     Ok(())
 }

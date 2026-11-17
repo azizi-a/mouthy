@@ -225,6 +225,7 @@ pub struct AppSettings {
     /// Read words the lexicon lacks with a separately installed espeak-ng.
     #[serde(default)]
     pub tts_espeak_fallback: bool,
+    /// The language local voices read text in; the server decides its own.
     #[serde(default)]
     pub tts_language: ReadingLanguage,
 }

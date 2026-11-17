@@ -478,7 +478,11 @@ tts_speed?: number; tts_volume?: number; tts_backend?: TtsBackend; tts_model_var
 /**
  * Read words the lexicon lacks with a separately installed espeak-ng.
  */
-tts_espeak_fallback?: boolean; tts_language?: ReadingLanguage }
+tts_espeak_fallback?: boolean; 
+/**
+ * The language local voices read text in; the server decides its own.
+ */
+tts_language?: ReadingLanguage }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 /**

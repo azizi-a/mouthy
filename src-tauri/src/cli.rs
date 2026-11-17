@@ -1,6 +1,7 @@
 use crate::settings::ReadingLanguage;
 use clap::builder::PossibleValue;
 use clap::{Parser, ValueEnum};
+use log::warn;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug, Clone, Default)]
@@ -98,9 +99,19 @@ impl CliArgs {
     /// The `--speak-file` request in a command line another launch handed
     /// over, its path resolved against that launch's working directory.
     pub fn handed_over_speak_file(args: &[String], cwd: &str) -> Option<SpeakFile> {
-        Self::try_parse_from(args)
-            .ok()?
-            .speak_file_in(Path::new(cwd))
+        match Self::try_parse_from(args) {
+            Ok(parsed) => parsed.speak_file_in(Path::new(cwd)),
+            Err(e) => {
+                // A newer binary can hand over a flag this version lacks.
+                if args
+                    .iter()
+                    .any(|arg| arg == "--speak-file" || arg.starts_with("--speak-file="))
+                {
+                    warn!("Ignoring a handed-over --speak-file: {:?}", e.kind());
+                }
+                None
+            }
+        }
     }
 }
 
@@ -203,7 +214,10 @@ mod tests {
             &["mouthy", "--speak-file", "/tmp/m.txt", "--lang", "es"][..],
             &["mouthy", "--speak-file", "/tmp/m.txt", "--lang", "english"],
             &["mouthy", "--speak-file", "/tmp/m.txt", "--lang"],
+            &["mouthy", "--speak-file", "/tmp/m.txt", "--lang", "EN"],
             &["mouthy", "--lang", "en"],
+            &["mouthy", "--lang", "en", "--stop"],
+            &["mouthy", "--lang", "en", "--voice", "bm_lewis"],
             &["mouthy", "--lang=en", "--speak-clipboard"],
             &["mouthy", "--lang", "en", "--speak-selection"],
             &[
@@ -279,6 +293,13 @@ mod tests {
         );
         assert_eq!(
             CliArgs::handed_over_speak_file(&args(&["mouthy", "--stop"]), "/work"),
+            None
+        );
+        assert_eq!(
+            CliArgs::handed_over_speak_file(
+                &args(&["mouthy", "--speak-file", "m.txt", "--from-a-newer-build"]),
+                "/work"
+            ),
             None
         );
     }

@@ -566,9 +566,9 @@ fn speak_file_on_main(
     match file_speech(app, text, voice.as_deref(), language) {
         // No preload for a replaced session unless this one fails to load its own voice.
         Ok((settings, speech, voice, language)) => {
-            let read_as = match language {
-                ReadingLanguage::Voice => "",
-                ReadingLanguage::English => " as English",
+            let read_as = match (&speech.backend, language) {
+                (tts::Backend::Local(_), ReadingLanguage::English) => " as English",
+                _ => "",
             };
             info!("Speaking the file in {voice}{read_as} ({source})");
             let other_reading = reads_unlike_settings(&settings, &voice, language);
@@ -828,9 +828,10 @@ fn file_language(settings: &AppSettings, requested: Option<ReadingLanguage>) -> 
 }
 
 /// Whether reading in `voice` and `language` loads something other than the
-/// settings do.
+/// settings do. The server ignores the language.
 fn reads_unlike_settings(settings: &AppSettings, voice: &str, language: ReadingLanguage) -> bool {
-    voice != settings.tts_voice || language != settings.tts_language
+    voice != settings.tts_voice
+        || (settings.tts_backend == TtsBackend::Local && language != settings.tts_language)
 }
 
 /// Loads the local voice in the background when the settings select it, so
@@ -1531,6 +1532,20 @@ mod tests {
             &settings,
             "ef_dora",
             ReadingLanguage::English
+        ));
+        let server = AppSettings {
+            tts_backend: TtsBackend::Http,
+            ..settings
+        };
+        assert!(!reads_unlike_settings(
+            &server,
+            "ef_dora",
+            ReadingLanguage::English
+        ));
+        assert!(reads_unlike_settings(
+            &server,
+            "bf_emma",
+            ReadingLanguage::Voice
         ));
     }
 
