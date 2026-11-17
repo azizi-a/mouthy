@@ -161,7 +161,7 @@
       },
       "voices": {
         "title": "Voices",
-        "description": "Each voice reads text in its own language, British voices with British pronunciation and American voices with American. Spanish, French, Italian, Brazilian Portuguese and Hindi voices need espeak-ng installed. Japanese and Mandarin voices read text as American English for now.",
+        "description": "English voices read English, British ones with British pronunciation and American ones with American. Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language and need espeak-ng installed. Other voices read text as American English. With Reading Language set to English, every voice reads English.",
         "female": "Female",
         "male": "Male",
         "language": {

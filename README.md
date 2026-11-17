@@ -70,7 +70,7 @@ Call the binary directly: `open -a Mouthy --args …` drops the arguments. With 
 
 Mouthy runs the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. Settings → General → Speech lists the voices you have downloaded, each with Preview and Use. Turn on **Show uninstalled voices** to see all 54 and download any of them (0.5 MB each). The Blend row mixes the voice in use with a second voice on a slider, and Other… takes any voice name or a blend of up to four voices, such as `bm_lewis(70)+bm_george(30)`.
 
-Each voice reads text in its own language (see Languages), and a blend reads in its first voice's. Of the 28 English voices, those starting with `b` get British pronunciations and the others American.
+A voice reads text in its own language where Mouthy can read that language (see Languages), and a blend reads in its first voice's. Of the 28 English voices, those starting with `b` get British pronunciations and the others American.
 
 Settings → Models manages the files: the int8 model, the fp32 model (326 MB; about twice as slow) and the voices, each of which you can preview, use or delete. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256. The files live in `~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/`.
 
@@ -82,7 +82,7 @@ Words an English voice's dictionary lacks, such as many names and product terms,
 
 ## Languages
 
-English voices read English. Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language, as Kokoro learned it: Mouthy asks [espeak-ng](https://github.com/espeak-ng/espeak-ng) how to say each sentence, numbers and times included, so these voices need it installed (`brew install espeak-ng`; on Linux see below), whatever the unknown-words setting says. Without it they show a notice instead of speaking, and `--voice` with one of them falls back to the Settings voice. Text in another language, English included, is read with the voice's own language's rules. Japanese and Mandarin voices read text as American English for now.
+English voices read English. Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language, as Kokoro learned it: Mouthy asks [espeak-ng](https://github.com/espeak-ng/espeak-ng) how to say each sentence, numbers and times included, so these voices need it installed (`brew install espeak-ng`; on Linux see below), whatever the unknown-words setting says. Without it they show a notice instead of speaking, and `--voice` with one of them falls back to the Settings voice unless the file is read as English. English text in one of these voices is read with its language's rules unless Reading Language is English (below). Other voices read text as American English.
 
 Settings → General → **Reading Language** matters only for a voice whose language Mouthy can read (see Voices); any other voice reads English either way. For such a voice it chooses between its own language (the default) and English, read with the voice's accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
 
