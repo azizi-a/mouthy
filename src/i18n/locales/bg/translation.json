@@ -113,7 +113,8 @@
         "title": "Pronounce unknown words with espeak-ng",
         "description": "Names and other words the built-in dictionary lacks are read by espeak-ng instead of spelled out letter by letter. espeak-ng is GPL-3 software you install yourself (brew install espeak-ng); Mouthy runs it as a separate program and does not bundle it. Each new unknown word can delay speech by up to half a second.",
         "found": "Using espeak-ng at {{path}}",
-        "notFound": "espeak-ng is not installed. Install it with: brew install espeak-ng"
+        "notFound": "espeak-ng is not installed. Install it with: brew install espeak-ng",
+        "notFoundLinux": "espeak-ng is not installed. Install it with: brew install espeak-ng, or rpm-ostree install espeak-ng"
       },
       "speed": {
         "title": "Speed",
