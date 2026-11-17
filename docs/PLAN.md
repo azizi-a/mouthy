@@ -989,6 +989,16 @@ Success looks like: on the Bazzite laptop a desktop shortcut reads the highlight
 | H6  | Run `docs/phase4-checklist.md` on the laptop and the macOS regression steps on the Mac                                                                                                                                                                                                                                       | Agents cannot run Linux or listen                                                       | Release R6 publish                                   | open   |
 | H7  | Release 0.6.0: create the draft, push the signed tag, let the workflow attach the Linux files, publish, merge the cask PR                                                                                                                                                                                                    | Agents never push tags or publish                                                       | Release R6                                           | open   |
 
+**Resolutions (2026-11-17, via the liaison):**
+
+- **H8 resolved — option (2):** the voice decides by default; an override (a Settings choice and a `--lang en` flag) lets a non-English voice keep reading English. The user's Claude voice skill will pass the flag. L1b is unblocked once L1 merges.
+- **H5 resolved — (b):** `jpreprocess` + `jpreprocess-naist-jdic` approved; L3b measures the app-size change and reports it to the user before merging.
+- **H4 partly resolved:** `jieba-rs` 0.7 and `pinyin` 0.10 approved (L4 unblocked after L1). Phrase-pinyin data: not decided; default is per-character readings.
+- **H3 resolved:** `unicode-normalization` 0.1 approved as a direct dependency (L1a after L2).
+- **H1 approved, with a repo constraint:** Actions is enabled but the allowlist is "selected" (GitHub-owned and verified creators only, no custom patterns) and default workflow permissions are read-only. Arbiter decision: P4.0's workflow uses only `actions/checkout` and `actions/upload-artifact`, installs Rust (`rustup`, pinned) and bun with plain run steps instead of `dtolnay/rust-toolchain`, `oven-sh/setup-bun` and `swatinem/rust-cache`, and declares `permissions: contents: write` on the bundle job only. Caching waits for a yes on `actions/cache` (asked).
+- **H9 partly resolved:** the Bazzite laptop runs **KDE Plasma**; smoke tier 0 outputs pending. P4.1 designs for KDE (layer-shell, Klipper, data-control available).
+- **Arbiter decision (planner's open point):** a `--voice` call for a voice whose language needs espeak-ng on a machine without it falls back to the Settings voice with a log line, as an unknown voice does (L2 extends `usable_voice`).
+
 H2 (`webkit2gtk-sys`) is not asked: it went to Deferred with the WebKitGTK renderer port. No credentials, accounts or paid tiers are needed: the workflow uses `GITHUB_TOKEN`, and Linux builds are unsigned like the Mac ones.
 
 ### Phase 4 common rules
