@@ -1,4 +1,6 @@
-use enigo::{Enigo, Key, Keyboard, Mouse, Settings};
+use enigo::{Enigo, Mouse, Settings};
+#[cfg(target_os = "macos")]
+use enigo::{Key, Keyboard};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
@@ -172,15 +174,11 @@ pub fn get_cursor_position(app_handle: &AppHandle) -> Option<(i32, i32)> {
     enigo.location().ok()
 }
 
-/// Sends Cmd+C (macOS) or Ctrl+C, holding the modifier for `hold_ms` after the
-/// C click. On macOS this must run on the main thread.
+/// Sends Cmd+C, holding Command for `hold_ms` after the C click. Must run on
+/// the main thread.
+#[cfg(target_os = "macos")]
 pub fn send_copy(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
     let (modifier_key, c_key_code) = (Key::Meta, macos::command_key(b'c', 8)); // kVK_ANSI_C
-    #[cfg(target_os = "windows")]
-    let (modifier_key, c_key_code) = (Key::Control, Key::Other(0x43)); // VK_C
-    #[cfg(target_os = "linux")]
-    let (modifier_key, c_key_code) = (Key::Control, Key::Unicode('c'));
 
     enigo
         .key(modifier_key, enigo::Direction::Press)
