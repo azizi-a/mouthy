@@ -4,8 +4,11 @@
 //!
 //! A voice reads text in the language it was trained on; an unknown prefix
 //! reads as American English.
+//!
+//! The Japanese dictionary is jpreprocess's own v0.15.0 release asset, with
+//! our sha256 of it.
 
-use super::local;
+use super::{ja_dictionary, local};
 use crate::settings::ModelVariant;
 use serde::Serialize;
 use specta::Type;
@@ -30,6 +33,19 @@ const MODELS: &[(&str, ModelVariant, &str, u64, &str)] = &[
         "8fbea51ea711f2af382e88c833d9e288c6dc82ce5e98421ea61c058ce21a34cb",
     ),
 ];
+
+/// The Japanese dictionary's only source, a release asset GitHub lets its
+/// owner replace or delete: the sha256 below catches a replacement.
+const DICTIONARY_URL: &str =
+    "https://github.com/jpreprocess/jpreprocess/releases/download/v0.15.0/naist-jdic-jpreprocess.tar.gz";
+
+/// Id, size and sha256 of the Japanese dictionary's archive. Linux CI
+/// downloads the same file for the tests that read with it.
+const DICTIONARY: (&str, u64, &str) = (
+    "naist-jdic",
+    28_668_638,
+    "8a930bbc57bf4adcf521d53544c7dc9ab8ab3aa997a591b1b1608dc5539017b8",
+);
 
 /// Every voice file is 510 style rows of 256 f32.
 const VOICE_SIZE: u64 = 522_240;
@@ -99,6 +115,7 @@ const VOICES: &[(&str, &str)] = &[
 pub enum ModelFileKind {
     Model,
     Voice,
+    Dictionary,
 }
 
 /// The language a voice was trained on.
@@ -143,12 +160,25 @@ pub struct CatalogFile {
     pub url: String,
     pub size: u64,
     pub sha256: &'static str,
+    /// Where the download goes.
     pub path: PathBuf,
-    /// A voice's language; `None` for a model.
+    /// A voice's language; `None` for a model or the dictionary.
     pub language: Option<VoiceLanguage>,
 }
 
-/// Every file, models first.
+impl CatalogFile {
+    /// Whether the file is ready to use: the dictionary once unpacked.
+    pub fn installed(&self) -> bool {
+        match self.kind {
+            ModelFileKind::Dictionary => self.path.parent().is_some_and(|models_dir| {
+                ja_dictionary::installed(&ja_dictionary::dir(models_dir))
+            }),
+            ModelFileKind::Model | ModelFileKind::Voice => self.path.is_file(),
+        }
+    }
+}
+
+/// Every file: models, voices, then the dictionary.
 pub fn all(models_dir: &Path) -> Vec<CatalogFile> {
     let models = MODELS
         .iter()
@@ -172,7 +202,17 @@ pub fn all(models_dir: &Path) -> Vec<CatalogFile> {
             language: VoiceLanguage::of(id),
         })
     });
-    models.chain(voices).collect()
+    let (id, size, sha256) = DICTIONARY;
+    let dictionary = CatalogFile {
+        id: id.to_string(),
+        kind: ModelFileKind::Dictionary,
+        url: DICTIONARY_URL.to_string(),
+        size,
+        sha256,
+        path: ja_dictionary::archive(models_dir),
+        language: None,
+    };
+    models.chain(voices).chain([dictionary]).collect()
 }
 
 pub fn find(models_dir: &Path, id: &str) -> Option<CatalogFile> {
@@ -188,7 +228,7 @@ mod tests {
     fn every_voice_is_listed_and_ids_are_unique() {
         let files = all(Path::new("/models"));
         assert_eq!(VOICES.len(), 54);
-        assert_eq!(files.len(), MODELS.len() + VOICES.len());
+        assert_eq!(files.len(), MODELS.len() + VOICES.len() + 1);
         let ids: HashSet<_> = files.iter().map(|file| file.id.as_str()).collect();
         assert_eq!(ids.len(), files.len());
         let hashes: HashSet<_> = files.iter().map(|file| file.sha256).collect();
@@ -222,12 +262,22 @@ mod tests {
         );
         assert_eq!(voice.kind, ModelFileKind::Voice);
         assert!(find(models, "../bm_lewis").is_none());
+        let dictionary = find(models, "naist-jdic").unwrap();
+        assert_eq!(dictionary.kind, ModelFileKind::Dictionary);
+        assert_eq!(dictionary.path, ja_dictionary::archive(models));
+        assert!(!dictionary.installed());
     }
 
     #[test]
     fn urls_are_pinned_and_checksums_are_sha256() {
         for file in all(Path::new("/models")) {
-            assert!(file.url.starts_with(REVISION_URL), "{}", file.url);
+            let pinned = match file.kind {
+                ModelFileKind::Dictionary => {
+                    "https://github.com/jpreprocess/jpreprocess/releases/download/v0.15.0/"
+                }
+                ModelFileKind::Model | ModelFileKind::Voice => REVISION_URL,
+            };
+            assert!(file.url.starts_with(pinned), "{}", file.url);
             assert_eq!(file.sha256.len(), 64, "{}", file.id);
             assert!(file
                 .sha256
@@ -245,10 +295,20 @@ mod tests {
     }
 
     #[test]
+    fn linux_ci_tests_with_the_dictionary_the_app_downloads() {
+        let workflow = include_str!("../../../.github/workflows/linux.yml");
+        assert!(workflow.contains(&format!("URL: {DICTIONARY_URL}")));
+        assert!(workflow.contains(&format!("SHA256: {}", DICTIONARY.2)));
+        assert!(workflow.contains("MOUTHY_REQUIRE_JA_DICTIONARY: \"1\""));
+    }
+
+    #[test]
     fn every_voice_has_the_language_its_id_names() {
         for file in all(Path::new("/models")) {
             match file.kind {
-                ModelFileKind::Model => assert_eq!(file.language, None, "{}", file.id),
+                ModelFileKind::Model | ModelFileKind::Dictionary => {
+                    assert_eq!(file.language, None, "{}", file.id)
+                }
                 ModelFileKind::Voice => assert!(file.language.is_some(), "{}", file.id),
             }
         }

@@ -2298,10 +2298,24 @@ mod tests {
             unreachable!()
         };
         let english = "and emoji 🎉 pass through untouched.";
+        let english = tts::local::phonemes_without_espeak(&alloy, &[english.to_string()]);
         assert_eq!(
             tts::local::phonemes_without_espeak(&kumo, &[kanji_line.to_string()]),
-            tts::local::phonemes_without_espeak(&alloy, &[english.to_string()])
+            english
         );
+        // The dictionary changes nothing without Japanese, and reads the kanji.
+        let texts: Vec<String> = american.into_iter().map(|(text, _)| text).collect();
+        let Some(tagged) = tts::local::phonemes_with_dictionary(&kumo, &texts) else {
+            return;
+        };
+        let untagged = tts::local::phonemes_without_espeak(&kumo, &texts);
+        for ((text, tagged), untagged) in texts.iter().zip(&tagged).zip(&untagged) {
+            if text == kanji_line {
+                assert_eq!(*tagged, format!("ɲihoŋɡo {}", english[0]));
+            } else {
+                assert_eq!(tagged, untagged, "{text}");
+            }
+        }
     }
 
     #[test]
@@ -2334,6 +2348,14 @@ mod tests {
             tts::local::phonemes_without_espeak(kumo, std::slice::from_ref(&text)),
             tts::local::phonemes_without_espeak(&alloy, std::slice::from_ref(&text))
         );
+        if let Some(tagged) =
+            tts::local::phonemes_with_dictionary(kumo, std::slice::from_ref(&text))
+        {
+            assert_eq!(
+                tagged,
+                tts::local::phonemes_without_espeak(&alloy, std::slice::from_ref(&text))
+            );
+        }
     }
 
     /// English as the local voice reads it must not move unless on purpose:
@@ -2381,19 +2403,35 @@ mod tests {
         std::fs::write(path, bytes).unwrap();
     }
 
-    /// Writes Japanese for a listener, as a session would read it:
-    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored japanese_voice --nocapture`.
+    /// Writes Japanese for a listener, as a session would read it with the
+    /// dictionary: `MOUTHY_KOKORO_MODELS=<models dir>
+    /// MOUTHY_JA_DICTIONARY=<unpacked naist-jdic> cargo test -- --ignored
+    /// japanese_voice --nocapture`. Both are only read, through links.
+    #[cfg(unix)]
     #[test]
-    #[ignore = "needs Kokoro model files and jm_kumo"]
-    fn japanese_voice_reads_kana_aloud() {
-        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+    #[ignore = "needs Kokoro model files, jm_kumo and the Japanese dictionary"]
+    fn japanese_voice_reads_aloud() {
+        let kokoro = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let dictionary = PathBuf::from(std::env::var("MOUTHY_JA_DICTIONARY").unwrap());
+        let models = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(
+            tts::local::kokoro_dir(&kokoro),
+            tts::local::kokoro_dir(models.path()),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(dictionary, tts::ja_dictionary::dir(models.path())).unwrap();
         let files =
-            || tts::local::ModelFiles::new(&models, settings::ModelVariant::Int8, "jm_kumo");
+            || tts::local::ModelFiles::new(models.path(), settings::ModelVariant::Int8, "jm_kumo");
         for (name, text) in [
             ("preview", preview_text(VoiceLanguage::Japanese)),
             (
                 "kana",
                 "がっこうのまえで、ラーメンをたべました。コーヒーもおいしかったです！あしたは、さんぽにいきませんか？",
+            ),
+            ("kanji", "東京に行きます。今日は天気がいいですね。"),
+            (
+                "mixed",
+                "私は日本語を勉強しています。昨日、新しいiPhoneで3人の写真を撮りました。",
             ),
         ] {
             let backend = tts::Backend::Local(files());

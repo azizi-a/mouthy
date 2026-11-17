@@ -28,6 +28,7 @@ export const ModelsSettings: React.FC = () => {
   const voice = getSetting("tts_voice");
   const models = list.files.filter((file) => file.kind === "model");
   const voices = list.files.filter((file) => file.kind === "voice");
+  const dictionary = list.files.find((file) => file.kind === "dictionary");
   const shares = new Map<string, number>();
   for (const { id, share } of list.voice_parts) {
     shares.set(id, (shares.get(id) ?? 0) + share);
@@ -160,6 +161,24 @@ export const ModelsSettings: React.FC = () => {
           />
         ))}
       </SettingsGroup>
+
+      {dictionary && (
+        <SettingsGroup
+          title={t("settings.models.dictionary.title")}
+          description={t("settings.models.dictionary.description")}
+        >
+          <FileRow
+            name={t("settings.models.dictionary.name")}
+            description={`${megabytes(dictionary.size)} · ${t("settings.models.dictionary.source")}`}
+            failure={
+              dictionary.mismatch
+                ? t("settings.models.dictionary.mismatch")
+                : undefined
+            }
+            {...rowProps(dictionary)}
+          />
+        </SettingsGroup>
+      )}
 
       <SettingsGroup title={t("settings.models.files.title")}>
         <SettingContainer

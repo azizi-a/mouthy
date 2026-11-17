@@ -59,11 +59,24 @@ jobs:
         run: |
           bun install --frozen-lockfile
           bun run build
+      # The Japanese dictionary the app downloads (the catalog's URL and
+      # sha256), for the tests that read with it.
+      - name: Download the Japanese dictionary
+        env:
+          URL: https://github.com/jpreprocess/jpreprocess/releases/download/v0.15.0/naist-jdic-jpreprocess.tar.gz
+          SHA256: 8a930bbc57bf4adcf521d53544c7dc9ab8ab3aa997a591b1b1608dc5539017b8
+        run: |
+          archive="$RUNNER_TEMP/naist-jdic-jpreprocess.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" "$URL"
+          echo "$SHA256  $archive" | sha256sum -c -
+          echo "MOUTHY_JA_ARCHIVE=$archive" >> "$GITHUB_ENV"
       - name: Test
         working-directory: src-tauri
-        # The espeak-ng tests fail rather than pass unchecked if it is missing.
+        # The espeak-ng and dictionary tests fail rather than pass unchecked
+        # if either is missing.
         env:
           MOUTHY_REQUIRE_ESPEAK: "1"
+          MOUTHY_REQUIRE_JA_DICTIONARY: "1"
         run: cargo test
       - name: Clippy
         working-directory: src-tauri
