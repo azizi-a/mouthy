@@ -43,7 +43,9 @@ impl Marks {
         terminators: &['.', '!', '?', '…', '。', '！', '？'],
         clause_breaks: &[',', ';', ':', '、', '，', '；', '：'],
         unspaced: &['。', '！', '？', '、', '，', '；', '：'],
-        closers: &['"', '\'', '”', '’', ')', ']', '»', '」', '』', '）', '】'],
+        closers: &[
+            '"', '\'', '”', '’', ')', ']', '»', '」', '』', '）', '】', '》', '〉', '〕',
+        ],
     };
     pub const HINDI: Marks = Marks {
         terminators: &['.', '!', '?', '…', '।', '॥'],
@@ -214,7 +216,7 @@ fn replace_urls(text: &str) -> String {
     while let Some(c) = rest.chars().next() {
         // The first-letter check keeps long inputs fast; every prefix starts with h or w.
         let is_url = matches!(c, 'h' | 'H' | 'w' | 'W')
-            && !prev.is_some_and(char::is_alphanumeric)
+            && !prev.is_some_and(|p| p.is_alphanumeric() && !is_cjk(p))
             && URL_PREFIXES.iter().any(|prefix| {
                 rest.get(..prefix.len())
                     .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
@@ -226,7 +228,7 @@ fn replace_urls(text: &str) -> String {
             continue;
         }
         let end = rest
-            .find(|ch: char| ch.is_whitespace() || "<>\"()[]".contains(ch))
+            .find(|ch: char| ch.is_whitespace() || "<>\"()[]".contains(ch) || is_cjk(ch))
             .unwrap_or(rest.len());
         // Sentence punctuation after a URL belongs to the sentence.
         let url = rest[..end].trim_end_matches(['.', ',', ';', ':', '!', '?', '\'']);
@@ -235,6 +237,22 @@ fn replace_urls(text: &str) -> String {
         rest = &rest[url.len()..];
     }
     out
+}
+
+/// Chinese, Japanese and Korean writing, which puts no space around a URL:
+/// Han, kana, Hangul, CJK punctuation and full-width forms.
+fn is_cjk(c: char) -> bool {
+    matches!(c,
+        '\u{1100}'..='\u{11ff}'
+        | '\u{3000}'..='\u{30ff}'
+        | '\u{3130}'..='\u{318f}'
+        | '\u{31f0}'..='\u{31ff}'
+        | '\u{3400}'..='\u{4dbf}'
+        | '\u{4e00}'..='\u{9fff}'
+        | '\u{ac00}'..='\u{d7af}'
+        | '\u{f900}'..='\u{faff}'
+        | '\u{ff00}'..='\u{ffef}'
+        | '\u{20000}'..='\u{2ffff}')
 }
 
 /// Drops emphasis, code and table symbols; `_` survives inside words like `snake_case`.
@@ -2050,6 +2068,28 @@ mod tests {
     }
 
     #[test]
+    fn a_url_ends_at_chinese_or_japanese_writing() {
+        assert_eq!(
+            normalize("详情请访问 https://example.com，我们会尽快回复。谢谢！"),
+            "详情请访问 link，我们会尽快回复。谢谢！"
+        );
+        assert_eq!(normalize("访问https://www.example.com了解"), "访问link了解");
+        assert_eq!(
+            normalize("詳しくは https://example.com、ご覧ください。"),
+            "詳しくは link、ご覧ください。"
+        );
+        // Accented Latin stays inside a URL, as before.
+        assert_eq!(
+            normalize("See https://fr.wikipedia.org/wiki/Été and café.com/menu."),
+            "See link and café.com/menu."
+        );
+        assert_eq!(
+            normalize("Open https://example.com/café?q=crème now."),
+            "Open link now."
+        );
+    }
+
+    #[test]
     fn normalize_leaves_url_lookalikes_inside_words() {
         assert_eq!(normalize("awww.cute"), "awww.cute");
     }
@@ -3207,6 +3247,13 @@ mod tests {
             "つぎのぶんは、ここからはじまるのでおわりです。",
         ];
         assert_eq!(sentences_in(&japanese.concat(), &Marks::CJK), japanese);
+        let chinese = [
+            "他最喜欢的书一直是《一本很长很长很长的小说。》",
+            "她笑着说〈我觉得这一章写得最好，值得再读一遍！〉",
+            "〔注：这一段是作者很久以后才加上去的说明文字。〕",
+            "下一句从这里开始，一直到这一段的最后才结束。",
+        ];
+        assert_eq!(sentences_in(&chinese.concat(), &Marks::CJK), chinese);
     }
 
     #[test]

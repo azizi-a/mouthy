@@ -1,2 +1,4 @@
 # Compared byte for byte by include_str! tests
 src-tauri/src/tts/fixtures/* -text
+# Vendored as published, so its checksum matches the release
+src-tauri/src/tts/data/* -text

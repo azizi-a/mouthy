@@ -11,6 +11,7 @@ use super::espeak;
 use super::ja;
 use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out, Marks};
 use super::voice::{is_voice_name, VoiceSpec};
+use super::zh;
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
@@ -116,28 +117,13 @@ static LOADED: Mutex<Option<LocalSynth>> = Mutex::new(None);
 /// the settings page can read it while a session holds the model.
 static PRELOAD_ERROR: Mutex<Option<String>> = Mutex::new(None);
 
-/// Whether this build can read text in `language`. A voice in any other
-/// language reads as American English.
-fn native(language: VoiceLanguage) -> bool {
-    matches!(
-        language,
-        VoiceLanguage::AmericanEnglish
-            | VoiceLanguage::BritishEnglish
-            | VoiceLanguage::Japanese
-            | VoiceLanguage::Spanish
-            | VoiceLanguage::French
-            | VoiceLanguage::Italian
-            | VoiceLanguage::BrazilianPortuguese
-            | VoiceLanguage::Hindi
-    )
-}
-
 /// The language `text` is read in by a voice reading `language`: a Japanese
-/// voice reads text with no Japanese in it as an American voice does, so
-/// English in a Japanese voice is unchanged.
+/// or Chinese voice reads text with none of its language in it as an American
+/// voice does, so English in such a voice is unchanged.
 fn language_for(language: VoiceLanguage, text: &str) -> VoiceLanguage {
     match language {
         VoiceLanguage::Japanese if !ja::has_japanese(text) => VoiceLanguage::AmericanEnglish,
+        VoiceLanguage::Mandarin if !zh::has_chinese(text) => VoiceLanguage::AmericanEnglish,
         language => language,
     }
 }
@@ -196,7 +182,7 @@ pub struct ModelFiles {
     voice_id: String,
     /// `None` when the setting is not a voice or blend.
     voices: Option<Vec<VoiceFile>>,
-    /// The language the text is read in; always one this build can read.
+    /// The language the text is read in.
     language: VoiceLanguage,
     /// Whether espeak-ng reads the English words the lexicon lacks.
     english_fallback: bool,
@@ -227,8 +213,7 @@ impl ModelFiles {
                 .collect()
         });
         // A blend reads in its first voice's language, as Kokoro-FastAPI does.
-        // A custom voice's unknown prefix, or a language this build cannot
-        // read, reads as American English.
+        // A custom voice's unknown prefix reads as American English.
         let language = voices
             .as_ref()
             .and_then(|voices| voices.first())
@@ -238,21 +223,15 @@ impl ModelFiles {
             model: model_path(models_dir, variant),
             voice_id: voice.to_string(),
             voices,
-            language: VoiceLanguage::AmericanEnglish,
+            language,
             english_fallback: false,
             espeak: None,
         }
-        .reading_as(language)
     }
 
-    /// Reads the text in `language`, or keeps the language it had when this
-    /// build cannot read that one.
+    /// Reads the text in `language` rather than the voice's.
     pub fn reading_as(self, language: VoiceLanguage) -> Self {
-        if native(language) {
-            Self { language, ..self }
-        } else {
-            self
-        }
+        Self { language, ..self }
     }
 
     pub fn language(&self) -> VoiceLanguage {
@@ -295,6 +274,7 @@ impl ModelFiles {
     pub fn max_chunk_chars(&self, text: &str) -> usize {
         match language_for(self.language, text) {
             VoiceLanguage::Japanese => ja::MAX_CHUNK_CHARS,
+            VoiceLanguage::Mandarin => zh::MAX_CHUNK_CHARS,
             _ => MAX_CHUNK_CHARS,
         }
     }
@@ -582,6 +562,10 @@ enum Phonemizer {
 impl Phonemizer {
     fn new(reading: &Reading) -> Result<Self, String> {
         let Some(voice) = espeak::voice(reading.language) else {
+            if reading.language == VoiceLanguage::Mandarin {
+                // Here, off the main thread, so the first sentence does not wait.
+                zh::load();
+            }
             return Ok(Self::Misaki(Box::new(build_g2p(reading))));
         };
         let program = reading
@@ -929,6 +913,14 @@ fn text_to_phonemes(g2p: &G2P, language: VoiceLanguage, text: &str) -> Result<St
         }
         return Ok(phonemes);
     }
+    if language == VoiceLanguage::Mandarin {
+        let english = |latin: &str| text_to_phonemes(g2p, VoiceLanguage::AmericanEnglish, latin);
+        let (phonemes, skipped) = zh::phonemes(&plain_text(text, language), english)?;
+        if skipped > 0 {
+            debug!("Skipped {skipped} Chinese characters with no reading");
+        }
+        return Ok(phonemes);
+    }
     let (raw, _) = g2p
         .g2p(&reading(g2p, text, language))
         .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
@@ -1075,6 +1067,8 @@ fn plain_text(text: &str, language: VoiceLanguage) -> String {
             '[' => out.push('('),
             ']' => out.push(')'),
             '’' | '‘' | 'ʼ' => out.push('\''),
+            // misaki keeps these in Chinese, and Kokoro has tokens for them.
+            '“' | '”' if language == VoiceLanguage::Mandarin => out.push(c),
             '“' | '”' | '„' => out.push('"'),
             // Minus sign.
             '\u{2212}' => out.push('-'),
@@ -1633,11 +1627,19 @@ mod tests {
         for voice in ["jf_alpha", "jm_kumo", "jf_nezumi+af_heart"] {
             assert_eq!(language_of(voice), VoiceLanguage::Japanese, "{voice}");
         }
+        for voice in [
+            "zf_xiaobei",
+            "zm_yunyang",
+            "Zf_xiaobei",
+            "zf_xiaobei+bf_emma",
+        ] {
+            assert_eq!(language_of(voice), VoiceLanguage::Mandarin, "{voice}");
+        }
     }
 
     #[test]
-    fn an_unknown_or_unread_language_reads_as_american_english() {
-        for voice in ["xx_custom", "zm_yunyang", "Zf_xiaobei"] {
+    fn an_unknown_prefix_reads_as_american_english() {
+        for voice in ["xx_custom", "qm_custom", "xx_custom+zf_xiaobei"] {
             assert_eq!(
                 language_of(voice),
                 VoiceLanguage::AmericanEnglish,
@@ -1735,10 +1737,7 @@ mod tests {
             language_of("af_alloy(9)+bm_lewis"),
             VoiceLanguage::AmericanEnglish
         );
-        assert_eq!(
-            language_of("zf_xiaobei+bf_emma"),
-            VoiceLanguage::AmericanEnglish
-        );
+        assert_eq!(language_of("zf_xiaobei+bf_emma"), VoiceLanguage::Mandarin);
         // Not a voice or blend: loading fails on the voices, not the language.
         assert_eq!(
             language_of("bm_lewis-af_alloy"),
@@ -1747,7 +1746,7 @@ mod tests {
     }
 
     #[test]
-    fn reading_as_takes_only_a_language_this_build_reads() {
+    fn reading_as_reads_in_the_language_given() {
         let lewis = || ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "bm_lewis");
         let read_as = |language| lewis().reading_as(language).language;
         assert_eq!(
@@ -1755,12 +1754,7 @@ mod tests {
             VoiceLanguage::AmericanEnglish
         );
         assert_eq!(read_as(VoiceLanguage::Spanish), VoiceLanguage::Spanish);
-        // A British voice stays British when asked for a language this build
-        // cannot read.
-        assert_eq!(
-            read_as(VoiceLanguage::Mandarin),
-            VoiceLanguage::BritishEnglish
-        );
+        assert_eq!(read_as(VoiceLanguage::Mandarin), VoiceLanguage::Mandarin);
         let dora = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "ef_dora");
         assert_eq!(
             dora.reading_as(VoiceLanguage::BritishEnglish).language,
@@ -1823,9 +1817,100 @@ mod tests {
     }
 
     #[test]
-    fn a_chinese_voice_has_its_text_cut_as_english_until_this_build_reads_chinese() {
+    fn a_chinese_voice_cuts_text_with_no_chinese_as_english() {
         let xiaobei = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "zf_xiaobei");
-        assert_eq!(xiaobei.marks("今天的天气非常好。"), &Marks::DEFAULT);
+        assert_eq!(xiaobei.marks("It works. Try it now."), &Marks::DEFAULT);
+        assert_eq!(
+            xiaobei.max_chunk_chars("It works. Try it now."),
+            MAX_CHUNK_CHARS
+        );
+        assert_eq!(xiaobei.marks("今天的天气非常好。"), &Marks::CJK);
+        assert_eq!(
+            xiaobei.max_chunk_chars("今天的天气非常好。"),
+            zh::MAX_CHUNK_CHARS
+        );
+    }
+
+    /// The listening test's Mandarin paragraph.
+    const MANDARIN_PARAGRAPH: &str = "今天天气很好，我们一起去公园散步吧。路上，我在银行门口遇到了一位老朋友，他说他重新开始学画画儿了。我们聊了一会儿，觉得时间过得真快：上次见面还是2019年！你明天有空吗？";
+
+    #[test]
+    fn a_mandarin_chunk_fits_one_inference() {
+        let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "zf_xiaobei");
+        let g2p = build_g2p(&files.reading());
+        // One sentence of about 300 characters, cut at its commas.
+        let long_sentence = MANDARIN_PARAGRAPH
+            .replace(['。', '！', '？', '：'], "，")
+            .repeat(3);
+        let text = format!("{MANDARIN_PARAGRAPH}{long_sentence}");
+        let chunks =
+            text::split_sentences_with(&text, files.max_chunk_chars(&text), files.marks(&text));
+        assert!(chunks.iter().any(|chunk| chunk.text.chars().count() > 80));
+        for chunk in &chunks {
+            assert!(
+                chunk.text.chars().count() <= zh::MAX_CHUNK_CHARS,
+                "{}",
+                chunk.text
+            );
+            let (ids, dropped) = text_to_ids(&g2p, VoiceLanguage::Mandarin, &chunk.text).unwrap();
+            assert_eq!(dropped, 0, "{}", chunk.text);
+            assert!(
+                ids.len() <= PIECE_TOKENS,
+                "{} ids: {}",
+                ids.len(),
+                chunk.text
+            );
+        }
+        let cut: Vec<_> = chunks.iter().filter(|chunk| !chunk.ends_sentence).collect();
+        assert!(!cut.is_empty());
+        assert!(
+            cut.iter().all(|chunk| chunk.text.ends_with('，')),
+            "{cut:?}"
+        );
+    }
+
+    #[test]
+    fn a_chinese_voice_reads_mandarin_as_misaki_does() {
+        let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "zf_xiaobei");
+        let g2p = build_g2p(&files.reading());
+        let goldens = include_str!("fixtures/mandarin-goldens.txt");
+        for (text, expected) in goldens
+            .lines()
+            .filter(|line| !line.starts_with('#'))
+            .filter_map(|line| line.split_once('\t'))
+        {
+            let read = text_to_phonemes(&g2p, files.language(), text).unwrap();
+            assert_eq!(read, expected, "{text}");
+        }
+    }
+
+    #[test]
+    fn english_inside_mandarin_reads_as_an_american_voice_reads_it() {
+        let g2p = G2P::new(Language::EnglishUS);
+        let american =
+            |text: &str| text_to_phonemes(&g2p, VoiceLanguage::AmericanEnglish, text).unwrap();
+        let mandarin = |text: &str| text_to_phonemes(&g2p, VoiceLanguage::Mandarin, text).unwrap();
+        for english in [
+            "OK",
+            "iPhone",
+            "Hello, world",
+            "naïve café",
+            "Tom & Jerry",
+            "it’s the user’s fault",
+            "well-known",
+            "GitHub",
+        ] {
+            assert_eq!(
+                mandarin(&format!("这是{english}。")),
+                format!("ꭧɤ↘ʂɨ↘ {}.", american(english)),
+                "{english}"
+            );
+            assert_eq!(mandarin(english), american(english), "{english}");
+        }
+        assert_eq!(
+            mandarin("我用iPhone拍照，很方便。"),
+            format!("wo↓jʊ↘ŋ {} pʰai→ꭧau↘, xə↓n fa→ŋpjɛ↘n.", american("iPhone"))
+        );
     }
 
     #[test]
