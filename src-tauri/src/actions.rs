@@ -1422,6 +1422,21 @@ mod tests {
     }
 
     #[test]
+    fn the_server_gets_chinese_and_hindi_cut_as_before() {
+        let server = http_backend(&settings::get_default_settings(), "zf_xiaobei");
+        for text in [
+            "今天的天气非常好，我们一起去公园散步吧。明天可能会下大雨，所以要带伞。",
+            "आज मौसम बहुत अच्छा है। कल शायद बारिश होगी, तो छाता ज़रूर ले जाना॥ क्या आप आना चाहेंगे?",
+        ] {
+            assert_eq!(
+                sentences_for(text, &server),
+                tts::text::split_sentences(text, 300),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
     fn both_engines_speak_the_preview_sentence() {
         let http = http_backend(&settings::get_default_settings(), "af_alloy");
         for backend in [http, local_backend("af_alloy")] {
