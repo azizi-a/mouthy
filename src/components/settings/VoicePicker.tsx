@@ -13,16 +13,6 @@ import { VoiceBlend } from "./VoiceBlend";
 import { languageOf, VoiceRow } from "./VoiceRow";
 
 const ENGLISH = ["britishEnglish", "americanEnglish"];
-/** Languages whose voices read their own language; the rest read English. */
-const READS_OWN_LANGUAGE = [
-  ...ENGLISH,
-  "japanese",
-  "spanish",
-  "french",
-  "italian",
-  "brazilianPortuguese",
-  "hindi",
-];
 const OTHER_GROUP = "other";
 
 type VoiceIds =
@@ -239,12 +229,6 @@ export const VoicePicker: React.FC<VoicePickerProps> = ({
                     ? t("settings.speech.voice.otherGroup")
                     : t(`settings.models.voices.language.${group.key}`)}
                 </h4>
-                {group.key !== OTHER_GROUP &&
-                  !READS_OWN_LANGUAGE.includes(group.key) && (
-                    <p className="text-xs text-mid-gray">
-                      {t("settings.speech.voice.englishOnly")}
-                    </p>
-                  )}
               </div>
               <div className="divide-y divide-mid-gray/20">
                 {group.voices.map((id) => row(id, id))}
