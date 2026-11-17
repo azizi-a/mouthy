@@ -27,6 +27,8 @@ pub struct Marks {
     /// Chinese and Japanese are written. Any other mark needs whitespace after
     /// it, so "3.14", "1,500" and "10:30" stay whole.
     unspaced: &'static [char],
+    /// Quotes and brackets that stay with the sentence they close.
+    closers: &'static [char],
 }
 
 impl Marks {
@@ -34,17 +36,20 @@ impl Marks {
         terminators: TERMINATORS,
         clause_breaks: CLAUSE_BREAKS,
         unspaced: &[],
+        closers: CLOSERS,
     };
     /// Chinese and Japanese.
     pub const CJK: Marks = Marks {
         terminators: &['.', '!', '?', '…', '。', '！', '？'],
         clause_breaks: &[',', ';', ':', '、', '，', '；', '：'],
         unspaced: &['。', '！', '？', '、', '，', '；', '：'],
+        closers: &['"', '\'', '”', '’', ')', ']', '»', '」', '』', '）', '】'],
     };
     pub const HINDI: Marks = Marks {
         terminators: &['.', '!', '?', '…', '।', '॥'],
         clause_breaks: CLAUSE_BREAKS,
         unspaced: &[],
+        closers: CLOSERS,
     };
 
     /// Whether `mark` ends a clause when `after` follows it.
@@ -819,7 +824,7 @@ fn raw_sentences<'a>(text: &'a str, marks: &Marks) -> Vec<&'a str> {
         let mut end = i + c.len_utf8();
         let mut unspaced = marks.unspaced.contains(&c);
         while let Some(&(j, next)) = chars.peek() {
-            if !marks.terminators.contains(&next) && !CLOSERS.contains(&next) {
+            if !marks.terminators.contains(&next) && !marks.closers.contains(&next) {
                 break;
             }
             end = j + next.len_utf8();
@@ -3182,6 +3187,18 @@ mod tests {
         let japanese = [
             "きょうはとてもいいてんきなので、こうえんにいきましょう。",
             "あしたはあめがふるかもしれないので、かさをもっていってね！",
+        ];
+        assert_eq!(sentences_in(&japanese.concat(), &Marks::CJK), japanese);
+    }
+
+    #[test]
+    fn a_closing_quote_or_bracket_stays_with_its_sentence() {
+        let japanese = [
+            "「きょうはもうおそいから、またあしたにしよう。」",
+            "『それでいいとおもうけど、みんなはどうかな！』",
+            "（あとでもういちど、ゆっくりかんがえてみます。）",
+            "【おしらせ：あしたのかいぎはごごからです？】",
+            "つぎのぶんは、ここからはじまるのでおわりです。",
         ];
         assert_eq!(sentences_in(&japanese.concat(), &Marks::CJK), japanese);
     }
