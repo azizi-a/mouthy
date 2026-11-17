@@ -16,11 +16,16 @@
         var root = document.getElementById("root");
         var errors = [];
         var panel = null;
+        var seconds = 5;
 
         function describe(event) {
           var target = event.target;
           if (target && target !== window && (target.src || target.href)) {
-            return "Could not load " + (target.src || target.href);
+            return (
+              "Could not load " +
+              (target.src || target.href) +
+              (target.tagName === "SCRIPT" ? " (or one of its imports)" : "")
+            );
           }
           var where = event.filename
             ? " (" + [event.filename, event.lineno, event.colno].join(":") + ")"
@@ -33,7 +38,7 @@
 
         function render() {
           panel.textContent = [
-            "Mouthy's interface did not start.",
+            "Mouthy's interface has not started after " + seconds + " seconds.",
             "",
             errors.length ? errors.join("\n\n") : "No error was reported.",
             "",
@@ -52,9 +57,15 @@
 
         function onRejection(event) {
           var reason = event.reason;
+          var text;
+          try {
+            text = String(reason);
+          } catch (_) {
+            text = Object.prototype.toString.call(reason);
+          }
           errors.push(
             "Unhandled rejection: " +
-              String(reason) +
+              text +
               (reason && reason.stack ? "\n" + reason.stack : ""),
           );
           if (panel) render();
@@ -73,7 +84,7 @@
           render();
         }
 
-        var timer = setTimeout(show, 5000);
+        var timer = setTimeout(show, seconds * 1000);
         var observer = new MutationObserver(function () {
           if (!root.firstElementChild) return;
           clearTimeout(timer);

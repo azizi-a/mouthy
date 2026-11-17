@@ -3,8 +3,8 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 interface ErrorBoundaryProps {
   children: ReactNode;
   context: string;
-  /** Rendered in place of the children after a render error; nothing if absent. */
-  fallback?: (error: Error, componentStack: string) => ReactNode;
+  /** Rendered in place of the children after a render error. */
+  fallback: (error: Error, componentStack: string) => ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<
 
   render(): ReactNode {
     const { error, componentStack } = this.state;
-    if (error) return this.props.fallback?.(error, componentStack) ?? null;
+    if (error) return this.props.fallback(error, componentStack);
     return this.props.children;
   }
 }

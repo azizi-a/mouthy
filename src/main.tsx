@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { platform } from "@tauri-apps/plugin-os";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import CrashPanel from "./components/CrashPanel";
 import App from "./App";
+import CrashPanel from "./components/CrashPanel";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
   applyTheme,
   getStoredTheme,
