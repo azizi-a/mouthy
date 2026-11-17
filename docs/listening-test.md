@@ -134,3 +134,13 @@ Select only this part's paragraph, with a Chinese voice such as `zf_xiaobei` or 
 今天天气很好，我们一起去公园散步吧。路上，我在银行门口遇到了一位老朋友，他说他重新开始学画画儿了。我们聊了一会儿，觉得时间过得真快：上次见面还是2019年！你明天有空吗？
 
 You should hear five Mandarin sentences, the last one a question, with the four tones distinct: 今天 level, 银 rising, 好 dipping, 在 falling. 银行 is "yínháng" and 重新 "chóngxīn"; 2019年 is read digit by digit, "èr líng yī jiǔ nián"; 了, the 得 of 觉得 and 吗 are light and unstressed.
+
+## Part 8: Words the dictionary lacks
+
+The changelog says the backend now checks the filesystem timestamp, and getUserName was refactored.
+
+Run sudo kubectl apply from the monorepo, then debounce the dropdown's tokenizer in tsconfig.
+
+Update CHANGELOG.md, the webview plugin and the Kubernetes popup.
+
+You should hear every word read, none spelled letter by letter: changelog as "change log", filesystem as "file system", getUserName as "get user name", monorepo as "mono repo", dropdown's as "drop down's", tokenizer as "tokeniser", tsconfig as "T S config", plugin as "plug in" and popup as "pop up", each run together as one word and stressed on its first part; sudo as "sue doe", kubectl as "cube control", debounce as "dee bounce" and Kubernetes as "koo ber NET eez". npm or HTTP in your own text stay spelled.
