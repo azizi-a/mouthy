@@ -55,6 +55,13 @@ pub fn init_shortcuts(app: &AppHandle) {
     }
 }
 
+/// Whether the backend in use registers no shortcuts, so they are bound in
+/// the desktop's settings instead.
+pub fn desktop_binds_shortcuts(app: &AppHandle) -> bool {
+    get_settings(app).keyboard_implementation == KeyboardImplementation::Tauri
+        && tauri_impl::registers_nothing()
+}
+
 /// Register a shortcut using the appropriate implementation
 pub fn register_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<(), String> {
     let settings = get_settings(app);

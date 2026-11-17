@@ -113,14 +113,26 @@ fn wait_for_modifier_release(
     .is_some()
 }
 
-#[cfg(not(target_os = "macos"))]
+/// The PRIMARY selection: the text last highlighted in any app.
+///
+/// Never call it on the main thread: wl-paste waits for the selection's
+/// owner, which may be Mouthy itself.
+#[cfg(target_os = "linux")]
+pub fn capture_selection(_app_handle: &AppHandle) -> Result<Selection, String> {
+    wayland::read_primary().map(|text| Selection {
+        text,
+        copied_while_held_at: None,
+    })
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 pub fn capture_selection(_app_handle: &AppHandle) -> Result<Selection, String> {
     Err("selection capture is macOS-only".into())
 }
 
 /// What the clipboard holds, as far as reading it aloud goes.
 #[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "linux")), allow(dead_code))]
 pub enum ClipboardText {
     Text(String),
     /// No plain text.
@@ -135,9 +147,278 @@ pub fn read_text() -> Result<ClipboardText, String> {
     Ok(pasteboard::read_text())
 }
 
-#[cfg(not(target_os = "macos"))]
+/// Never call it on the main thread: wl-paste waits for the clipboard's
+/// owner, which may be Mouthy itself.
+#[cfg(target_os = "linux")]
+pub fn read_text() -> Result<ClipboardText, String> {
+    wayland::read_clipboard()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 pub fn read_text() -> Result<ClipboardText, String> {
     Err("clipboard reading is macOS-only".into())
+}
+
+/// Where wl-paste is, if wl-clipboard is installed.
+#[cfg(target_os = "linux")]
+pub fn find_wl_paste() -> Option<std::path::PathBuf> {
+    wayland::find()
+}
+
+/// The selection and clipboard on Wayland, read by wl-clipboard's `wl-paste`,
+/// a separately installed program.
+#[cfg(any(target_os = "linux", test))]
+mod wayland {
+    use super::ClipboardText;
+    use crate::program::{self, Output};
+    use log::info;
+    use std::path::Path;
+    use std::time::Duration;
+
+    /// wl-paste waits for the app that owns the text; one that hangs must not
+    /// hold up the press for long.
+    const TIMEOUT: Duration = Duration::from_millis(500);
+    /// Enough for every character read aloud: at most four bytes each.
+    const TEXT_BYTES: usize = crate::actions::TEXT_CHAR_CAP * 4;
+    const TYPES_BYTES: usize = 64 * 1024;
+    /// What KDE's password managers add to a secret they copy. Many others,
+    /// and apps copying through XWayland, add nothing.
+    const PASSWORD_HINT: &str = "x-kde-passwordManagerHint";
+    /// How wl-paste says there is nothing to read, in its old and new
+    /// wording. Anything else it prints is an error.
+    const NOTHING: [&str; 4] = [
+        "Nothing is copied",
+        "No selection",
+        "No suitable type",
+        "Clipboard content is not available as",
+    ];
+
+    #[cfg(target_os = "linux")]
+    pub fn find() -> Option<std::path::PathBuf> {
+        program::find(
+            &[
+                "/usr/bin/wl-paste",
+                "/home/linuxbrew/.linuxbrew/bin/wl-paste",
+            ],
+            "wl-paste",
+            std::env::var_os("PATH"),
+        )
+    }
+
+    #[cfg(target_os = "linux")]
+    fn wl_paste(input: &str) -> Result<std::path::PathBuf, String> {
+        if !crate::utils::is_wayland() {
+            return Err(format!("Reading the {input} needs a Wayland session"));
+        }
+        find().ok_or_else(|| {
+            "Install wl-clipboard (package manager, or brew install wl-clipboard)".to_string()
+        })
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn read_primary() -> Result<Option<String>, String> {
+        read(&wl_paste("selection")?, true)
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn read_clipboard() -> Result<ClipboardText, String> {
+        read_clipboard_with(&wl_paste("clipboard")?)
+    }
+
+    /// The selection's (PRIMARY's) or the clipboard's text, `None` if empty.
+    fn read(wl_paste: &Path, primary: bool) -> Result<Option<String>, String> {
+        let args: &[&str] = if primary {
+            &["--primary", "--no-newline", "--type", "text"]
+        } else {
+            &["--no-newline", "--type", "text"]
+        };
+        let text = pasted(program::run(wl_paste, args, TIMEOUT, TEXT_BYTES))?;
+        Ok(text.filter(|text| !text.is_empty()))
+    }
+
+    fn read_clipboard_with(wl_paste: &Path) -> Result<ClipboardText, String> {
+        let types = pasted(program::run(
+            wl_paste,
+            &["--list-types"],
+            TIMEOUT,
+            TYPES_BYTES,
+        ))?;
+        let Some(types) = types else {
+            return Ok(ClipboardText::Empty);
+        };
+        if names_secret(&types) {
+            info!("The clipboard holds a password manager's secret; not reading it");
+            return Ok(ClipboardText::Secret);
+        }
+        Ok(match read(wl_paste, false)? {
+            Some(text) => ClipboardText::Text(text),
+            None => ClipboardText::Empty,
+        })
+    }
+
+    fn names_secret(types: &str) -> bool {
+        types.lines().any(|name| name.trim() == PASSWORD_HINT)
+    }
+
+    /// wl-paste's output as text (invalid UTF-8 replaced, as from an X11 app's
+    /// Latin-1), `None` when it said there was nothing to read, or why it failed.
+    fn pasted(run: Result<Output, String>) -> Result<Option<String>, String> {
+        let output = run.map_err(|e| format!("wl-paste: {e}"))?;
+        // No status: stopped once it had printed all that is read.
+        if output.status.is_none_or(|status| status.success()) {
+            return Ok(Some(String::from_utf8_lossy(&output.stdout).into_owned()));
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if NOTHING.iter().any(|nothing| stderr.contains(nothing)) {
+            return Ok(None);
+        }
+        let reason = stderr
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty())
+            .map(str::to_string)
+            .or_else(|| output.status.map(|status| status.to_string()))
+            .unwrap_or_default();
+        Err(format!("wl-paste failed: {reason}"))
+    }
+
+    #[cfg(all(test, unix))]
+    mod tests {
+        use super::*;
+        use std::path::PathBuf;
+        use std::process::Command;
+
+        /// A stand-in wl-paste running `body` as a shell script. A child
+        /// process writes it: had this one, a test forking meanwhile could
+        /// hold the file open for writing, failing its exec with "Text file busy".
+        fn fake(dir: &tempfile::TempDir, body: &str) -> PathBuf {
+            let path = dir.path().join("wl-paste");
+            let written = Command::new("/bin/sh")
+                .args(["-c", r#"printf '%s\n' "$1" > "$2" && chmod 755 "$2""#, "sh"])
+                .arg(format!("#!/bin/sh\n{body}"))
+                .arg(&path)
+                .status()
+                .unwrap();
+            assert!(written.success());
+            path
+        }
+
+        fn primary(body: &str) -> Result<Option<String>, String> {
+            let dir = tempfile::tempdir().unwrap();
+            read(&fake(&dir, body), true)
+        }
+
+        fn clipboard(body: &str) -> Result<ClipboardText, String> {
+            let dir = tempfile::tempdir().unwrap();
+            read_clipboard_with(&fake(&dir, body))
+        }
+
+        #[test]
+        fn the_selection_is_primary_as_text_without_a_newline() {
+            let read = primary(
+                r#"[ "$*" = "--primary --no-newline --type text" ] || exit 9
+printf 'Read this.\nAnd this.'"#,
+            );
+            assert_eq!(read, Ok(Some("Read this.\nAnd this.".into())));
+        }
+
+        #[test]
+        fn wl_paste_saying_there_is_nothing_reads_as_empty() {
+            for message in [
+                "Nothing is copied",
+                "No selection",
+                "No suitable type of content copied",
+                r#"Clipboard content is not available as requested type "text". Use "wl-paste --list-types" to view available types."#,
+            ] {
+                let read = primary(&format!("echo '{message}' >&2; exit 1"));
+                assert_eq!(read, Ok(None), "{message}");
+            }
+            assert_eq!(primary("exit 0"), Ok(None), "an empty selection");
+        }
+
+        #[test]
+        fn any_other_failure_is_an_error_naming_it() {
+            assert_eq!(
+                primary(
+                    "echo 'The compositor does not seem to support primary selection' >&2; exit 1"
+                ),
+                Err(
+                    "wl-paste failed: The compositor does not seem to support primary selection"
+                        .into()
+                )
+            );
+            assert_eq!(
+                primary("exit 3"),
+                Err("wl-paste failed: exit status: 3".into())
+            );
+        }
+
+        #[test]
+        fn a_hung_owner_is_given_up_on() {
+            assert_eq!(
+                primary("exec sleep 10"),
+                Err("wl-paste: no answer within 500 ms".into())
+            );
+        }
+
+        #[test]
+        fn invalid_utf8_is_read_with_replacements() {
+            assert_eq!(primary(r"printf 'caf\351'"), Ok(Some("caf\u{fffd}".into())));
+        }
+
+        #[test]
+        fn a_long_selection_is_read_up_to_the_cap() {
+            let read = primary("head -c 204800 /dev/zero | tr '\\0' a")
+                .unwrap()
+                .unwrap();
+            assert_eq!(read.len(), TEXT_BYTES);
+        }
+
+        const PLAIN_TYPES: &str = r#"printf 'text/plain;charset=utf-8\nUTF8_STRING\nCOMPOUND_TEXT\nTEXT\ntext/plain\nSTRING\nSAVE_TARGETS\n'"#;
+
+        #[test]
+        fn the_clipboard_is_read_as_text_after_its_types() {
+            let read = clipboard(&format!(
+                r#"case "$*" in
+--list-types) {PLAIN_TYPES} ;;
+"--no-newline --type text") printf 'Copied text' ;;
+*) exit 9 ;;
+esac"#
+            ));
+            assert_eq!(read, Ok(ClipboardText::Text("Copied text".into())));
+        }
+
+        #[test]
+        fn a_secret_from_a_password_manager_is_not_read() {
+            let read = clipboard(
+                r#"case "$*" in
+--list-types) printf 'text/plain\nx-kde-passwordManagerHint\n' ;;
+*) printf 'hunter2' ;;
+esac"#,
+            );
+            assert_eq!(read, Ok(ClipboardText::Secret));
+        }
+
+        #[test]
+        fn an_empty_clipboard_is_empty() {
+            assert_eq!(
+                clipboard("echo 'Nothing is copied' >&2; exit 1"),
+                Ok(ClipboardText::Empty)
+            );
+            let image_only = r#"case "$*" in
+--list-types) printf 'image/png\n' ;;
+*) echo 'Clipboard content is not available as requested type "text"' >&2; exit 1 ;;
+esac"#;
+            assert_eq!(clipboard(image_only), Ok(ClipboardText::Empty));
+        }
+
+        #[test]
+        fn only_the_kde_hint_marks_a_secret() {
+            assert!(names_secret("text/plain\nx-kde-passwordManagerHint\n"));
+            assert!(!names_secret("text/plain\nUTF8_STRING\n"));
+            assert!(!names_secret("x-kde-passwordManagerHint-other\n"));
+        }
+    }
 }
 
 /// Pasteboard types that password managers add to a secret they copy
