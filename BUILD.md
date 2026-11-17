@@ -58,7 +58,7 @@ gh run watch "$(gh run list --workflow linux.yml --event workflow_dispatch --lim
 gh run download <run-id> -n mouthy-linux
 ```
 
-A pushed `v*` tag runs the bundle job too, which waits up to 30 minutes for the tag's draft release and attaches the bundles and `SHA256SUMS-linux` to it.
+A pushed `v*` tag runs the bundle job too, and then an `attach` job that adds the bundles to the tag's draft release (see Release). A manual run never touches a release.
 
 ## Release
 
@@ -87,6 +87,15 @@ gh release create v0.4.0 --draft --title "Mouthy 0.4.0" --notes-file release-not
   src-tauri/target/release/bundle/dmg/Mouthy_0.4.0_aarch64.dmg \
   src-tauri/target/release/bundle/dmg/SHA256SUMS
 ```
+
+The Linux bundles come from CI, in this order:
+
+1. Push the tag (above); the Linux workflow starts building.
+2. Create the draft (above) within 30 minutes. Never create a second draft for the same tag: the job attaches to whichever release `gh release view` finds.
+3. Wait for the run's `attach` job to add the deb, rpm, AppImage and `SHA256SUMS-linux` to the draft (`gh run watch`).
+4. Check the draft lists all four, then publish.
+
+`attach` only uploads while the release is a draft; on a published release it fails without uploading. To attach again (a failed or late run), re-run that run's jobs while the release is still a draft.
 
 After publishing, check that GitHub calls it the latest release; the cask's livecheck relies on it:
 
