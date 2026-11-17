@@ -1,4 +1,5 @@
-//! In-process Kokoro-82M: misaki-rs phonemes, ONNX Runtime inference.
+//! In-process Kokoro-82M: misaki-rs or espeak-ng phonemes, ONNX Runtime
+//! inference.
 //!
 //! Files live under `<models>/kokoro-v1.0/`: `<variant>.onnx` (onnx-community
 //! export) and `voices/<voice>.bin`. The loaded model stays in memory between
@@ -117,8 +118,32 @@ static PRELOAD_ERROR: Mutex<Option<String>> = Mutex::new(None);
 fn native(language: VoiceLanguage) -> bool {
     matches!(
         language,
-        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish
+        VoiceLanguage::AmericanEnglish
+            | VoiceLanguage::BritishEnglish
+            | VoiceLanguage::Spanish
+            | VoiceLanguage::French
+            | VoiceLanguage::Italian
+            | VoiceLanguage::BrazilianPortuguese
+            | VoiceLanguage::Hindi
     )
+}
+
+#[cfg(target_os = "macos")]
+const INSTALL_ESPEAK: &str = "Install it with: brew install espeak-ng";
+#[cfg(not(target_os = "macos"))]
+const INSTALL_ESPEAK: &str = "Install it with your package manager.";
+
+/// The notice for a language espeak-ng reads when it is not installed.
+fn espeak_missing(language: VoiceLanguage) -> String {
+    let name = match language {
+        VoiceLanguage::Spanish => "Spanish",
+        VoiceLanguage::French => "French",
+        VoiceLanguage::Italian => "Italian",
+        VoiceLanguage::BrazilianPortuguese => "Portuguese",
+        VoiceLanguage::Hindi => "Hindi",
+        _ => "These",
+    };
+    format!("{name} voices need espeak-ng. {INSTALL_ESPEAK}")
 }
 
 /// Which misaki lexicon English text is read with.
@@ -235,10 +260,16 @@ impl ModelFiles {
         Self { espeak, ..self }
     }
 
+    /// Whether espeak-ng reads this language's text, whatever the English
+    /// fallback says.
+    pub fn needs_espeak(&self) -> bool {
+        espeak::voice(self.language).is_some()
+    }
+
     /// What reading this language needs that is not installed, as a notice.
     /// English needs nothing beyond the model files.
     pub fn unmet_requirement(&self) -> Option<String> {
-        None
+        (self.needs_espeak() && self.espeak.is_none()).then(|| espeak_missing(self.language))
     }
 
     /// Where this language's text is cut into sentences and clauses.
@@ -496,8 +527,8 @@ impl FileStamp {
     }
 }
 
-/// How the G2P reads text: in which language, and whether espeak-ng reads the
-/// English words the lexicon lacks.
+/// How text is read: in which language, with which espeak-ng, and whether it
+/// reads the English words the lexicon lacks.
 #[derive(Debug, PartialEq, Eq)]
 struct Reading {
     language: VoiceLanguage,
@@ -513,11 +544,49 @@ impl Reading {
     }
 }
 
+/// How text becomes Kokoro's symbols in the language being read.
+enum Phonemizer {
+    /// English, from misaki's lexicons.
+    Misaki(Box<G2P>),
+    /// A whole sentence at a time from espeak-ng.
+    Espeak(espeak::Sentences),
+}
+
+impl Phonemizer {
+    fn new(reading: &Reading) -> Result<Self, String> {
+        let Some(voice) = espeak::voice(reading.language) else {
+            return Ok(Self::Misaki(Box::new(build_g2p(reading))));
+        };
+        let program = reading
+            .espeak
+            .clone()
+            .ok_or_else(|| espeak_missing(reading.language))?;
+        info!(
+            "Reading {:?} with espeak-ng at {}",
+            reading.language,
+            program.display()
+        );
+        Ok(Self::Espeak(espeak::Sentences::new(program, voice)))
+    }
+
+    /// Kokoro ids for `text` in `language`, and how many symbols had no id.
+    fn ids(&self, language: VoiceLanguage, text: &str) -> Result<(Vec<i64>, usize), String> {
+        match self {
+            Self::Misaki(g2p) => text_to_ids(g2p, language, text),
+            Self::Espeak(sentences) => {
+                let (phonemes, unread) = sentences.read(&plain_text(text, language))?;
+                let (ids, dropped) = token_ids(&phonemes);
+                Ok((ids, unread + dropped))
+            }
+        }
+    }
+}
+
 struct LocalSynth {
     session: Session,
     model: FileStamp,
     voice: Voice,
-    g2p: G2P,
+    phonemizer: Phonemizer,
     reading: Reading,
 }
 
@@ -529,12 +598,12 @@ impl LocalSynth {
     ) -> Result<Self, String> {
         let session = load_session(&model.path)?;
         let voice = Voice::load(voice)?;
-        let g2p = build_g2p(&reading);
+        let phonemizer = Phonemizer::new(&reading)?;
         Ok(Self {
             session,
             model,
             voice,
-            g2p,
+            phonemizer,
             reading,
         })
     }
@@ -551,7 +620,7 @@ impl LocalSynth {
         }
         self.voice.refresh(voice)?;
         if self.reading != reading {
-            self.g2p = build_g2p(&reading);
+            self.phonemizer = Phonemizer::new(&reading)?;
             self.reading = reading;
         }
         Ok(())
@@ -566,7 +635,7 @@ impl LocalSynth {
         ends_sentence: bool,
         run_options: &RunOptions,
     ) -> Result<Vec<i16>, String> {
-        let (ids, dropped) = text_to_ids(&self.g2p, self.reading.language, text)?;
+        let (ids, dropped) = self.phonemizer.ids(self.reading.language, text)?;
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
@@ -1510,23 +1579,92 @@ mod tests {
 
     #[test]
     fn an_unknown_or_unread_language_reads_as_american_english() {
-        for voice in [
-            "xx_custom",
-            "ef_dora",
-            "ff_siwis",
-            "hf_alpha",
-            "im_nicola",
-            "jf_alpha",
-            "pf_dora",
-            "zm_yunyang",
-            "Zf_xiaobei",
-        ] {
+        for voice in ["xx_custom", "jf_alpha", "zm_yunyang", "Zf_xiaobei"] {
             assert_eq!(
                 language_of(voice),
                 VoiceLanguage::AmericanEnglish,
                 "{voice}"
             );
         }
+    }
+
+    #[test]
+    fn the_espeak_ng_languages_read_their_own_language() {
+        for (voice, language) in [
+            ("ef_dora", VoiceLanguage::Spanish),
+            ("em_alex", VoiceLanguage::Spanish),
+            ("ff_siwis", VoiceLanguage::French),
+            ("if_sara", VoiceLanguage::Italian),
+            ("im_nicola", VoiceLanguage::Italian),
+            ("pf_dora", VoiceLanguage::BrazilianPortuguese),
+            ("hf_alpha", VoiceLanguage::Hindi),
+            ("HM_Psi", VoiceLanguage::Hindi),
+            ("ff_siwis+af_alloy", VoiceLanguage::French),
+        ] {
+            assert_eq!(language_of(voice), language, "{voice}");
+            let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice);
+            assert!(files.needs_espeak(), "{voice}");
+        }
+        for voice in [
+            "af_alloy",
+            "bm_lewis",
+            "jf_alpha",
+            "zf_xiaobei",
+            "xx_custom",
+        ] {
+            let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice);
+            assert!(!files.needs_espeak(), "{voice}");
+        }
+    }
+
+    #[test]
+    fn a_language_espeak_ng_reads_needs_it_installed() {
+        let files = |voice| ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice);
+        let program = || Some(PathBuf::from("/opt/homebrew/bin/espeak-ng"));
+        assert_eq!(
+            files("ef_dora").unmet_requirement().as_deref(),
+            Some(format!("Spanish voices need espeak-ng. {INSTALL_ESPEAK}").as_str())
+        );
+        assert!(files("pf_dora")
+            .unmet_requirement()
+            .unwrap()
+            .starts_with("Portuguese voices need espeak-ng."));
+        for voice in ["ef_dora", "ff_siwis", "if_sara", "pf_dora", "hf_alpha"] {
+            assert!(files(voice).unmet_requirement().is_some(), "{voice}");
+            let found = files(voice).with_espeak(program());
+            assert_eq!(found.unmet_requirement(), None, "{voice}");
+            // The English fallback setting has no say.
+            let found = found.with_english_fallback(false);
+            assert_eq!(found.unmet_requirement(), None, "{voice}");
+        }
+        for voice in ["af_alloy", "bm_lewis", "jf_alpha", "zf_xiaobei"] {
+            assert_eq!(files(voice).unmet_requirement(), None, "{voice}");
+        }
+    }
+
+    #[test]
+    fn a_language_espeak_ng_reads_cannot_load_without_it() {
+        let reading = |espeak| Reading {
+            language: VoiceLanguage::French,
+            english_fallback: false,
+            espeak,
+        };
+        let error = Phonemizer::new(&reading(None)).err().unwrap();
+        assert!(error.starts_with("French voices need espeak-ng"), "{error}");
+        let program = PathBuf::from("/opt/homebrew/bin/espeak-ng");
+        assert!(matches!(
+            Phonemizer::new(&reading(Some(program))),
+            Ok(Phonemizer::Espeak(_))
+        ));
+        let english = Reading {
+            language: VoiceLanguage::BritishEnglish,
+            english_fallback: false,
+            espeak: None,
+        };
+        assert!(matches!(
+            Phonemizer::new(&english),
+            Ok(Phonemizer::Misaki(_))
+        ));
     }
 
     #[test]
@@ -1558,10 +1696,11 @@ mod tests {
             read_as(VoiceLanguage::AmericanEnglish),
             VoiceLanguage::AmericanEnglish
         );
+        assert_eq!(read_as(VoiceLanguage::Spanish), VoiceLanguage::Spanish);
         // A British voice stays British when asked for a language this build
         // cannot read.
         assert_eq!(
-            read_as(VoiceLanguage::Spanish),
+            read_as(VoiceLanguage::Japanese),
             VoiceLanguage::BritishEnglish
         );
         let dora = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "ef_dora");
@@ -2239,5 +2378,133 @@ mod tests {
         assert!(blend != lewis && blend != george);
         // A weight change alone reloads the voice.
         assert!(speak("bm_lewis(30)+bm_george(70)") != blend);
+    }
+
+    /// One paragraph for each language espeak-ng reads, as in the listening
+    /// test, with the voice that reads it.
+    const PARAGRAPHS: &[(&str, &str)] = &[
+        (
+            "ef_dora",
+            "El tren salió de Madrid a las 10:30 y llegó a Sevilla con veinte minutos de \
+             retraso. ¿Quién lo habría dicho? En el vagón, el 3,5 % de los viajeros dormía; \
+             los demás leían, hablaban o miraban por la ventana. ¡Qué viaje tan largo!",
+        ),
+        (
+            "ff_siwis",
+            "Les enfants sont dans le jardin et jouent sous les grands arbres. Le train de \
+             8 heures est parti à l'heure, mais il pleuvait déjà à Lyon. « Tu viens ce soir ? » \
+             m'a demandé Hélène ; je lui ai répondu que oui.",
+        ),
+        (
+            "if_sara",
+            "Il treno per Roma parte alle 10:30 dal binario 3. Ciao, come stai? Bene, grazie: \
+             oggi fa caldo, ma domani pioverà. Gli gnocchi della nonna sono i migliori.",
+        ),
+        (
+            "pf_dora",
+            "Não sei se vou conseguir chegar às oito. O ônibus estava cheio, e o trânsito, \
+             como sempre, parado. Você quer café ou chá? Obrigado pela atenção!",
+        ),
+        (
+            "hf_alpha",
+            "आज मौसम बहुत अच्छा है। कल शायद बारिश होगी, इसलिए छाता ज़रूर ले जाना। \
+             मैं iPhone use करता हूँ। मेरे पास 25 रुपये हैं।",
+        ),
+    ];
+
+    /// The chunks `files` reads `paragraph` as, cut as the hotkey would.
+    fn chunks(files: &ModelFiles, paragraph: &str) -> Vec<text::Chunk> {
+        text::split_sentences_with(&text::normalize(paragraph), MAX_CHUNK_CHARS, files.marks())
+    }
+
+    #[test]
+    fn each_espeak_ng_language_reads_its_paragraph_without_dropping_a_symbol() {
+        let Some(program) = espeak::find() else {
+            eprintln!("espeak-ng is not installed, so this test checks nothing");
+            return;
+        };
+        for &(voice, paragraph) in PARAGRAPHS {
+            let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice)
+                .with_espeak(Some(program.clone()));
+            let phonemizer = Phonemizer::new(&files.reading()).unwrap();
+            let (mut ids, mut chars) = (0, 0);
+            for chunk in chunks(&files, paragraph) {
+                let (read, dropped) = phonemizer.ids(files.language(), &chunk.text).unwrap();
+                assert_eq!(dropped, 0, "{voice}: {}", chunk.text);
+                assert!(has_phonemes(&read), "{voice}: {}", chunk.text);
+                // Language flags and brackets never reach Kokoro.
+                assert!(!read.contains(&12) && !read.contains(&13), "{voice}");
+                ids += read.len();
+                chars += chunk.text.chars().count();
+            }
+            println!(
+                "{voice}: {:.2} ids per character",
+                ids as f32 / chars as f32
+            );
+        }
+    }
+
+    /// Writes each paragraph as read by its voice, for the voices downloaded,
+    /// to `mouthy-<voice>.wav` in `MOUTHY_WAV_DIR` or the temporary folder:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored paragraphs --nocapture`.
+    #[test]
+    #[ignore = "needs Kokoro model files and espeak-ng"]
+    fn local_voices_read_their_language_paragraphs() {
+        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let out = std::env::var_os("MOUTHY_WAV_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir);
+        let program = espeak::find().expect("espeak-ng is installed");
+        let stop = Arc::new(AtomicBool::new(false));
+        for &(voice, paragraph) in PARAGRAPHS {
+            let files = ModelFiles::new(&models, ModelVariant::Int8, voice)
+                .with_espeak(Some(program.clone()));
+            if let Some(missing) = files.missing() {
+                println!("{voice}: skipped, missing {missing}");
+                continue;
+            }
+            let started = Instant::now();
+            let mut loaded = open(&files, &stop).unwrap();
+            let mut samples = Vec::new();
+            for chunk in chunks(&files, paragraph) {
+                samples.extend(
+                    loaded
+                        .synthesize(&chunk.text, 1.0, chunk.ends_sentence)
+                        .unwrap(),
+                );
+            }
+            drop(loaded);
+            let seconds = samples.len() as f32 / SAMPLE_RATE as f32;
+            assert!(seconds > 3.0, "{voice}: {seconds} s");
+            let path = out.join(format!("mouthy-{voice}.wav"));
+            write_wav(&path, &samples);
+            println!(
+                "{voice}: {seconds:.1} s of audio in {:?}, {}",
+                started.elapsed(),
+                path.display()
+            );
+        }
+    }
+
+    /// 16-bit mono PCM at Kokoro's rate.
+    fn write_wav(path: &Path, samples: &[i16]) {
+        let data = u32::try_from(samples.len() * 2).unwrap();
+        let mut bytes = Vec::with_capacity(44 + samples.len() * 2);
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&(36 + data).to_le_bytes());
+        bytes.extend_from_slice(b"WAVEfmt ");
+        bytes.extend_from_slice(&16u32.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&SAMPLE_RATE.to_le_bytes());
+        bytes.extend_from_slice(&(SAMPLE_RATE * 2).to_le_bytes());
+        bytes.extend_from_slice(&2u16.to_le_bytes());
+        bytes.extend_from_slice(&16u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&data.to_le_bytes());
+        for sample in samples {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        fs::write(path, bytes).unwrap();
     }
 }

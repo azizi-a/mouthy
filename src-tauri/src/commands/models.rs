@@ -9,7 +9,7 @@ use super::models_dir;
 use crate::settings::{self, ModelVariant};
 use crate::tts::catalog::{self, CatalogFile, ModelFileKind, VoiceLanguage};
 use crate::tts::download;
-use crate::tts::local::{self, ModelFiles};
+use crate::tts::local;
 use crate::tts::voice::VoiceSpec;
 use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
 use log::{info, warn};
@@ -124,7 +124,7 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
         })
         .collect();
     let settings = settings::get_settings(&app);
-    let selected = ModelFiles::new(&models_dir, settings.tts_model_variant, &settings.tts_voice);
+    let selected = crate::actions::local_model_files(&app, &settings, &settings.tts_voice)?;
     let voice_parts = VoiceSpec::parse(&settings.tts_voice)
         .map(|spec| {
             spec.shares()
@@ -145,7 +145,8 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
             .then_some(settings.tts_model_variant),
         missing_voices: selected.missing_voices(),
         voice_parts,
-        load_error: local::preload_error(),
+        // Checked now, so installing espeak-ng clears it without a reload.
+        load_error: selected.unmet_requirement().or_else(local::preload_error),
     })
 }
 
