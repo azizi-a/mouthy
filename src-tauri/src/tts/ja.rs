@@ -561,9 +561,11 @@ fn counted(number: &str, counter: char, after_month: bool) -> Option<String> {
         ('日', 5) => "いつか",
         ('日', 6) => "むいか",
         ('日', 7) => "なのか",
-        ('日', 8) => "ようか",
+        // Long with ー, as the dictionary says them: the kana table reads ようか
+        // with a separate う.
+        ('日', 8) => "よーか",
         ('日', 9) => "ここのか",
-        ('日', 10) => "とおか",
+        ('日', 10) => "とーか",
         ('日', 14) => "じゅうよっか",
         ('日', 20) => "はつか",
         ('日', 24) => "にじゅうよっか",
@@ -1453,9 +1455,10 @@ mod tests {
         assert_eq!(reads_tagged("二人"), "ɸɯtaɾʲi");
         assert_eq!(reads_tagged("四人"), "joɲiɴ");
         assert_eq!(reads_tagged("十四人"), "ʥɨːjoɲiɴ");
-        // みっか, とおか, はつか, じゅうよっか, にじゅうくにち
+        // みっか, ようか, とおか, はつか, じゅうよっか, にじゅうくにち
         assert_eq!(reads_tagged("三日"), "mʲiʔka");
-        assert_eq!(reads_tagged("十日"), "tooka");
+        assert_eq!(reads_tagged("八日"), "joːka");
+        assert_eq!(reads_tagged("十日"), "toːka");
         assert_eq!(reads_tagged("二十日"), "haʦɨka");
         assert_eq!(reads_tagged("十四日"), "ʥɨːjoʔka");
         assert_eq!(reads_tagged("二十九日"), "ɲiʥɨːkɯɲiʨi");
