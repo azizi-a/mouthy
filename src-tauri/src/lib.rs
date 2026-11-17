@@ -268,6 +268,14 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     utils::create_overlay(app_handle);
 }
 
+/// Makes `dir` the working directory, returning the one to go back to.
+#[cfg(target_os = "linux")]
+fn enter_dir(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    let back = std::env::current_dir().ok()?;
+    std::env::set_current_dir(dir).ok()?;
+    Some(back)
+}
+
 fn log_plugin(console_filter: env_filter::Filter) -> tauri::plugin::TauriPlugin<tauri::Wry> {
     LogBuilder::new()
         .level(log::LevelFilter::Trace) // Set to most verbose level globally
@@ -388,6 +396,17 @@ pub fn run(cli_args: CliArgs) {
     {
         builder = builder.plugin(tauri_nspanel::init());
     }
+
+    // An AppImage starts Mouthy in the image's `usr` folder, which WebKit finds
+    // its helper programs from. The single-instance plugin hands the working
+    // directory to a running Mouthy, so the caller's is set while plugins
+    // start, before any window opens, and the image's put back after.
+    let launch_dir = utils::launch_dir(
+        std::env::var_os("APPIMAGE").as_deref(),
+        std::env::var_os("OWD").as_deref(),
+    );
+    #[cfg(target_os = "linux")]
+    let image_dir = launch_dir.as_deref().and_then(enter_dir);
 
     // Single-instance forwards CLI args to an already-running Mouthy and exits.
     // The callback runs on an async runtime worker: hand off, never block.
@@ -535,14 +554,16 @@ pub fn run(cli_args: CliArgs) {
 
             // The other speak flags only reach a running instance, but a script
             // handing over text expects it spoken even when it launched Mouthy.
-            let cwd = std::env::current_dir().unwrap_or_default();
+            let cwd = launch_dir
+                .clone()
+                .or_else(|| std::env::current_dir().ok())
+                .unwrap_or_default();
             if let Some(request) = cli_args.speak_file_in(&cwd) {
-                actions::speak_file(
+                actions::speak_launch_file(
                     &app_handle,
                     &request.path,
                     request.voice,
                     request.language,
-                    "CLI",
                 );
             }
 
@@ -552,6 +573,12 @@ pub fn run(cli_args: CliArgs) {
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
                 let _res = window.hide();
+
+                // The tray is the only other way to quit.
+                #[cfg(not(target_os = "macos"))]
+                if window.app_handle().try_state::<TrayIcon>().is_none() {
+                    window.app_handle().exit(0);
+                }
 
                 #[cfg(target_os = "macos")]
                 {
@@ -580,6 +607,13 @@ pub fn run(cli_args: CliArgs) {
         .invoke_handler(invoke_handler)
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
+
+    #[cfg(target_os = "linux")]
+    if let Some(image_dir) = image_dir {
+        if let Err(e) = std::env::set_current_dir(&image_dir) {
+            log::error!("Cannot return to {}: {e}", image_dir.display());
+        }
+    }
 
     // Must sit between build() and run(): see the doc comment.
     #[cfg(target_os = "macos")]

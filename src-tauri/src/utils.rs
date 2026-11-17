@@ -1,4 +1,5 @@
 use std::ffi::OsStr;
+use std::path::PathBuf;
 
 // Re-export all utility modules for easy access
 pub use crate::overlay::*;
@@ -11,6 +12,13 @@ pub fn is_wayland() -> bool {
             std::env::var_os("WAYLAND_DISPLAY").as_deref(),
             std::env::var_os("XDG_SESSION_TYPE").as_deref(),
         )
+}
+
+/// The directory Mouthy was started from when an AppImage's launcher moved
+/// it into the image: the AppImage runtime leaves the caller's in `OWD`.
+pub fn launch_dir(appimage: Option<&OsStr>, owd: Option<&OsStr>) -> Option<PathBuf> {
+    appimage.filter(|path| !path.is_empty())?;
+    owd.map(PathBuf::from).filter(|dir| dir.is_absolute())
 }
 
 /// A Wayland session from its `WAYLAND_DISPLAY` and `XDG_SESSION_TYPE`.
@@ -78,6 +86,20 @@ mod tests {
         assert!(!is_wayland_session(None, os("x11")));
         assert!(!is_wayland_session(os(""), os("tty")));
         assert!(!is_wayland_session(None, None));
+    }
+
+    #[test]
+    fn an_appimage_was_started_from_owd() {
+        let os = |s: &'static str| Some(OsStr::new(s));
+        let image = os("/home/me/Applications/Mouthy.AppImage");
+        assert_eq!(
+            launch_dir(image, os("/home/me/notes")),
+            Some(PathBuf::from("/home/me/notes"))
+        );
+        assert_eq!(launch_dir(image, None), None);
+        assert_eq!(launch_dir(image, os("notes")), None, "not absolute");
+        assert_eq!(launch_dir(None, os("/home/me/notes")), None, "no AppImage");
+        assert_eq!(launch_dir(os(""), os("/home/me/notes")), None);
     }
 
     #[test]
