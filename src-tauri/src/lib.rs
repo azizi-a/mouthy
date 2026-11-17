@@ -309,6 +309,13 @@ fn log_plugin(console_filter: env_filter::Filter) -> tauri::plugin::TauriPlugin<
         .build()
 }
 
+/// Whether a tray icon shows: built, turned on in Settings, and no `--no-tray`.
+fn tray_available(app: &AppHandle) -> bool {
+    get_settings(app).show_tray_icon
+        && !app.try_state::<CliArgs>().is_some_and(|args| args.no_tray)
+        && app.try_state::<TrayIcon>().is_some()
+}
+
 #[tauri::command]
 #[specta::specta]
 fn show_main_window_command(app: AppHandle) -> Result<(), String> {
@@ -545,10 +552,7 @@ pub fn run(cli_args: CliArgs) {
             // If start_hidden but tray is disabled, we must show the window
             // anyway. Without a tray icon, the dock is the only way back in.
             // Keep in sync with `apply_startup_activation_policy` (macOS).
-            let tray_available = settings.show_tray_icon
-                && !cli_args.no_tray
-                && app_handle.try_state::<TrayIcon>().is_some();
-            if !should_hide || !tray_available {
+            if !should_hide || !tray_available(&app_handle) {
                 show_main_window(&app_handle);
             }
 
@@ -574,9 +578,9 @@ pub fn run(cli_args: CliArgs) {
                 api.prevent_close();
                 let _res = window.hide();
 
-                // The tray is the only other way to quit.
+                // Without a tray there would be no way back, and no Quit.
                 #[cfg(not(target_os = "macos"))]
-                if window.app_handle().try_state::<TrayIcon>().is_none() {
+                if window.label() == "main" && !tray_available(window.app_handle()) {
                     window.app_handle().exit(0);
                 }
 

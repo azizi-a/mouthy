@@ -436,7 +436,7 @@ esac"#,
             let dir = tempfile::tempdir().unwrap();
             assert_eq!(
                 read(&fake(&dir, "exec sleep 10"), true, TIMEOUT),
-                Err("wl-paste: no answer within 500 ms".into())
+                Err("wl-paste: no answer in time".into())
             );
         }
 

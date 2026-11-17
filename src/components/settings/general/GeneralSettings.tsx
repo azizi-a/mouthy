@@ -37,7 +37,10 @@ export const GeneralSettings: React.FC = () => {
       .then((help) => {
         if (current) setShortcutHelp(help);
       })
-      .catch(() => {});
+      .catch(() => {
+        // The inputs, rather than nothing, if the answer never comes.
+        if (current) setShortcutHelp(null);
+      });
     return () => {
       current = false;
     };

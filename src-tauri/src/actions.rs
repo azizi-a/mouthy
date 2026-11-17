@@ -270,17 +270,30 @@ fn repeats() -> MutexGuard<'static, RepeatGuard> {
     REPEATS.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// Stops so far (Linux). Stops do not wait for reads, so a request that was
-/// made before a stop, and is still being read when it runs, is dropped.
+/// Stops so far (Linux). Stops do not wait for reads, so a request that
+/// arrived before a stop, and is still being read when it runs, is dropped.
 static STOPS: AtomicU64 = AtomicU64::new(0);
 
-fn stops_so_far() -> u64 {
-    STOPS.load(Ordering::SeqCst)
+/// Where a request stands among stops, taken as it arrives, before any read.
+#[derive(Clone, Copy, Debug)]
+struct Arrival(u64);
+
+fn arrival() -> Arrival {
+    Arrival(STOPS.load(Ordering::SeqCst))
 }
 
-/// Whether a stop came after a request made when `stops` had been counted.
-fn stopped_since(stops: u64) -> bool {
-    stops_so_far() != stops
+impl Arrival {
+    /// Whether a stop has come since.
+    fn overtaken(self) -> bool {
+        STOPS.load(Ordering::SeqCst) != self.0
+    }
+}
+
+/// Counts a stop before it is posted, so every request that arrived earlier
+/// is dropped wherever it is, and the next one need not wait out the guard.
+fn count_stop() {
+    STOPS.fetch_add(1, Ordering::SeqCst);
+    *repeats() = RepeatGuard::default();
 }
 
 /// Work for the request thread, ending with a post to the main thread.
@@ -402,7 +415,7 @@ fn file_request(
     language: Option<ReadingLanguage>,
     source: &str,
 ) -> impl FnOnce() + Send + 'static {
-    let stops = stops_so_far();
+    let arrived = arrival();
     // Read before posting, so a handed-over file is read off the main thread. A
     // first launch reads on it, bounded by the regular-file check and byte cap.
     let text = read_text_file(path).map_err(|e| {
@@ -415,7 +428,7 @@ fn file_request(
     let handle = app.clone();
     let source = source.to_string();
     move || {
-        if stopped_since(stops) {
+        if arrived.overtaken() {
             info!("Not speaking a file a later stop came before ({source})");
             return;
         }
@@ -568,12 +581,12 @@ fn request_speech(app: &AppHandle, source: &str, trigger: Trigger, input: Input)
             debug!("Ignoring a request too soon after the last one ({source})");
             return;
         }
-        let stops = stops_so_far();
+        let arrived = arrival();
         send_in_order(Box::new(move || {
             let read = read_off_main(&handle, input);
             let app = handle.clone();
             post(&app, "speech", move || {
-                if stopped_since(stops) {
+                if arrived.overtaken() {
                     debug!("Dropping a request a later stop came before ({source})");
                     return;
                 }
@@ -602,10 +615,7 @@ fn hotkey_released(app: &AppHandle) {
 pub fn stop_speaking(app: &AppHandle, source: &str) {
     info!("Stopping speech ({source})");
     if READ_OFF_MAIN_THREAD {
-        // Ahead of any request still being read, which then finds it stopped;
-        // and the next request need not wait out the repeat guard.
-        STOPS.fetch_add(1, Ordering::SeqCst);
-        *repeats() = RepeatGuard::default();
+        count_stop();
     }
     let handle = app.clone();
     post(app, "stopping speech", move || {
@@ -1471,23 +1481,20 @@ mod tests {
         assert!(guard.allow(ms(2400 + 700)), "700 ms after it");
     }
 
+    /// The only test that touches the shared stop count and guard, so no
+    /// other test's stop can land between its steps.
     #[test]
-    fn a_request_made_before_a_stop_is_dropped_and_one_after_is_not() {
-        let before = stops_so_far();
-        // What `stop_speaking` does on Linux before posting.
-        STOPS.fetch_add(1, Ordering::SeqCst);
-        assert!(stopped_since(before));
-        assert!(!stopped_since(stops_so_far()));
-    }
-
-    #[test]
-    fn after_a_stop_the_next_request_goes_ahead_at_once() {
+    fn a_stop_drops_what_arrived_before_it_and_lets_the_next_request_through() {
         let start = Instant::now();
-        let mut guard = RepeatGuard::default();
-        assert!(guard.allow(start));
-        // `stop_speaking` starts the guard afresh.
-        guard = RepeatGuard::default();
-        assert!(guard.allow(start + Duration::from_millis(250)));
+        let before = arrival();
+        assert!(repeats().allow(start));
+        count_stop();
+        assert!(before.overtaken());
+        assert!(!arrival().overtaken());
+        assert!(
+            repeats().allow(start + Duration::from_millis(250)),
+            "a speak request 250 ms after the first, with a stop between"
+        );
     }
 
     #[test]

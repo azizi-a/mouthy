@@ -113,7 +113,7 @@ pub fn run(
         let _ = child.wait();
     }
     output.map_err(|e| match e {
-        Failure::Late => format!("no answer within {} ms", timeout.as_millis()),
+        Failure::Late => "no answer in time".to_string(),
         Failure::Other(e) => e,
     })
 }
@@ -126,6 +126,14 @@ fn host_environment(
     appdir: &Path,
     var: impl Fn(&str) -> Option<OsString>,
 ) -> Vec<(&'static str, Option<OsString>)> {
+    // The mount may be reached through a symlink, as a symlinked TMPDIR is.
+    let real_appdir = std::fs::canonicalize(appdir).ok();
+    let in_image = |entry: &Path| {
+        entry.starts_with(appdir)
+            || real_appdir
+                .as_deref()
+                .is_some_and(|real| entry.starts_with(real))
+    };
     let mut changes = Vec::new();
     for &name in IMAGE_PATHS {
         let Some(value) = var(name) else {
@@ -134,7 +142,7 @@ fn host_environment(
         let entries: Vec<PathBuf> = std::env::split_paths(&value).collect();
         let kept: Vec<&PathBuf> = entries
             .iter()
-            .filter(|entry| !entry.as_os_str().is_empty() && !entry.starts_with(appdir))
+            .filter(|entry| !entry.as_os_str().is_empty() && !in_image(entry))
             .collect();
         if kept.len() == entries.len() {
             continue;
@@ -297,14 +305,17 @@ mod tests {
         // stopped, so waiting for either to close would run into the deadline.
         let started = Instant::now();
         let output = sh(
-            "sleep 3 & exec yes 0123456789",
-            Duration::from_secs(2),
+            "sleep 5 & exec yes 0123456789",
+            Duration::from_secs(10),
             100_000,
         )
         .unwrap();
         assert_eq!(output.status, None);
         assert_eq!(output.stdout.len(), 100_000);
-        assert!(started.elapsed() < Duration::from_secs(2));
+        assert!(
+            started.elapsed() < Duration::from_secs(4),
+            "did not wait for the helper"
+        );
     }
 
     #[test]
@@ -324,7 +335,7 @@ mod tests {
             1024,
         )
         .unwrap_err();
-        assert_eq!(error, "no answer within 200 ms");
+        assert_eq!(error, "no answer in time");
         assert!(started.elapsed() < Duration::from_secs(5));
     }
 
@@ -415,6 +426,19 @@ mod tests {
             "the user's own paths, another mount's and WAYLAND_DISPLAY stay"
         );
         assert_eq!(host_environment(appdir, |_| None), vec![]);
+    }
+
+    #[test]
+    fn an_appdir_reached_through_a_symlink_is_recognised() {
+        let dir = tempfile::tempdir().unwrap();
+        let mount = dir.path().join("mount");
+        fs::create_dir(&mount).unwrap();
+        let link = dir.path().join("link");
+        std::os::unix::fs::symlink(&mount, &link).unwrap();
+        let real_bin = fs::canonicalize(&mount).unwrap().join("usr/bin");
+        let path = std::env::join_paths([real_bin.as_path(), Path::new("/usr/bin")]).unwrap();
+        let changes = host_environment(&link, |name| (name == "PATH").then(|| path.clone()));
+        assert_eq!(changes, vec![("PATH", Some(OsString::from("/usr/bin")))]);
     }
 
     #[test]
