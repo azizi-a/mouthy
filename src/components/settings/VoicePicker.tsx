@@ -14,7 +14,15 @@ import { languageOf, VoiceRow } from "./VoiceRow";
 
 const ENGLISH = ["britishEnglish", "americanEnglish"];
 /** Languages whose voices read their own language; the rest read English. */
-const READS_OWN_LANGUAGE = [...ENGLISH, "japanese"];
+const READS_OWN_LANGUAGE = [
+  ...ENGLISH,
+  "japanese",
+  "spanish",
+  "french",
+  "italian",
+  "brazilianPortuguese",
+  "hindi",
+];
 const OTHER_GROUP = "other";
 
 type VoiceIds =

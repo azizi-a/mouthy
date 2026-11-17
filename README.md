@@ -78,12 +78,13 @@ Mouthy uses about 350 MB of memory once the voice has loaded, and up to about 1.
 
 ### Better pronunciation of unknown words
 
-Words the voice's dictionary lacks, such as many names and product terms, are spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say them instead. Each new unknown word delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
+Words an English voice's dictionary lacks, such as many names and product terms, are spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say them instead. Each new unknown word delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
 
 ## Languages
 
-English voices read English. Other voices read English for now, except:
+English voices read English, and Chinese voices read English for now. The others read their own language:
 
+- **Spanish, French, Italian, Brazilian Portuguese and Hindi** (`ef_*`, `ff_*`, `if_*`, `pf_*`, `hf_*` and their male voices): read as Kokoro learned these languages. Mouthy asks [espeak-ng](https://github.com/espeak-ng/espeak-ng) how to say each sentence, numbers and times included, so these voices need it installed (`brew install espeak-ng`; on Linux see below), whatever the unknown-words setting says. Without it they show a notice instead of speaking, and `--voice` with one of them falls back to the Settings voice unless the file is read as English. English text in one of these voices is read with its language's rules unless Reading Language is English (below).
 - **Japanese** (`jf_*`, `jm_*`): reads kana (hiragana and katakana) and numbers. English inside Japanese text is read as English, and text with no Japanese in it is read as an American English voice reads it. Mouthy cannot read kanji yet: they are skipped, and text where more than a fifth of the letters are kanji is not read at all. Without a dictionary, words run together, the particles は and へ are read "ha" and "he", and long vowels follow the spelling.
 
 Settings → General → **Reading Language** matters only for a voice whose language Mouthy can read (see Voices); any other voice reads English either way. For such a voice it chooses between its own language (the default) and English, read with the voice's accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.

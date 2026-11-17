@@ -303,11 +303,12 @@ fn file_speech(
 ) -> Result<(AppSettings, Speech, String, ReadingLanguage), OverlayView> {
     let text = text?;
     let settings = settings::get_settings(app);
+    // First: whether a voice can read the file depends on the language.
+    let language = file_language(&settings, language);
     let voice = match voice {
-        Some(requested) => file_voice(app, &settings, requested),
+        Some(requested) => file_voice(app, &settings, requested, language),
         None => settings.tts_voice.clone(),
     };
-    let language = file_language(&settings, language);
     let backend = speech_backend(app, &settings, &voice, language)?;
     let split_started = Instant::now();
     let text = tts::text::normalize(&text);
@@ -334,25 +335,38 @@ fn file_speech(
 }
 
 /// The voice `--voice` asked for, written as the voice setting would be, or
-/// the settings voice when that one cannot read the file.
-fn file_voice(app: &AppHandle, settings: &AppSettings, requested: &str) -> String {
-    usable_voice(settings, || crate::commands::models_dir(app), requested).unwrap_or_else(
-        |reason| {
-            warn!(
-                "Cannot read the file in the voice '{requested}' ({reason}); using the settings voice {}",
-                settings.tts_voice
-            );
-            settings.tts_voice.clone()
-        },
+/// the settings voice when that one cannot read the file in `language`.
+fn file_voice(
+    app: &AppHandle,
+    settings: &AppSettings,
+    requested: &str,
+    language: ReadingLanguage,
+) -> String {
+    usable_voice(
+        settings,
+        || crate::commands::models_dir(app),
+        tts::espeak::find,
+        requested,
+        language,
     )
+    .unwrap_or_else(|reason| {
+        warn!(
+            "Cannot read the file in the voice '{requested}' ({reason}); using the settings voice {}",
+            settings.tts_voice
+        );
+        settings.tts_voice.clone()
+    })
 }
 
 /// `requested` as the voice setting would store it, or why it cannot read: for
-/// Local, it must be a voice or blend whose every voice is downloaded.
+/// Local, it must be a voice or blend whose every voice is downloaded, and
+/// what reading in `language` needs must be installed.
 fn usable_voice(
     settings: &AppSettings,
     models_dir: impl FnOnce() -> Result<PathBuf, String>,
+    find_espeak: impl FnOnce() -> Option<PathBuf>,
     requested: &str,
+    language: ReadingLanguage,
 ) -> Result<String, String> {
     match settings.tts_backend {
         // As the voice setting: only the server knows its voices.
@@ -362,14 +376,12 @@ fn usable_voice(
             .ok_or_else(|| "no voice given".to_string()),
         TtsBackend::Local => {
             let voice = tts::voice::VoiceSpec::parse(requested)?.to_string();
-            let missing =
-                tts::local::ModelFiles::new(&models_dir()?, settings.tts_model_variant, &voice)
-                    .missing_voices();
-            if missing.is_empty() {
-                Ok(voice)
-            } else {
-                Err(format!("not downloaded: {}", missing.join(", ")))
+            let files = model_files(&models_dir()?, settings, &voice, language, find_espeak);
+            let missing = files.missing_voices();
+            if !missing.is_empty() {
+                return Err(format!("not downloaded: {}", missing.join(", ")));
             }
+            files.unmet_requirement().map_or(Ok(voice), Err)
         }
     }
 }
@@ -801,17 +813,42 @@ fn http_backend(settings: &AppSettings, voice: &str) -> tts::Backend {
     }
 }
 
-fn local_model_files(
+/// The local voice's files for `voice` in the settings' model, with the
+/// espeak-ng they read with.
+pub(crate) fn local_model_files(
     app: &AppHandle,
     settings: &AppSettings,
     voice: &str,
     language: ReadingLanguage,
 ) -> Result<tts::local::ModelFiles, String> {
     let models_dir = crate::commands::models_dir(app)?;
-    let files = tts::local::ModelFiles::new(&models_dir, settings.tts_model_variant, voice);
-    Ok(read_in(files, language)
-        .with_english_fallback(settings.tts_espeak_fallback)
-        .with_espeak(tts::espeak::find_if_enabled(settings.tts_espeak_fallback)))
+    Ok(model_files(
+        &models_dir,
+        settings,
+        voice,
+        language,
+        tts::espeak::find,
+    ))
+}
+
+/// The files read in the language `language` gives, before espeak-ng is
+/// looked up: a language espeak-ng reads needs it whatever the English
+/// fallback setting says, which governs English alone.
+fn model_files(
+    models_dir: &Path,
+    settings: &AppSettings,
+    voice: &str,
+    language: ReadingLanguage,
+    find_espeak: impl FnOnce() -> Option<PathBuf>,
+) -> tts::local::ModelFiles {
+    let files = tts::local::ModelFiles::new(models_dir, settings.tts_model_variant, voice);
+    let files = read_in(files, language).with_english_fallback(settings.tts_espeak_fallback);
+    let espeak = if files.needs_espeak() {
+        find_espeak()
+    } else {
+        tts::espeak::find_if_enabled(settings.tts_espeak_fallback)
+    };
+    files.with_espeak(espeak)
 }
 
 /// `files` read in the language `choice` gives.
@@ -1374,6 +1411,14 @@ mod tests {
         }
     }
 
+    fn models(dir: &tempfile::TempDir) -> impl FnOnce() -> Result<PathBuf, String> + '_ {
+        || Ok(dir.path().to_path_buf())
+    }
+
+    fn no_espeak() -> Option<PathBuf> {
+        None
+    }
+
     fn install_voices(models_dir: &Path, voices: &[&str]) {
         for voice in voices {
             let path = tts::local::voice_path(models_dir, voice).unwrap();
@@ -1387,8 +1432,15 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         install_voices(dir.path(), &["bm_lewis", "bm_george"]);
         let settings = local_settings("af_alloy");
-        let usable =
-            |requested| usable_voice(&settings, || Ok(dir.path().to_path_buf()), requested);
+        let usable = |requested| {
+            usable_voice(
+                &settings,
+                models(&dir),
+                no_espeak,
+                requested,
+                ReadingLanguage::Voice,
+            )
+        };
         assert_eq!(usable(" bm_lewis ").unwrap(), "bm_lewis");
         assert_eq!(
             usable("bm_lewis ( 70 ) + bm_george(30)").unwrap(),
@@ -1401,8 +1453,15 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         install_voices(dir.path(), &["bm_lewis"]);
         let settings = local_settings("bm_lewis");
-        let usable =
-            |requested| usable_voice(&settings, || Ok(dir.path().to_path_buf()), requested);
+        let usable = |requested| {
+            usable_voice(
+                &settings,
+                models(&dir),
+                no_espeak,
+                requested,
+                ReadingLanguage::Voice,
+            )
+        };
         assert_eq!(usable("bf_emma").unwrap_err(), "not downloaded: bf_emma");
         assert_eq!(
             usable("bm_lewis(70)+bf_emma(30)").unwrap_err(),
@@ -1412,8 +1471,16 @@ mod tests {
         for requested in ["", "bm_lewis-bm_george", "../secret", "bm_lewis(0)"] {
             assert!(usable(requested).is_err(), "{requested:?}");
         }
+        let no_app_data = || Err("no app data".into());
         assert_eq!(
-            usable_voice(&settings, || Err("no app data".into()), "bm_lewis").unwrap_err(),
+            usable_voice(
+                &settings,
+                no_app_data,
+                no_espeak,
+                "bm_lewis",
+                ReadingLanguage::Voice
+            )
+            .unwrap_err(),
             "no app data"
         );
     }
@@ -1425,11 +1492,102 @@ mod tests {
             ..settings::get_default_settings()
         };
         let no_models = || -> Result<PathBuf, String> { panic!("HTTP never looks for files") };
+        let usable = |requested| {
+            usable_voice(
+                &settings,
+                no_models,
+                no_espeak,
+                requested,
+                ReadingLanguage::Voice,
+            )
+        };
+        assert_eq!(usable(" my_server_voice ").unwrap(), "my_server_voice");
+        assert!(usable("  ").is_err());
+    }
+
+    fn espeak_installed() -> Option<PathBuf> {
+        Some(PathBuf::from("/opt/homebrew/bin/espeak-ng"))
+    }
+
+    fn espeak_not_asked() -> Option<PathBuf> {
+        panic!("English needs no espeak-ng unless its fallback is on")
+    }
+
+    #[test]
+    fn a_voice_whose_language_needs_espeak_ng_is_usable_only_with_it() {
+        let dir = tempfile::tempdir().unwrap();
+        install_voices(dir.path(), &["bm_lewis", "ef_dora", "hf_alpha"]);
+        let settings = local_settings("bm_lewis");
+        let in_its_language = |voice, find_espeak: fn() -> Option<PathBuf>| {
+            usable_voice(
+                &settings,
+                models(&dir),
+                find_espeak,
+                voice,
+                ReadingLanguage::Voice,
+            )
+        };
+        for voice in ["ef_dora", "hf_alpha", "ef_dora(70)+bm_lewis(30)"] {
+            let reason = in_its_language(voice, no_espeak).unwrap_err();
+            assert!(
+                reason.contains("voices need espeak-ng"),
+                "{voice}: {reason}"
+            );
+            assert!(in_its_language(voice, espeak_installed).is_ok());
+        }
         assert_eq!(
-            usable_voice(&settings, no_models, " my_server_voice ").unwrap(),
-            "my_server_voice"
+            in_its_language("bm_lewis(30)+ef_dora(70)", espeak_not_asked).unwrap(),
+            "bm_lewis(30)+ef_dora(70)"
         );
-        assert!(usable_voice(&settings, no_models, "  ").is_err());
+        // A missing file is the reason given before a missing program.
+        assert_eq!(
+            in_its_language("ff_siwis", no_espeak).unwrap_err(),
+            "not downloaded: ff_siwis"
+        );
+    }
+
+    #[test]
+    fn a_voice_read_as_english_needs_no_espeak_ng() {
+        let dir = tempfile::tempdir().unwrap();
+        install_voices(dir.path(), &["ef_dora", "hf_alpha"]);
+        let settings = local_settings("bm_lewis");
+        for voice in ["ef_dora", "hf_alpha", "ef_dora(70)+hf_alpha(30)"] {
+            let usable = usable_voice(
+                &settings,
+                models(&dir),
+                espeak_not_asked,
+                voice,
+                ReadingLanguage::English,
+            );
+            assert_eq!(usable.as_deref(), Ok(voice), "{voice}");
+        }
+    }
+
+    #[test]
+    fn the_reading_language_decides_whether_espeak_ng_is_needed() {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = local_settings("ef_dora");
+        let files = |voice, language, find_espeak: fn() -> Option<PathBuf>| {
+            model_files(dir.path(), &settings, voice, language, find_espeak)
+        };
+
+        let spanish = files("ef_dora", ReadingLanguage::Voice, no_espeak);
+        assert_eq!(spanish.language(), VoiceLanguage::Spanish);
+        assert!(spanish.needs_espeak());
+        assert!(spanish
+            .unmet_requirement()
+            .is_some_and(|notice| notice.starts_with("Spanish voices need espeak-ng")));
+        let spanish = files("ef_dora", ReadingLanguage::Voice, espeak_installed);
+        assert_eq!(spanish.unmet_requirement(), None);
+
+        let english = files("ef_dora", ReadingLanguage::English, espeak_not_asked);
+        assert_eq!(english.language(), VoiceLanguage::AmericanEnglish);
+        assert!(!english.needs_espeak());
+        assert_eq!(english.unmet_requirement(), None);
+
+        let british = files("bm_lewis", ReadingLanguage::English, espeak_not_asked);
+        assert_eq!(british.language(), VoiceLanguage::BritishEnglish);
+        assert_eq!(british.unmet_requirement(), None);
     }
 
     const ALL_LANGUAGES: [VoiceLanguage; 9] = [
@@ -1594,7 +1752,7 @@ mod tests {
     }
 
     /// A voice of each language this build cannot read yet.
-    const READ_AS_ENGLISH: &[&str] = &["zf_xiaobei", "ef_dora", "hf_alpha"];
+    const READ_AS_ENGLISH: &[&str] = &["zf_xiaobei"];
 
     #[test]
     fn a_voice_this_build_cannot_read_previews_in_english() {
@@ -1619,6 +1777,26 @@ mod tests {
         // "どうも。" is too short to read alone and joins the next sentence.
         let sentences = sentences_for(preview_sentence(&backend), &backend);
         assert_eq!(sentences.len(), 1, "{sentences:?}");
+    }
+
+    #[test]
+    fn a_voice_that_reads_its_own_language_previews_in_it() {
+        for (voice, language) in [
+            ("ef_dora", VoiceLanguage::Spanish),
+            ("ff_siwis", VoiceLanguage::French),
+            ("im_nicola", VoiceLanguage::Italian),
+            ("pf_dora", VoiceLanguage::BrazilianPortuguese),
+            ("hf_alpha", VoiceLanguage::Hindi),
+        ] {
+            let backend = local_backend(voice);
+            assert_eq!(
+                preview_sentence(&backend),
+                preview_text(language),
+                "{voice}"
+            );
+            let text = tts::text::normalize(preview_sentence(&backend));
+            assert_eq!(sentences_for(&text, &backend).len(), 1, "{voice}");
+        }
     }
 
     #[test]
@@ -1695,7 +1873,11 @@ mod tests {
     /// One `ends_sentence<TAB>phonemes` line per chunk `voice` reads the
     /// English pin's text as.
     fn english_reading(voice: &str) -> Vec<String> {
-        english_chunks(voice)
+        english_reading_by(local_backend(voice))
+    }
+
+    fn english_reading_by(backend: tts::Backend) -> Vec<String> {
+        english_chunks_by(backend)
             .into_iter()
             .map(|(_, line)| line)
             .collect()
@@ -1703,7 +1885,10 @@ mod tests {
 
     /// Each chunk of the English pin's text, with its `english_reading` line.
     fn english_chunks(voice: &str) -> Vec<(String, String)> {
-        let backend = local_backend(voice);
+        english_chunks_by(local_backend(voice))
+    }
+
+    fn english_chunks_by(backend: tts::Backend) -> Vec<(String, String)> {
         let chunks: Vec<tts::text::Chunk> = std::iter::once(ENGLISH_TEXT)
             .chain(ENGLISH_LINES.iter().copied())
             .flat_map(|text| sentences_for(&tts::text::normalize(text), &backend))
@@ -1733,6 +1918,21 @@ mod tests {
                     .map(move |line| format!("{voice}\t{line}\n"))
             })
             .collect()
+    }
+
+    #[test]
+    fn a_voice_read_as_english_reads_as_american_english() {
+        let american = english_reading("af_alloy");
+        for voice in ["ef_dora", "hf_alpha", "ff_siwis"] {
+            let files = read_in(files(voice), ReadingLanguage::English);
+            let read = english_reading_by(tts::Backend::Local(files));
+            assert_eq!(read, american, "{voice}");
+        }
+        let british = read_in(files("bm_lewis"), ReadingLanguage::English);
+        assert_eq!(
+            english_reading_by(tts::Backend::Local(british)),
+            english_reading("bm_lewis")
+        );
     }
 
     #[test]

@@ -103,7 +103,23 @@ It was popular in the 1990s.
 
 You should hear: "example dot com" and "settings dot R S"; "version two point zero"; the address as "one hundred and ninety-two point one hundred and sixty-eight point zero point one"; "three point five G B"; "four pounds and ninety-nine pence"; "the nineteen nineties".
 
-## Part 5: Japanese
+## Part 5: Other languages
+
+Select one paragraph at a time and read it with a voice of its language: `ef_dora` (Spanish), `ff_siwis` (French), `if_sara` (Italian), `pf_dora` (Brazilian Portuguese), `hf_alpha` (Hindi). These voices need espeak-ng installed.
+
+El tren salió de Madrid a las 10:30 y llegó a Sevilla con veinte minutos de retraso. ¿Quién lo habría dicho? En el vagón, el 3,5 % de los viajeros dormía; los demás leían, hablaban o miraban por la ventana. ¡Qué viaje tan largo!
+
+Les enfants sont dans le jardin et jouent sous les grands arbres. Le train de 8 heures est parti à l'heure, mais il pleuvait déjà à Lyon. « Tu viens ce soir ? » m'a demandé Hélène ; je lui ai répondu que oui.
+
+Il treno per Roma parte alle 10:30 dal binario 3. Ciao, come stai? Bene, grazie: oggi fa caldo, ma domani pioverà. Gli gnocchi della nonna sono i migliori.
+
+Não sei se vou conseguir chegar às oito. O ônibus estava cheio, e o trânsito, como sempre, parado. Você quer café ou chá? Obrigado pela atenção!
+
+आज मौसम बहुत अच्छा है। कल शायद बारिश होगी, इसलिए छाता ज़रूर ले जाना। मैं iPhone use करता हूँ। मेरे पास 25 रुपये हैं।
+
+You should hear each paragraph in its own language, with nothing spelled letter by letter: the times as "diez treinta", "huit heures" and "dieci e trenta"; "tres coma cinco por ciento"; the questions rising; a pause at each comma and a full stop at each `।`; and "iPhone use" in English inside the Hindi sentence. With espeak-ng uninstalled, these voices show a notice instead of speaking.
+
+## Part 6: Japanese
 
 Select only this part's paragraph, with a Japanese voice such as `jf_alpha` or `jm_kumo`.
 

@@ -105,13 +105,13 @@
           "with": "{{voice}} with",
           "choose": "Choose a voice...",
           "none": "No other voice to blend with",
-          "accent": "Blends read with the first voice's accent.",
+          "language": "A blend reads in its first voice's language and accent.",
           "editInOther": "Edit in Other…"
         }
       },
       "espeak": {
         "title": "Pronounce unknown words with espeak-ng",
-        "description": "Names and other words the built-in dictionary lacks are read by espeak-ng instead of spelled out letter by letter. espeak-ng is GPL-3 software you install yourself (brew install espeak-ng); Mouthy runs it as a separate program and does not bundle it. Each new unknown word can delay speech by up to half a second.",
+        "description": "Names and other English words the built-in dictionary lacks are read by espeak-ng instead of spelled out letter by letter. Spanish, French, Italian, Portuguese and Hindi voices need espeak-ng to read at all, whether this is on or off. espeak-ng is GPL-3 software you install yourself (brew install espeak-ng); Mouthy runs it as a separate program and does not bundle it. Each new unknown word can delay speech by up to half a second.",
         "found": "Using espeak-ng at {{path}}",
         "notFound": "espeak-ng is not installed. Install it with: brew install espeak-ng",
         "notFoundLinux": "espeak-ng is not installed. Install it with your distribution's package manager, or on an immutable one such as Bazzite with: brew install espeak-ng"
@@ -162,7 +162,7 @@
       },
       "voices": {
         "title": "Voices",
-        "description": "Mouthy reads all text as English, with British pronunciation for British voices and American for the rest. Voices for other languages cannot read their own language.",
+        "description": "English voices read English (British voices with British pronunciation, the rest American); Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language and need espeak-ng; Japanese voices read Japanese kana but not kanji yet; Chinese voices read English for now.",
         "female": "Female",
         "male": "Male",
         "language": {

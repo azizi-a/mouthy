@@ -1,9 +1,12 @@
-//! Pronunciations from a separately installed espeak-ng for words misaki-rs
-//! has no entry for. espeak-ng is GPL-3, so it only ever runs as its own
-//! program, given one word on its command line and read back as text; Mouthy
+//! A separately installed espeak-ng: it reads the English words misaki-rs has
+//! no entry for, and whole sentences in the languages Kokoro's own pipeline
+//! reads through it. espeak-ng is GPL-3, so it only ever runs as its own
+//! program, given the text on its command line and read back as text; Mouthy
 //! never links, downloads or ships it.
 
+use super::catalog::VoiceLanguage;
 use super::local::{in_vocab, Dialect, TIES_COMMON};
+use super::text::CLOSERS;
 use log::{debug, info, warn};
 use misaki_rs::fallback::FallbackError;
 use misaki_rs::{Fallback, G2P};
@@ -13,6 +16,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -27,7 +31,14 @@ const KNOWN_LOCATIONS: &[&str] = &[
 ];
 /// The longest wait for one word. Speech waits for it, so it stays short.
 const TIMEOUT: Duration = Duration::from_millis(500);
+/// The longest wait for one sentence, which is all a sentence's audio waits on.
+const SENTENCE_TIMEOUT: Duration = Duration::from_secs(2);
 const POLL: Duration = Duration::from_millis(1);
+/// How long output may still be on its way once the program has exited.
+const OUTPUT_GRACE: Duration = Duration::from_millis(100);
+/// Far more than any sentence gives. Past it the pipe is closed, so a
+/// program that writes on dies of SIGPIPE and memory stays bounded.
+const OUTPUT_LIMIT: u64 = 1 << 20;
 /// Longer "words" are spelled out rather than sent.
 const LONGEST_WORD: usize = 48;
 /// Pronunciations kept per G2P; the cache starts over when full.
@@ -74,9 +85,46 @@ const US: &[(&str, &str)] = &[
 const SYLLABIC: char = '\u{329}';
 const TIE: char = '\u{200d}';
 
+/// misaki's `EspeakG2P` replacements, in its order, for the sentence
+/// languages; its `^` tie is espeak-ng's U+200D. Nasal vowels keep U+0303,
+/// which Kokoro has a token for.
+const SENTENCE_TIES: &[(&str, &str)] = &[
+    ("a\u{200d}ɪ", "I"),
+    ("a\u{200d}ʊ", "W"),
+    ("d\u{200d}z", "ʣ"),
+    ("d\u{200d}ʒ", "ʤ"),
+    ("e\u{200d}ɪ", "A"),
+    ("o\u{200d}ʊ", "O"),
+    ("s\u{200d}s", "S"),
+    ("t\u{200d}s", "ʦ"),
+    ("t\u{200d}ʃ", "ʧ"),
+    ("ɔ\u{200d}ɪ", "Y"),
+    ("ə\u{200d}ʊ", "Q"),
+];
+/// Where espeak-ng ends a clause, and so an output line, when whitespace or
+/// the end follows (closing quotes and brackets may come between): "3,5",
+/// "1.000" and "10:30" stay one number. It also starts a line at a `¿` or `¡`
+/// after a word, and ends none at a `.` before a lower-case word.
+const CLAUSE_MARKS: &[char] = &[',', ';', ':', '.', '!', '?', '…', '—', '–', '।', '॥'];
+
 /// The espeak-ng program, if one is installed where Mouthy looks.
 pub fn find() -> Option<PathBuf> {
     find_in(KNOWN_LOCATIONS, std::env::var_os("PATH"))
+}
+
+/// espeak-ng for a test that runs it: without it the test passes having
+/// checked nothing, unless `MOUTHY_REQUIRE_ESPEAK` is set, as on Linux CI.
+#[cfg(test)]
+pub(super) fn installed_for_test() -> Option<PathBuf> {
+    let program = find();
+    if program.is_none() {
+        assert!(
+            std::env::var_os("MOUTHY_REQUIRE_ESPEAK").is_none(),
+            "espeak-ng is required here but not installed"
+        );
+        eprintln!("espeak-ng is not installed, so this test checks nothing");
+    }
+    program
 }
 
 /// The espeak-ng to use for unknown words, or `None` when the setting is off
@@ -236,30 +284,264 @@ impl Spellings {
     }
 }
 
-/// `espeak-ng -q --ipa=3 -v <voice> -- <word>`: no audio, IPA with U+200D
-/// ties (the form misaki-rs's lexicons use), the word as one argument.
+/// The word as one argument for the dialect's English voice.
 fn args(dialect: Dialect, word: &str) -> Vec<String> {
     let voice = match dialect {
         Dialect::British => "en-gb",
         Dialect::American => "en-us",
     };
-    ["-q", "--ipa=3", "-v", voice, "--", word]
+    command(voice, word)
+}
+
+/// `espeak-ng -q --ipa=3 -v <voice> -- <text>`: no audio, IPA with U+200D
+/// ties (the form misaki-rs's lexicons use), the text as one argument that
+/// cannot be read as an option ("-5 grados").
+fn command(voice: &str, text: &str) -> Vec<String> {
+    ["-q", "--ipa=3", "-v", voice, "--", text]
         .map(str::to_string)
         .to_vec()
 }
 
+/// espeak-ng's voice for a language Kokoro's own pipeline reads through it.
+pub(super) fn voice(language: VoiceLanguage) -> Option<&'static str> {
+    match language {
+        VoiceLanguage::Spanish => Some("es"),
+        VoiceLanguage::French => Some("fr-fr"),
+        VoiceLanguage::Italian => Some("it"),
+        VoiceLanguage::BrazilianPortuguese => Some("pt-br"),
+        VoiceLanguage::Hindi => Some("hi"),
+        _ => None,
+    }
+}
+
+/// Reads whole sentences in one language, one espeak-ng process each and no
+/// cache: espeak-ng reads numbers, times and the words of other languages
+/// itself, which it can only do with the sentence whole.
+pub(super) struct Sentences {
+    program: PathBuf,
+    voice: &'static str,
+}
+
+impl Sentences {
+    pub(super) fn new(program: PathBuf, voice: &'static str) -> Self {
+        Self { program, voice }
+    }
+
+    /// Kokoro's symbols for `sentence`, and how many of espeak-ng's had no
+    /// token.
+    pub(super) fn read(&self, sentence: &str) -> Result<(String, usize), String> {
+        let text = without_controls(sentence);
+        if text.trim().is_empty() {
+            return Ok((String::new(), 0));
+        }
+        let started = Instant::now();
+        let ipa = run(&self.program, &command(self.voice, &text), SENTENCE_TIMEOUT)
+            .map_err(|e| format!("espeak-ng could not read a sentence: {e}"))?;
+        // The sentence itself stays out of the log: it is selected text.
+        debug!(
+            "espeak-ng read a sentence in {} ms",
+            started.elapsed().as_millis()
+        );
+        Ok(sentence_to_kokoro(&ipa, &clause_marks(&text)))
+    }
+}
+
+/// `text` without NUL, which no argument can hold, or other control
+/// characters; whitespace among them becomes a space.
+fn without_controls(text: &str) -> String {
+    text.chars()
+        .filter_map(|c| match c {
+            c if c.is_whitespace() => Some(' '),
+            c if c.is_control() => None,
+            c => Some(c),
+        })
+        .collect()
+}
+
+/// The marks that end a sentence's clauses, in order.
+#[derive(Debug, PartialEq, Eq)]
+struct ClauseMarks {
+    /// Each as Kokoro reads it.
+    marks: Vec<String>,
+    /// Whether the last one ends the text.
+    ends_text: bool,
+}
+
+/// The clause marks in `text`. A mark with nothing to say before it starts
+/// no clause, as espeak-ng prints no line for one; a `¿` or `¡` after a word
+/// starts one with no mark before it.
+fn clause_marks(text: &str) -> ClauseMarks {
+    let mut marks = Vec::new();
+    let mut ends_text = false;
+    let mut spoken = false;
+    let mut chars = text.char_indices().peekable();
+    while let Some((start, c)) = chars.next() {
+        if matches!(c, '¿' | '¡') {
+            if spoken {
+                marks.push(String::new());
+                ends_text = false;
+                spoken = false;
+            }
+            continue;
+        }
+        if !CLAUSE_MARKS.contains(&c) {
+            spoken |= c.is_alphanumeric();
+            continue;
+        }
+        let mut end = start + c.len_utf8();
+        while let Some(&(i, next)) = chars.peek() {
+            if !CLAUSE_MARKS.contains(&next) {
+                break;
+            }
+            end = i + next.len_utf8();
+            chars.next();
+        }
+        let (run, rest) = (&text[start..end], &text[end..]);
+        let at_break = rest
+            .trim_start_matches(CLOSERS)
+            .chars()
+            .next()
+            .is_none_or(char::is_whitespace);
+        if spoken && at_break && !continues_sentence(run, rest) {
+            marks.push(run.chars().map(kokoro_mark).collect());
+            ends_text = rest
+                .trim_start_matches(|c: char| c.is_whitespace() || CLOSERS.contains(&c))
+                .is_empty();
+            spoken = false;
+        }
+    }
+    ClauseMarks { marks, ends_text }
+}
+
+/// One or two full stops right before a lower-case word, as in "etc. y" or
+/// "p. ej. esto", end no clause for espeak-ng; three are an ellipsis, which do.
+fn continues_sentence(run: &str, rest: &str) -> bool {
+    run.len() <= 2
+        && run.chars().all(|c| c == '.')
+        && rest.starts_with(char::is_whitespace)
+        && rest.trim_start().starts_with(char::is_lowercase)
+}
+
+/// Kokoro has no token for the danda or the en dash.
+fn kokoro_mark(mark: char) -> char {
+    match mark {
+        '।' | '॥' => '.',
+        '–' => '—',
+        mark => mark,
+    }
+}
+
+/// espeak-ng's lines for one sentence as Kokoro's symbols, each clause given
+/// back the mark that ended it, and how many symbols had no token. When the
+/// lines do not match the marks, the clauses are joined by commas instead.
+fn sentence_to_kokoro(ipa: &str, marks: &ClauseMarks) -> (String, usize) {
+    let mut dropped = 0;
+    let clauses: Vec<String> = ipa
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| clause_to_kokoro(line, &mut dropped))
+        .collect();
+    let Some(last) = clauses.len().checked_sub(1) else {
+        return (String::new(), 0);
+    };
+    let expected = marks.marks.len() + usize::from(!marks.ends_text);
+    let mut out = String::new();
+    if clauses.len() == expected {
+        for (i, clause) in clauses.iter().enumerate() {
+            out.push_str(clause);
+            if let Some(mark) = marks.marks.get(i) {
+                out.push_str(mark);
+            }
+            if i < last {
+                out.push(' ');
+            }
+        }
+    } else {
+        out = clauses.join(", ");
+        if let Some(mark) = marks.marks.last().filter(|_| marks.ends_text) {
+            out.push_str(mark);
+        }
+    }
+    (out, dropped)
+}
+
+/// One of espeak-ng's lines as Kokoro's symbols, as misaki's `EspeakG2P`
+/// maps them, counting the symbols with no token into `dropped`.
+fn clause_to_kokoro(line: &str, dropped: &mut usize) -> String {
+    let mapped = SENTENCE_TIES
+        .iter()
+        .fold(without_language_flags(line), |s, (from, to)| {
+            s.replace(from, to)
+        })
+        // Ties left over, and French liaison's "le-z".
+        .replace([TIE, '-'], "");
+    let mut out = String::with_capacity(mapped.len());
+    for c in mapped.chars() {
+        match c {
+            c if c.is_whitespace() => {
+                if !out.is_empty() && !out.ends_with(' ') {
+                    out.push(' ');
+                }
+            }
+            c if in_vocab(c) => out.push(c),
+            _ => *dropped += 1,
+        }
+    }
+    out.trim_end().to_string()
+}
+
+/// `line` without the flags espeak-ng puts around words it reads in another
+/// language, such as `(en)` and `(hi)`, which it writes with a U+200D before
+/// each letter.
+fn without_language_flags(line: &str) -> String {
+    let is_flag = |inner: &str| {
+        let mut letters = inner.chars().filter(|&c| c != TIE).peekable();
+        letters.peek().is_some() && letters.all(|c| c.is_ascii_lowercase() || c == '-')
+    };
+    let mut out = String::with_capacity(line.len());
+    let mut rest = line;
+    while let Some(open) = rest.find('(') {
+        let flag = rest[open + 1..]
+            .find(')')
+            .filter(|&close| is_flag(&rest[open + 1..open + 1 + close]));
+        match flag {
+            Some(close) => {
+                out.push_str(&rest[..open]);
+                rest = &rest[open + close + 2..];
+            }
+            None => {
+                out.push_str(&rest[..=open]);
+                rest = &rest[open + 1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
 /// Runs `program` without a shell or stdin and returns its output, killing it
-/// after `timeout`. Output for one word is far smaller than a pipe's buffer,
-/// so the program never blocks on it before exiting.
+/// after `timeout`. The output is read while it runs, so a long one cannot
+/// fill the pipe and stall it.
 fn run(program: &Path, args: &[String], timeout: Duration) -> Result<String, String> {
     let mut child = Command::new(program)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("cannot start {}: {e}", program.display()))?;
     let deadline = Instant::now() + timeout;
+    let (output, errors) = match (
+        read_in_background(child.stdout.take()),
+        read_in_background(child.stderr.take()),
+    ) {
+        (Ok(output), Ok(errors)) => (output, errors),
+        (Err(e), _) | (_, Err(e)) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(e);
+        }
+    };
     let status = loop {
         match child.try_wait() {
             Ok(Some(status)) => break status,
@@ -277,16 +559,51 @@ fn run(program: &Path, args: &[String], timeout: Duration) -> Result<String, Str
         }
     };
     if !status.success() {
-        return Err(format!("it exited with {status}"));
+        let said = errors
+            .recv_timeout(OUTPUT_GRACE)
+            .ok()
+            .and_then(Result::ok)
+            .and_then(|bytes| first_line(&bytes));
+        return Err(match said {
+            Some(said) => format!("it exited with {status}: {said}"),
+            None => format!("it exited with {status}"),
+        });
     }
-    let mut output = String::new();
-    child
-        .stdout
-        .take()
-        .ok_or_else(|| "its output was not captured".to_string())?
-        .read_to_string(&mut output)
+    let wait = deadline
+        .saturating_duration_since(Instant::now())
+        .max(OUTPUT_GRACE);
+    let bytes = output
+        .recv_timeout(wait)
+        .map_err(|_| "its output did not end".to_string())?
         .map_err(|e| format!("cannot read its output: {e}"))?;
-    Ok(output)
+    String::from_utf8(bytes).map_err(|e| format!("cannot read its output: {e}"))
+}
+
+/// Reads one of the program's pipes to the end on a thread of its own, so
+/// neither can fill and stall it.
+fn read_in_background(
+    pipe: Option<impl Read + Send + 'static>,
+) -> Result<Receiver<std::io::Result<Vec<u8>>>, String> {
+    let pipe = pipe.ok_or_else(|| "its output was not captured".to_string())?;
+    let (send, receive) = mpsc::channel();
+    thread::Builder::new()
+        .name("espeak-output".into())
+        .spawn(move || {
+            let mut output = Vec::new();
+            let read = pipe.take(OUTPUT_LIMIT).read_to_end(&mut output);
+            let _ = send.send(read.map(|_| output));
+        })
+        .map_err(|e| format!("cannot read its output: {e}"))?;
+    Ok(receive)
+}
+
+/// The first line a program wrote, if it wrote one.
+fn first_line(bytes: &[u8]) -> Option<String> {
+    String::from_utf8_lossy(bytes)
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(str::to_string)
 }
 
 /// Kokoro symbols for espeak-ng's IPA, and how many symbols Kokoro has no
@@ -414,6 +731,323 @@ mod tests {
     }
 
     #[test]
+    fn a_sentence_is_one_argument_after_the_options() {
+        assert_eq!(
+            command("es", "-5 grados"),
+            ["-q", "--ipa=3", "-v", "es", "--", "-5 grados"]
+        );
+    }
+
+    #[test]
+    fn each_espeak_ng_language_has_kokoros_voice_for_it() {
+        for (language, name) in [
+            (VoiceLanguage::Spanish, "es"),
+            (VoiceLanguage::French, "fr-fr"),
+            (VoiceLanguage::Italian, "it"),
+            (VoiceLanguage::BrazilianPortuguese, "pt-br"),
+            (VoiceLanguage::Hindi, "hi"),
+        ] {
+            assert_eq!(voice(language), Some(name), "{language:?}");
+        }
+        for language in [
+            VoiceLanguage::AmericanEnglish,
+            VoiceLanguage::BritishEnglish,
+            VoiceLanguage::Japanese,
+            VoiceLanguage::Mandarin,
+        ] {
+            assert_eq!(voice(language), None, "{language:?}");
+        }
+    }
+
+    #[test]
+    fn control_characters_never_reach_espeak_ng() {
+        assert_eq!(without_controls("a\u{0}b\u{7}c\td\ne\u{1b}"), "abc d e");
+        assert_eq!(without_controls("¿Qué?"), "¿Qué?");
+        // Joiners are format characters, not controls: Hindi spells half
+        // forms with them.
+        assert_eq!(
+            without_controls("क्\u{200d}ष क्\u{200c}ष"),
+            "क्\u{200d}ष क्\u{200c}ष"
+        );
+    }
+
+    /// The sentence, espeak-ng 1.52's output for it as captured on macOS, and
+    /// what Kokoro gets.
+    const READINGS: &[(&str, &str, &str, &str)] = &[
+        (
+            "fr-fr",
+            "Les enfants sont dans le jardin.",
+            "le-z ɑ\u{303}fˈɑ\u{303} sˈɔ\u{303} dɑ\u{303} lə- ʒaʁdˈɛ\u{303}\n",
+            "lez ɑ\u{303}fˈɑ\u{303} sˈɔ\u{303} dɑ\u{303} lə ʒaʁdˈɛ\u{303}.",
+        ),
+        (
+            "pt-br",
+            "Não, obrigado.",
+            "nˈɐ\u{303}\u{200d}ʊ\u{303}\nˌobriɡˈadʊ\n",
+            "nˈɐ\u{303}ʊ\u{303}, ˌobriɡˈadʊ.",
+        ),
+        (
+            "hi",
+            "मैं iPhone use करता हूँ।",
+            "mɛ\u{303} (\u{200d}e\u{200d}n)ˈa\u{200d}ɪ fˈə\u{200d}ʊn jˈuːs(\u{200d}h\u{200d}i) kˈʌɾtˌaː hu\u{303}\n",
+            "mɛ\u{303} ˈI fˈQn jˈuːs kˈʌɾtˌaː hu\u{303}.",
+        ),
+        (
+            "hi",
+            "आज मौसम बहुत अच्छा है।",
+            "ˈaːɟ mˈɔːsəm bˈʌhʊt ˈʌcʰcʰaː hɛː\n",
+            "ˈaːɟ mˈɔːsəm bˈʌhʊt ˈʌcʰcʰaː hɛː.",
+        ),
+        (
+            "es",
+            "El 3,5 % de 1.000 personas llegó a las 10:30.",
+            "el tɾˈes koma θˈinko poɾθjˈɛnto ðe mˈil peɾsˈonas ʎeɣˈo a las ðjˈɛθ tɾˈe\u{200d}ɪnta\n",
+            "el tɾˈes koma θˈinko poɾθjˈɛnto ðe mˈil peɾsˈonas ʎeɣˈo a las ðjˈɛθ tɾˈAnta.",
+        ),
+        (
+            "es",
+            "Hola, ¿cómo estás?",
+            "ˈola\nkˈomo estˈas\n",
+            "ˈola, kˈomo estˈas?",
+        ),
+        ("es", "¡Qué bien!", "kˈe βjˈen\n", "kˈe βjˈen!"),
+        // espeak-ng reads no minus sign; the argument is not an option.
+        ("es", "-5 grados", "θˈinko ɣɾˈaðos\n", "θˈinko ɣɾˈaðos"),
+        (
+            "it",
+            "Ciao, come stai? Bene, grazie.",
+            "t\u{200d}ʃˈao\nkˌome stˈaj\nbˈɛne\nɡrˈat\u{200d}sje\n",
+            "ʧˈao, kˌome stˈaj? bˈɛne, ɡrˈaʦje.",
+        ),
+        (
+            "it",
+            "Lo zio mangia la pizza.",
+            "lo d\u{200d}zˈio mˈand\u{200d}ʒa la pˈit\u{200d}sːa\n",
+            "lo ʣˈio mˈanʤa la pˈiʦːa.",
+        ),
+        (
+            "fr-fr",
+            "Ce weekend, j'ai regardé Netflix.",
+            "sə- (\u{200d}e\u{200d}n)wiːkˈɛnd(\u{200d}f\u{200d}r)\nʒe ʁəɡaʁdˈe nɛtflˈiks\n",
+            "sə wiːkˈɛnd, ʒe ʁəɡaʁdˈe nɛtflˈiks.",
+        ),
+        (
+            "es",
+            "«¿Vienes?» preguntó.",
+            "bjˈenes\npɾˌeɣuntˈo\n",
+            "bjˈenes? pɾˌeɣuntˈo.",
+        ),
+        // No clause ends at "UU.", before a lower-case word.
+        (
+            "es",
+            "EE. UU. es grande.",
+            "ˈee\nˌuˈu ˈes ɣɾˈande\n",
+            "ˈee. ˌuˈu ˈes ɣɾˈande.",
+        ),
+        (
+            "es",
+            "EE. UU. desde ayer.",
+            "ˈee\nˌuˈu ðˌesðe aʝˈeɾ\n",
+            "ˈee. ˌuˈu ðˌesðe aʝˈeɾ.",
+        ),
+        (
+            "es",
+            "Compré manzanas, peras, etc. y dime ¿quieres una?",
+            "kompɾˈe manθˈanas\npˈeɾas\netθˈeteɾa i ðˈime\nkjˈeɾes ˈuna\n",
+            "kompɾˈe manθˈanas, pˈeɾas, etθˈeteɾa i ðˈime kjˈeɾes ˈuna?",
+        ),
+        // A clause starts at a "¿" after a word, with no mark before it.
+        (
+            "es",
+            "Dime ¿qué quieres?",
+            "dˈime\nkˈe kjˈeɾes\n",
+            "dˈime kˈe kjˈeɾes?",
+        ),
+        (
+            "es",
+            "Dime ¿qué quieres? y te lo doy.",
+            "dˈime\nkˈe kjˈeɾes\ni te lo ðˈo\u{200d}ɪ\n",
+            "dˈime kˈe kjˈeɾes? i te lo ðˈoɪ.",
+        ),
+        // French spaces its marks and closes its quotes after them.
+        (
+            "fr-fr",
+            "Il a dit : « Non ! »",
+            "il a dˈi\nnˈɔ\u{303}\n\n",
+            "il a dˈi: nˈɔ\u{303}!",
+        ),
+        (
+            "fr-fr",
+            "Elle demande : « Tu viens ? »",
+            "ɛl dəmˈɑ\u{303}d\nty vjˈɛ\u{303}\n\n",
+            "ɛl dəmˈɑ\u{303}d: ty vjˈɛ\u{303}?",
+        ),
+        (
+            "fr-fr",
+            "Il a répondu : « Oui. »",
+            "il a ʁepɔ\u{303}dˈy\nwˈi\n\n",
+            "il a ʁepɔ\u{303}dˈy: wˈi.",
+        ),
+        (
+            "fr-fr",
+            "Il a dit\u{a0}: «\u{a0}Non\u{a0}!\u{a0}»",
+            "il a dˈi\nnˈɔ\u{303}\n",
+            "il a dˈi: nˈɔ\u{303}!",
+        ),
+        (
+            "fr-fr",
+            "Elle demande\u{202f}: «\u{202f}Tu viens\u{202f}?\u{202f}»",
+            "ɛl dəmˈɑ\u{303}d\nty vjˈɛ\u{303}\n",
+            "ɛl dəmˈɑ\u{303}d: ty vjˈɛ\u{303}?",
+        ),
+        (
+            "fr-fr",
+            "Il a dit « Non ! » et « Oui ? »",
+            "il a dˈi nˈɔ\u{303}\ne wˈi\n\n",
+            "il a dˈi nˈɔ\u{303}! e wˈi?",
+        ),
+        (
+            "es",
+            "Le pregunté: «¿Vienes? »",
+            "le pɾˌeɣuntˈe\nbjˈenes\n\n",
+            "le pɾˌeɣuntˈe: bjˈenes?",
+        ),
+        // A closer after a full stop ends the clause before a lower-case word.
+        (
+            "es",
+            "«Hola.» dijo él.",
+            "ˈola\ndˈixo ˈel\n",
+            "ˈola. dˈixo ˈel.",
+        ),
+        // espeak-ng breaks at an ellipsis with no space after it: the line
+        // count does not match, so the clauses are joined by a comma.
+        ("es", "Uno…dos.", "ˈuno\ndˈos\n", "ˈuno, dˈos."),
+    ];
+
+    #[test]
+    fn espeak_ng_output_maps_to_what_kokoro_was_trained_on() {
+        for &(_, text, ipa, kokoro) in READINGS {
+            let read = sentence_to_kokoro(ipa, &clause_marks(text));
+            assert_eq!(read, (kokoro.to_string(), 0), "{text}");
+            assert!(kokoro.chars().all(in_vocab), "{text}: {kokoro}");
+        }
+    }
+
+    #[test]
+    fn nasal_vowels_keep_their_tilde() {
+        let nasals = "ɑ\u{303} ɔ\u{303} ɛ\u{303} œ\u{303} ɐ\u{303} u\u{303}";
+        let read = sentence_to_kokoro(&format!("{nasals}\n"), &clause_marks("x"));
+        assert_eq!(read, (nasals.to_string(), 0));
+    }
+
+    #[test]
+    fn language_flags_go_and_their_words_stay() {
+        for (line, without) in [
+            (
+                "mɛ̃ (\u{200d}e\u{200d}n)ˈa\u{200d}ɪ jˈuːs(\u{200d}h\u{200d}i) hũ",
+                "mɛ̃ ˈa\u{200d}ɪ jˈuːs hũ",
+            ),
+            ("(en)wiːkˈɛnd(fr)", "wiːkˈɛnd"),
+            ("(\u{200d}p\u{200d}t\u{200d}-\u{200d}p\u{200d}t)a", "a"),
+            // Not flags.
+            ("a (b c) d", "a (b c) d"),
+            ("a () b (", "a () b ("),
+        ] {
+            assert_eq!(without_language_flags(line), without, "{line}");
+        }
+    }
+
+    #[test]
+    fn symbols_with_no_token_are_dropped_and_counted() {
+        // ʉ and ɵ: vowels Kokoro has no token for.
+        let read = sentence_to_kokoro("ʉa ɵ\n", &clause_marks("x."));
+        assert_eq!(read, ("a.".to_string(), 2));
+        assert_eq!(
+            sentence_to_kokoro("\n", &clause_marks("…")),
+            (String::new(), 0)
+        );
+    }
+
+    #[test]
+    fn clause_marks_are_read_where_espeak_ng_ends_a_clause() {
+        let marks = |text| {
+            let found = clause_marks(text);
+            (found.marks, found.ends_text)
+        };
+        let ending = |marks: &[&str]| (marks.iter().map(|m| m.to_string()).collect(), true);
+        let inside = |marks: &[&str]| (marks.iter().map(|m| m.to_string()).collect(), false);
+        assert_eq!(marks("Hola, ¿cómo estás?"), ending(&[",", "?"]));
+        assert_eq!(
+            marks("El 3,5 % de 1.000 personas llegó a las 10:30."),
+            ending(&["."])
+        );
+        assert_eq!(marks("«¿Vienes?» preguntó."), ending(&["?", "."]));
+        assert_eq!(marks("Él dijo: \"No lo sé.\""), ending(&[":", "."]));
+        assert_eq!(marks("dijo: hola"), inside(&[":"]));
+        assert_eq!(marks("¿Qué?! Espera…"), ending(&["?!", "…"]));
+        assert_eq!(marks("नमस्ते। दुनिया॥"), ending(&[".", "."]));
+        assert_eq!(marks("de 1914 – 1918"), inside(&["—"]));
+        assert_eq!(marks("well—maybe, 3, 5"), inside(&[",", ","]));
+        // Nothing to say before it: no clause.
+        assert_eq!(marks(", , hola"), inside(&[]));
+        assert_eq!(marks("hola, , adiós"), inside(&[","]));
+        assert_eq!(marks("les enfants"), inside(&[]));
+        // The mark ending the text may have closers and spaces after it.
+        assert_eq!(marks("Il a dit : « Non ! »"), ending(&[":", "!"]));
+        assert_eq!(
+            marks("Il a dit « Non ! » et « Oui ? »"),
+            ending(&["!", "?"])
+        );
+        // A full stop or two before a lower-case word is no clause end.
+        assert_eq!(marks("etc. y p. ej. esto."), ending(&["."]));
+        assert_eq!(marks("uno.. dos"), inside(&[]));
+        assert_eq!(marks("uno... dos"), inside(&["..."]));
+        assert_eq!(marks("Uno. Dos. 3 más."), ending(&[".", ".", "."]));
+        // A "¿" or "¡" after a word starts a clause with no mark.
+        assert_eq!(marks("Hola ¡qué bien! y adiós."), ending(&["", "!", "."]));
+        assert_eq!(marks("Hola, ¿qué tal? ¿Bien?"), ending(&[",", "?", "?"]));
+    }
+
+    /// Where an older espeak-ng reads a sentence of `READINGS` differently:
+    /// its version, the sentence and what Kokoro gets. 1.51 (Ubuntu 24.04)
+    /// says the Spanish "etc." as written rather than "etcétera".
+    const OLDER_READINGS: &[(&str, &str, &str)] = &[(
+        "1.51",
+        "Compré manzanas, peras, etc. y dime ¿quieres una?",
+        "kompɾˈe manθˈanas, pˈeɾas, ˈetk i ðˈime kjˈeɾes ˈuna?",
+    )];
+
+    /// "1.52.0" from "eSpeak NG text-to-speech: 1.52.0  Data at: …".
+    fn version(program: &Path) -> String {
+        let said = run(program, &["--version".to_string()], SENTENCE_TIMEOUT).unwrap();
+        said.split_whitespace()
+            .nth(3)
+            .unwrap_or_default()
+            .to_string()
+    }
+
+    #[test]
+    fn real_espeak_ng_reads_each_sentence_as_captured() {
+        let Some(program) = installed_for_test() else {
+            return;
+        };
+        let version = version(&program);
+        let mismatches: Vec<String> = READINGS
+            .iter()
+            .filter_map(|&(voice, text, _, kokoro)| {
+                let kokoro = OLDER_READINGS
+                    .iter()
+                    .find(|&&(older, sentence, _)| version.starts_with(older) && sentence == text)
+                    .map_or(kokoro, |&(_, _, older)| older);
+                let read = Sentences::new(program.clone(), voice).read(text).unwrap();
+                (read != (kokoro.to_string(), 0))
+                    .then(|| format!("{voice} {text}\n  expected {kokoro}\n  read     {read:?}"))
+            })
+            .collect();
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+
+    #[test]
     fn only_plain_words_are_sent() {
         for word in ["Kubernetes", "O'Neill", "npm", "'tis"] {
             assert!(is_plain_word(word), "{word}");
@@ -492,6 +1126,34 @@ mod tests {
         let error = run(Path::new("/usr/bin/false"), &[], TIMEOUT).unwrap_err();
         assert!(error.contains("exited"), "{error}");
         assert!(run(Path::new("/nonexistent/espeak-ng"), &[], TIMEOUT).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_failing_program_says_why() {
+        let args = ["-c", "echo; echo 'unknown voice' >&2; exit 1"].map(str::to_string);
+        let error = run(Path::new("/bin/sh"), &args, TIMEOUT).unwrap_err();
+        assert!(error.ends_with(": unknown voice"), "{error}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn output_far_larger_than_a_pipe_holds_is_read_whole() {
+        let args = ["-c", "yes | head -c 204800"].map(str::to_string);
+        let output = run(Path::new("/bin/sh"), &args, SENTENCE_TIMEOUT).unwrap();
+        assert_eq!(output.len(), 204_800);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_program_that_writes_without_end_is_stopped() {
+        let started = Instant::now();
+        let error = run(Path::new("/usr/bin/yes"), &[], Duration::from_millis(200)).unwrap_err();
+        assert!(
+            error.contains("no answer") || error.contains("exited"),
+            "{error}"
+        );
+        assert!(started.elapsed() < Duration::from_secs(2));
     }
 
     #[cfg(unix)]
