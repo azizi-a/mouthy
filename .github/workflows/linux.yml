@@ -36,6 +36,11 @@ jobs:
             libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
             patchelf libasound2-dev libgtk-layer-shell-dev libx11-dev \
             libxtst-dev libxrandr-dev libssl-dev pkg-config
+      # For the pronunciation tests only; the app never bundles it.
+      - name: Install espeak-ng
+        run: |
+          sudo apt-get install -y espeak-ng
+          espeak-ng --version
       # The Mac's toolchain; bump by hand.
       - &rust
         uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
