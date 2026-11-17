@@ -798,7 +798,7 @@ fn text_to_ids(
 /// Kokoro's symbols for `text`, before they become ids.
 fn text_to_phonemes(g2p: &G2P, language: VoiceLanguage, text: &str) -> Result<String, String> {
     let (raw, _) = g2p
-        .g2p(&reading(g2p, text))
+        .g2p(&reading(g2p, text, language))
         .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
     Ok(to_kokoro_phonemes(&raw, Dialect::of(language)))
 }
@@ -818,11 +818,22 @@ pub(crate) fn phonemes_without_espeak(files: &ModelFiles, texts: &[String]) -> V
         .collect()
 }
 
-/// `text` as misaki-rs should get it: plain characters, abbreviations and
-/// numbers in words and initialisms spelled.
-fn reading(g2p: &G2P, text: &str) -> String {
-    let words = expand_numbers(&expand_abbreviations(&plain_text(text)));
+/// `text` as misaki-rs should get it: plain characters and, in English,
+/// abbreviations and numbers in words and initialisms spelled.
+fn reading(g2p: &G2P, text: &str, language: VoiceLanguage) -> String {
+    let plain = plain_text(text, language);
+    if !is_english(language) {
+        return plain;
+    }
+    let words = expand_numbers(&expand_abbreviations(&plain));
     spell_out(&words, &g2p.lexicon)
+}
+
+fn is_english(language: VoiceLanguage) -> bool {
+    matches!(
+        language,
+        VoiceLanguage::AmericanEnglish | VoiceLanguage::BritishEnglish
+    )
 }
 
 /// Initialisms read as misaki reads a proper noun it spells: each letter's
@@ -912,8 +923,10 @@ const FOLDS: &[(&str, &str)] = &[
 
 /// Text as misaki-rs reads it best. It splits a word at a curly apostrophe
 /// ("don’t" → "don", "❓", "t"), spells an unknown word letter by letter and
-/// reads a dash as a plain space.
-fn plain_text(text: &str) -> String {
+/// reads a dash as a plain space. Only English loses its accents: other
+/// languages need their letters as written.
+fn plain_text(text: &str, language: VoiceLanguage) -> String {
+    let fold = is_english(language);
     let mut out = String::with_capacity(text.len());
     for (i, c) in text.char_indices() {
         match c {
@@ -926,7 +939,7 @@ fn plain_text(text: &str) -> String {
             // Minus sign.
             '\u{2212}' => out.push('-'),
             // Accents typed as a separate mark after the letter ("e" + U+0301).
-            '\u{300}'..='\u{36f}' if out.ends_with(|c: char| c.is_ascii_alphabetic()) => {}
+            '\u{300}'..='\u{36f}' if fold && out.ends_with(|c: char| c.is_ascii_alphabetic()) => {}
             // Soft hyphen, zero-width space, byte order mark.
             '\u{ad}' | '\u{200b}' | '\u{feff}' => {}
             '\u{a0}' => out.push(' '),
@@ -937,7 +950,7 @@ fn plain_text(text: &str) -> String {
                     out.push(',');
                 }
             }
-            c if c.is_ascii() => out.push(c),
+            c if c.is_ascii() || !fold => out.push(c),
             c => match FOLDS.iter().find(|(from, _)| from.contains(c)) {
                 Some((_, to)) => out.push_str(to),
                 None => out.push(c),
@@ -1192,6 +1205,35 @@ mod tests {
         (g2p, unknown)
     }
 
+    fn plain_english(text: &str) -> String {
+        plain_text(text, VoiceLanguage::BritishEnglish)
+    }
+
+    #[test]
+    fn only_english_loses_its_accents() {
+        let text = "Él dijo “sí” — mañana, cafe\u{301} y ça va.";
+        assert_eq!(
+            plain_text(text, VoiceLanguage::Spanish),
+            "Él dijo \"sí\", mañana, cafe\u{301} y ça va."
+        );
+        assert_eq!(
+            plain_text(text, VoiceLanguage::AmericanEnglish),
+            "El dijo \"si\", manana, cafe y ca va."
+        );
+    }
+
+    #[test]
+    fn only_english_has_numbers_abbreviations_and_initialisms_rewritten() {
+        let g2p = G2P::new(Language::EnglishUS);
+        let text = "Dr. Smith paid $5 for the API.";
+        assert_eq!(reading(&g2p, text, VoiceLanguage::Spanish), text);
+        let english = reading(&g2p, text, VoiceLanguage::AmericanEnglish);
+        assert!(
+            english.starts_with("Doctor Smith paid five dollars for the [API]("),
+            "{english}"
+        );
+    }
+
     #[test]
     fn curly_apostrophes_and_accents_read_as_plain_words() {
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
@@ -1206,7 +1248,7 @@ mod tests {
             ("donʼt", "don't"),
             ("‘Café’", "'Cafe'"),
         ] {
-            let (read, _) = g2p.g2p(&plain_text(typed)).unwrap();
+            let (read, _) = g2p.g2p(&plain_english(typed)).unwrap();
             let (expected, _) = g2p.g2p(plain).unwrap();
             assert_eq!(read, expected, "{typed}");
             assert!(!read.contains('❓'), "{typed} -> {read}");
@@ -1218,14 +1260,14 @@ mod tests {
     fn decomposed_accents_read_as_plain_words() {
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
         for (typed, plain) in [("cafe\u{301}", "cafe"), ("re\u{301}sume\u{301}", "resume")] {
-            assert_eq!(plain_text(typed), plain);
-            let (read, _) = g2p.g2p(&plain_text(typed)).unwrap();
+            assert_eq!(plain_english(typed), plain);
+            let (read, _) = g2p.g2p(&plain_english(typed)).unwrap();
             let (expected, _) = g2p.g2p(plain).unwrap();
             assert_eq!(read, expected, "{typed}");
         }
         assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
         // Not after a plain letter: left for misaki-rs.
-        assert_eq!(plain_text("日\u{301}"), "日\u{301}");
+        assert_eq!(plain_english("日\u{301}"), "日\u{301}");
     }
 
     /// Kokoro symbols for `text` as the local voice reads it.
@@ -1311,7 +1353,7 @@ mod tests {
         let g2p = G2P::new(Language::EnglishGB);
         let sentence = "Dr. Smith met Mr. Jones at 7.30pm.";
         assert_eq!(
-            reading(&g2p, sentence),
+            reading(&g2p, sentence, VoiceLanguage::BritishEnglish),
             "Doctor Smith met Mister Jones at seven thirty PM."
         );
         let read_gb = |text| read(&g2p, VoiceLanguage::BritishEnglish, text);
@@ -1390,7 +1432,7 @@ mod tests {
             !curly.windows(2).any(|pair| pair == [SPACE_ID, SPACE_ID]),
             "{curly:?}"
         );
-        assert_eq!(plain_text("„no“"), "\"no\"");
+        assert_eq!(plain_english("„no“"), "\"no\"");
     }
 
     #[test]
@@ -1406,22 +1448,22 @@ mod tests {
     #[test]
     fn invisible_characters_go_and_no_break_spaces_become_spaces() {
         assert_eq!(
-            plain_text("soft\u{ad}ware\u{200b} \u{feff}ten\u{a0}pounds"),
+            plain_english("soft\u{ad}ware\u{200b} \u{feff}ten\u{a0}pounds"),
             "software ten pounds"
         );
-        assert_eq!(plain_text("Straße Œuvre ﬂoor"), "Strasse OEuvre floor");
-        assert_eq!(plain_text("日本 🎉"), "日本 🎉");
+        assert_eq!(plain_english("Straße Œuvre ﬂoor"), "Strasse OEuvre floor");
+        assert_eq!(plain_english("日本 🎉"), "日本 🎉");
     }
 
     #[test]
     fn a_spaced_dash_becomes_a_comma() {
         assert_eq!(
-            plain_text("Tea — or coffee – is fine"),
+            plain_english("Tea — or coffee – is fine"),
             "Tea, or coffee, is fine"
         );
-        assert_eq!(plain_text("Wait, — no."), "Wait, no.");
+        assert_eq!(plain_english("Wait, — no."), "Wait, no.");
         for kept in ["well—maybe", "1914 – 1918", "£5 – £10", "— Yes", "fine —"] {
-            assert_eq!(plain_text(kept), kept);
+            assert_eq!(plain_english(kept), kept);
         }
         let (g2p, _) = recording_g2p(Language::EnglishGB);
         let (ids, _) = text_to_ids(&g2p, VoiceLanguage::BritishEnglish, "Tea — or coffee").unwrap();
@@ -2000,7 +2042,9 @@ mod tests {
         let plain = G2P::new(Language::EnglishGB);
         let (mut oov, mut read_by_espeak) = (0, 0);
         for text in CORPUS {
-            let (raw, _) = g2p.g2p(&reading(&g2p, text)).unwrap();
+            let (raw, _) = g2p
+                .g2p(&reading(&g2p, text, VoiceLanguage::BritishEnglish))
+                .unwrap();
             let phonemes = to_kokoro_phonemes(&raw, Dialect::British);
             let words = std::mem::take(&mut *unknown.lock().unwrap());
             println!("{text}\n  {phonemes}\n  not in the lexicon: {words:?}");
