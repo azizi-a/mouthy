@@ -38,10 +38,13 @@ jobs:
             libxtst-dev libxrandr-dev libssl-dev pkg-config
       # The Mac's toolchain; bump by hand.
       - &rust
-        name: Install Rust
-        run: |
-          rustup toolchain install 1.99.1 --profile minimal --component clippy
-          rustup default 1.99.1
+        uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: clippy
+      - &rust-cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
       - &bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -67,6 +70,7 @@ jobs:
       - *checkout
       - *apt
       - *rust
+      - *rust-cache
       - *bun
       - *frontend
       - name: Bundle deb, rpm and AppImage
