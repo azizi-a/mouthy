@@ -94,8 +94,15 @@ pub fn unpack(models_dir: &Path) -> Result<(), String> {
 /// Deletes the dictionary and anything an interrupted unpack left. A session
 /// reading Japanese keeps its mapped copy until the voice reloads.
 pub fn remove(models_dir: &Path) -> Result<(), String> {
-    remove_dir(&unpacking(models_dir))?;
+    remove_leftovers(models_dir)?;
     remove_dir(&dir(models_dir))
+}
+
+/// Deletes what only an unpack in progress should have: the downloaded
+/// archive and the folder it is unpacked into.
+pub fn remove_leftovers(models_dir: &Path) -> Result<(), String> {
+    download::remove_if_present(&archive(models_dir))?;
+    remove_dir(&unpacking(models_dir))
 }
 
 /// Writes `files` from `archive` into `temp`, then renames it to `dest`, so
@@ -131,7 +138,8 @@ fn unpack_files(
 /// fails the whole unpack.
 fn extract(stream: impl Read, dest: &Path, files: &[(&str, u64)]) -> Result<(), String> {
     remove_dir(dest)?;
-    fs::create_dir_all(dest)
+    // Fails if anything took the name since: the folder must be our own.
+    fs::create_dir(dest)
         .map_err(|e| format!("Cannot create the folder {}: {e}", dest.display()))?;
     let limit = files.iter().map(|(_, size)| size).sum::<u64>() + TAR_OVERHEAD;
     let mut tar = stream.take(limit);
@@ -139,6 +147,8 @@ fn extract(stream: impl Read, dest: &Path, files: &[(&str, u64)]) -> Result<(), 
     loop {
         let mut block = [0u8; BLOCK];
         tar.read_exact(&mut block).map_err(damaged)?;
+        // The end. What follows, and the gzip trailer, go unchecked: the
+        // archive's sha256 was checked before it was unpacked.
         if block.iter().all(|&b| b == 0) {
             break;
         }
@@ -265,13 +275,40 @@ pub(crate) fn install_placeholder(models_dir: &Path) {
     }
 }
 
-/// The same dictionary, built into the test binary.
+/// The dictionary for a test that reads with it: the archive at
+/// `MOUTHY_JA_ARCHIVE`, checked against the catalog's sha256, unpacked and
+/// loaded as the app does. Without it the test passes having checked nothing,
+/// unless `MOUTHY_REQUIRE_JA_DICTIONARY` is set, as on Linux CI.
 #[cfg(test)]
-pub(crate) fn test_tagger() -> &'static Tagger {
-    static TAGGER: std::sync::OnceLock<Tagger> = std::sync::OnceLock::new();
-    TAGGER.get_or_init(|| {
-        JPreprocess::with_dictionaries(jpreprocess_naist_jdic::lindera::load().unwrap(), None)
-    })
+pub(crate) fn tagger_for_test() -> Option<&'static Tagger> {
+    static TAGGER: std::sync::OnceLock<Option<Tagger>> = std::sync::OnceLock::new();
+    let tagger = TAGGER
+        .get_or_init(|| {
+            let downloaded = PathBuf::from(std::env::var_os("MOUTHY_JA_ARCHIVE")?);
+            // Kept between runs, so a run unpacks only once.
+            let models = std::env::temp_dir().join("mouthy-test-models");
+            if !installed(&dir(&models)) {
+                let pinned = super::catalog::all(&models)
+                    .into_iter()
+                    .find(|file| file.kind == super::catalog::ModelFileKind::Dictionary)
+                    .unwrap();
+                let actual = download::sha256_file(&downloaded).unwrap();
+                assert_eq!(actual, pinned.sha256, "{}", downloaded.display());
+                fs::create_dir_all(&models).unwrap();
+                fs::copy(&downloaded, archive(&models)).unwrap();
+                unpack(&models).unwrap();
+            }
+            Some(load(&dir(&models)).unwrap())
+        })
+        .as_ref();
+    if tagger.is_none() {
+        assert!(
+            std::env::var_os("MOUTHY_REQUIRE_JA_DICTIONARY").is_none(),
+            "the Japanese dictionary is required here: set MOUTHY_JA_ARCHIVE"
+        );
+        eprintln!("MOUTHY_JA_ARCHIVE is not set, so this test checks nothing");
+    }
+    tagger
 }
 
 #[cfg(test)]
@@ -469,6 +506,21 @@ mod tests {
     }
 
     #[test]
+    fn leftovers_go_and_the_dictionary_stays() {
+        let models = tempfile::tempdir().unwrap();
+        unpack_download(models.path(), &gz(&tar(&good()))).unwrap();
+        fs::write(archive(models.path()), b"stale").unwrap();
+        fs::create_dir_all(unpacking(models.path())).unwrap();
+        fs::write(unpacking(models.path()).join("a.bin"), b"half").unwrap();
+        remove_leftovers(models.path()).unwrap();
+        assert!(!archive(models.path()).exists());
+        assert!(!unpacking(models.path()).exists());
+        assert!(complete(&dir(models.path()), SMALL));
+        // Nothing left is no error.
+        remove_leftovers(models.path()).unwrap();
+    }
+
+    #[test]
     fn the_files_are_the_published_ones() {
         let total: u64 = FILES.iter().map(|(_, size)| size).sum();
         assert_eq!(total, 80_055_769);
@@ -476,37 +528,20 @@ mod tests {
         assert_eq!(dir(Path::new("/m")), Path::new("/m/naist-jdic"));
     }
 
-    /// Unpacks and loads the real download:
-    /// `MOUTHY_JA_ARCHIVE=<naist-jdic-jpreprocess.tar.gz> cargo test -- --ignored published_archive`.
     #[test]
-    #[ignore = "needs the downloaded dictionary"]
-    fn the_published_archive_unpacks_and_reads_as_the_built_in_one() {
+    fn the_published_archive_unpacks_whole_and_loads() {
+        if tagger_for_test().is_none() {
+            return;
+        }
         let models = tempfile::tempdir().unwrap();
-        fs::copy(
-            std::env::var("MOUTHY_JA_ARCHIVE").unwrap(),
-            archive(models.path()),
-        )
-        .unwrap();
+        let downloaded = std::env::var_os("MOUTHY_JA_ARCHIVE").unwrap();
+        fs::copy(downloaded, archive(models.path())).unwrap();
         unpack(models.path()).unwrap();
         assert!(installed(&dir(models.path())));
         assert!(!archive(models.path()).exists());
+        assert!(!unpacking(models.path()).exists());
         let tagger = load(&dir(models.path())).unwrap();
-        let prons = |tagger: &Tagger, text: &str| -> Vec<String> {
-            tagger
-                .text_to_njd(text)
-                .unwrap()
-                .nodes
-                .iter()
-                .map(|node| format!("{}={}", node.get_string(), node.get_pron()))
-                .collect()
-        };
-        for text in [
-            "東京に行きます。",
-            "今日は天気がいいですね。",
-            "日本語を勉強しています。",
-            "3人で10時30分に会いました。",
-        ] {
-            assert_eq!(prons(&tagger, text), prons(test_tagger(), text), "{text}");
-        }
+        let nodes = tagger.text_to_njd("東京").unwrap().nodes;
+        assert_eq!(nodes[0].get_pron().to_string(), "トーキョー");
     }
 }

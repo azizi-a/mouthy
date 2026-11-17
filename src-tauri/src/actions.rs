@@ -2244,7 +2244,9 @@ mod tests {
         );
         // The dictionary changes nothing without Japanese, and reads the kanji.
         let texts: Vec<String> = american.into_iter().map(|(text, _)| text).collect();
-        let tagged = tts::local::phonemes_with_dictionary(&kumo, &texts);
+        let Some(tagged) = tts::local::phonemes_with_dictionary(&kumo, &texts) else {
+            return;
+        };
         let untagged = tts::local::phonemes_without_espeak(&kumo, &texts);
         for ((text, tagged), untagged) in texts.iter().zip(&tagged).zip(&untagged) {
             if text == kanji_line {
@@ -2285,10 +2287,14 @@ mod tests {
             tts::local::phonemes_without_espeak(kumo, std::slice::from_ref(&text)),
             tts::local::phonemes_without_espeak(&alloy, std::slice::from_ref(&text))
         );
-        assert_eq!(
-            tts::local::phonemes_with_dictionary(kumo, std::slice::from_ref(&text)),
-            tts::local::phonemes_without_espeak(&alloy, std::slice::from_ref(&text))
-        );
+        if let Some(tagged) =
+            tts::local::phonemes_with_dictionary(kumo, std::slice::from_ref(&text))
+        {
+            assert_eq!(
+                tagged,
+                tts::local::phonemes_without_espeak(&alloy, std::slice::from_ref(&text))
+            );
+        }
     }
 
     /// English as the local voice reads it must not move unless on purpose:

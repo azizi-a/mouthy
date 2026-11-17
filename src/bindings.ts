@@ -538,9 +538,17 @@ installed: boolean;
  */
 partial: number; downloading: boolean; 
 /**
+ * Downloaded and checked, and being unpacked: too late to cancel.
+ */
+unpacking: boolean; 
+/**
  * Why the last download failed, until the next one starts.
  */
 error: string | null; 
+/**
+ * The last download did not match its pinned sha256.
+ */
+mismatch: boolean; 
 /**
  * A voice's language; `None` for a model or the dictionary.
  */
@@ -548,7 +556,7 @@ language: VoiceLanguage | null }
 export type ModelFileKind = "model" | "voice" | "dictionary"
 export type ModelFileList = { 
 /**
- * The folder the files live in.
+ * The models folder, holding the Kokoro files and the Japanese dictionary.
  */
 dir: string; files: ModelFile[]; 
 /**

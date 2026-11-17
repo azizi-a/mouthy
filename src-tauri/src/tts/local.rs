@@ -1006,10 +1006,14 @@ pub(crate) fn phonemes_without_espeak(files: &ModelFiles, texts: &[String]) -> V
     phonemes_with(files, texts, None)
 }
 
-/// The same, with the Japanese dictionary the tests have built in.
+/// The same with the Japanese dictionary, when the test run has it.
 #[cfg(test)]
-pub(crate) fn phonemes_with_dictionary(files: &ModelFiles, texts: &[String]) -> Vec<String> {
-    phonemes_with(files, texts, Some(ja_dictionary::test_tagger()))
+pub(crate) fn phonemes_with_dictionary(
+    files: &ModelFiles,
+    texts: &[String],
+) -> Option<Vec<String>> {
+    let tagger = ja_dictionary::tagger_for_test()?;
+    Some(phonemes_with(files, texts, Some(tagger)))
 }
 
 #[cfg(test)]
@@ -1854,10 +1858,6 @@ mod tests {
         japanese_with(None, text)
     }
 
-    fn japanese_tagged(text: &str) -> String {
-        japanese_with(Some(ja_dictionary::test_tagger()), text)
-    }
-
     #[test]
     fn japanese_reads_kana_and_its_latin_words_in_english() {
         assert_eq!(japanese("きょうはOKです。"), "kʲoɯha ˌOkˈA desɨ.");
@@ -1867,9 +1867,13 @@ mod tests {
         );
         assert_eq!(japanese("「API」をつかう。"), "“ˌApˌiˈI” oʦɨkaɯ.");
         // With the dictionary: word spaces, は as "wa" and long vowels.
-        assert_eq!(japanese_tagged("きょうはOKです。"), "kʲoː βa ˌOkˈA desɨ.");
+        let Some(tagger) = ja_dictionary::tagger_for_test() else {
+            return;
+        };
+        let tagged = |text: &str| japanese_with(Some(tagger), text);
+        assert_eq!(tagged("きょうはOKです。"), "kʲoː βa ˌOkˈA desɨ.");
         assert_eq!(
-            japanese_tagged("私はiPhone 15を使う。"),
+            tagged("私はiPhone 15を使う。"),
             "βataɕi βa ˈI fˈOn fˈɪftin o ʦɨkaɯ."
         );
     }
@@ -1881,11 +1885,12 @@ mod tests {
     fn a_japanese_chunk_fits_one_inference() {
         let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "jf_alpha");
         let g2p = build_g2p(&files.reading());
-        for (paragraph, tagger) in [
-            (KANA_PARAGRAPH, None),
-            (KANA_PARAGRAPH, Some(ja_dictionary::test_tagger())),
-            (ja::KANJI_PROSE, Some(ja_dictionary::test_tagger())),
-        ] {
+        let mut paragraphs = vec![(KANA_PARAGRAPH, None)];
+        if let Some(tagger) = ja_dictionary::tagger_for_test() {
+            paragraphs.push((KANA_PARAGRAPH, Some(tagger)));
+            paragraphs.push((ja::KANJI_PROSE, Some(tagger)));
+        }
+        for (paragraph, tagger) in paragraphs {
             // One sentence of several hundred characters, cut at its commas.
             let long_sentence = paragraph.replace(['。', '？'], "、").repeat(2);
             let text = format!("{paragraph}{long_sentence}");
@@ -1954,7 +1959,7 @@ mod tests {
         };
         let japanese =
             |text: &str| text_to_phonemes(&g2p, None, VoiceLanguage::Japanese, text).unwrap();
-        let tagger = Some(ja_dictionary::test_tagger());
+        let tagger = ja_dictionary::tagger_for_test();
         let tagged =
             |text: &str| text_to_phonemes(&g2p, tagger, VoiceLanguage::Japanese, text).unwrap();
         for english in [
@@ -1974,13 +1979,15 @@ mod tests {
                 format!("koɾeha {} desɨ.", american(english)),
                 "{english}"
             );
-            assert_eq!(
-                tagged(&format!("これは{english}です。")),
-                format!("koɾe βa {} desɨ.", american(english)),
-                "{english}"
-            );
             assert_eq!(japanese(english), american(english), "{english}");
-            assert_eq!(tagged(english), american(english), "{english}");
+            if tagger.is_some() {
+                assert_eq!(
+                    tagged(&format!("これは{english}です。")),
+                    format!("koɾe βa {} desɨ.", american(english)),
+                    "{english}"
+                );
+                assert_eq!(tagged(english), american(english), "{english}");
+            }
         }
     }
 

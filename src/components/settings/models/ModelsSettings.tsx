@@ -170,6 +170,11 @@ export const ModelsSettings: React.FC = () => {
           <FileRow
             name={t("settings.models.dictionary.name")}
             description={`${megabytes(dictionary.size)} · ${t("settings.models.dictionary.source")}`}
+            failure={
+              dictionary.mismatch
+                ? t("settings.models.dictionary.mismatch")
+                : undefined
+            }
             {...rowProps(dictionary)}
           />
         </SettingsGroup>

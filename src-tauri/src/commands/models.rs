@@ -31,13 +31,23 @@ pub struct ModelDownloads(Mutex<DownloadTable>);
 #[derive(Default)]
 struct DownloadTable {
     running: HashMap<String, Running>,
-    failed: HashMap<String, String>,
+    failed: HashMap<String, Failure>,
 }
 
 /// A file's entry stays until its task ends, so a file has one task at most.
 struct Running {
     abort: AbortHandle,
     downloaded: u64,
+    /// Checked and being unpacked, past where a cancel can stop it.
+    unpacking: bool,
+}
+
+/// Why a file's last download failed.
+#[derive(Clone)]
+struct Failure {
+    message: String,
+    /// Its bytes did not match the pinned sha256.
+    mismatch: bool,
 }
 
 impl ModelDownloads {
@@ -48,7 +58,7 @@ impl ModelDownloads {
 
 #[derive(Serialize, Type)]
 pub struct ModelFileList {
-    /// The folder the files live in.
+    /// The models folder, holding the Kokoro files and the Japanese dictionary.
     pub dir: String,
     pub files: Vec<ModelFile>,
     /// The selected model, if its file is not there.
@@ -84,8 +94,12 @@ pub struct ModelFile {
     /// the next download resumes from.
     pub partial: u64,
     pub downloading: bool,
+    /// Downloaded and checked, and being unpacked: too late to cancel.
+    pub unpacking: bool,
     /// Why the last download failed, until the next one starts.
     pub error: Option<String>,
+    /// The last download did not match its pinned sha256.
+    pub mismatch: bool,
     /// A voice's language; `None` for a model or the dictionary.
     pub language: Option<VoiceLanguage>,
 }
@@ -101,30 +115,46 @@ struct DownloadProgress<'a> {
 #[specta::specta]
 pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
     let models_dir = models_dir(&app)?;
-    let (running, failed): (HashMap<String, u64>, HashMap<String, String>) = {
+    let catalog = catalog::all(&models_dir);
+    let (running, failed): (HashMap<String, (u64, bool)>, HashMap<String, Failure>) = {
         let downloads = app.state::<ModelDownloads>();
         let table = downloads.lock();
+        // Under the lock, so no download of the dictionary starts meanwhile.
+        for file in &catalog {
+            if file.kind == ModelFileKind::Dictionary && !table.running.contains_key(&file.id) {
+                if let Err(e) = ja_dictionary::remove_leftovers(&models_dir) {
+                    warn!("{e}");
+                }
+            }
+        }
         let running = table
             .running
             .iter()
-            .map(|(id, r)| (id.clone(), r.downloaded))
+            .map(|(id, r)| (id.clone(), (r.downloaded, r.unpacking)))
             .collect();
         (running, table.failed.clone())
     };
-    let files = catalog::all(&models_dir)
+    let files = catalog
         .into_iter()
-        .map(|file| ModelFile {
-            installed: file.installed(),
-            partial: running
-                .get(&file.id)
-                .copied()
-                .unwrap_or_else(|| partial_len(&file.path)),
-            downloading: running.contains_key(&file.id),
-            error: failed.get(&file.id).cloned(),
-            size: file.size,
-            kind: file.kind,
-            language: file.language,
-            id: file.id,
+        .map(|file| {
+            let failure = failed.get(&file.id);
+            ModelFile {
+                installed: file.installed(),
+                partial: running
+                    .get(&file.id)
+                    .map(|&(downloaded, _)| downloaded)
+                    .unwrap_or_else(|| partial_len(&file.path)),
+                downloading: running.contains_key(&file.id),
+                unpacking: running
+                    .get(&file.id)
+                    .is_some_and(|&(_, unpacking)| unpacking),
+                error: failure.map(|failure| failure.message.clone()),
+                mismatch: failure.is_some_and(|failure| failure.mismatch),
+                size: file.size,
+                kind: file.kind,
+                language: file.language,
+                id: file.id,
+            }
         })
         .collect();
     let settings = settings::get_settings(&app);
@@ -145,9 +175,7 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
         })
         .unwrap_or_default();
     Ok(ModelFileList {
-        dir: local::kokoro_dir(&models_dir)
-            .to_string_lossy()
-            .into_owned(),
+        dir: models_dir.to_string_lossy().into_owned(),
         files,
         missing_model: selected
             .model_missing()
@@ -175,7 +203,14 @@ pub async fn download_model_file(app: AppHandle, id: String) -> Result<(), Strin
         }
         table.failed.remove(&id);
         let downloaded = partial_len(&file.path);
-        table.running.insert(id, Running { abort, downloaded });
+        table.running.insert(
+            id,
+            Running {
+                abort,
+                downloaded,
+                unpacking: false,
+            },
+        );
     }
     files_changed(&app);
     tauri::async_runtime::spawn(run_download(app, file, client, registration));
@@ -222,7 +257,7 @@ pub async fn delete_model_file(app: AppHandle, id: String) -> Result<(), String>
 #[tauri::command]
 #[specta::specta]
 pub async fn open_models_dir(app: AppHandle) -> Result<(), String> {
-    let dir = local::kokoro_dir(&models_dir(&app)?);
+    let dir = models_dir(&app)?;
     fs::create_dir_all(&dir).map_err(|e| format!("Cannot create {}: {e}", dir.display()))?;
     app.opener()
         .open_path(dir.to_string_lossy(), None::<String>)
@@ -252,7 +287,10 @@ async fn run_download(
     let mut finish = Finish {
         app: app.clone(),
         id: file.id.clone(),
-        error: Some("The download stopped unexpectedly".into()),
+        failure: Some(Failure {
+            message: "The download stopped unexpectedly".into(),
+            mismatch: false,
+        }),
     };
     let progress = |downloaded: u64| {
         if let Some(running) = app
@@ -291,40 +329,70 @@ async fn run_download(
             );
             // Not cancellable: the task holds the file's entry until this
             // ends, so no second download can unpack beside it.
-            if let Err(e) = install(&app, &file).await {
-                warn!("Installing {} failed: {e}", file.id);
-                finish.error = Some(e);
+            if file.kind == ModelFileKind::Dictionary {
+                if let Some(running) = app
+                    .state::<ModelDownloads>()
+                    .lock()
+                    .running
+                    .get_mut(&file.id)
+                {
+                    running.unpacking = true;
+                }
+                files_changed(&app);
+            }
+            if let Err(message) = install(&file).await {
+                warn!("Installing {} failed: {message}", file.id);
+                finish.failure = Some(Failure {
+                    message,
+                    mismatch: false,
+                });
                 return;
             }
-            finish.error = None;
+            finish.failure = None;
             crate::actions::preload_local_voice(&app);
         }
-        Ok(Err(e)) => {
-            warn!("Download of {} failed: {e}", file.id);
-            finish.error = Some(e);
+        Ok(Err(message)) => {
+            warn!("Download of {} failed: {message}", file.id);
+            finish.failure = Some(Failure {
+                mismatch: message == download::MISMATCH,
+                message,
+            });
         }
         Err(_) => {
             info!("Download of {} cancelled", file.id);
-            finish.error = None;
+            finish.failure = None;
         }
     }
 }
 
-/// Makes a checked download ready to use: the dictionary is unpacked.
-async fn install(app: &AppHandle, file: &CatalogFile) -> Result<(), String> {
+/// Makes a checked download ready to use: the dictionary is unpacked, and what
+/// the unpack used is removed however it ends.
+async fn install(file: &CatalogFile) -> Result<(), String> {
     if file.kind != ModelFileKind::Dictionary {
         return Ok(());
     }
-    let models_dir = models_dir(app)?;
+    let Some(models_dir) = file.path.parent().map(Path::to_path_buf) else {
+        return Err(format!("{} has no folder", file.path.display()));
+    };
     let started = Instant::now();
-    tauri::async_runtime::spawn_blocking(move || ja_dictionary::unpack(&models_dir))
-        .await
-        .map_err(|e| format!("Unpacking the dictionary failed: {e}"))??;
-    info!(
-        "Unpacked the Japanese dictionary in {:.1} s",
-        started.elapsed().as_secs_f32()
-    );
-    Ok(())
+    let unpack_into = models_dir.clone();
+    let result =
+        match tauri::async_runtime::spawn_blocking(move || ja_dictionary::unpack(&unpack_into))
+            .await
+        {
+            Ok(unpacked) => unpacked,
+            Err(e) => Err(format!("Unpacking the dictionary failed: {e}")),
+        };
+    if let Err(e) = ja_dictionary::remove_leftovers(&models_dir) {
+        warn!("{e}");
+    }
+    if result.is_ok() {
+        info!(
+            "Unpacked the Japanese dictionary in {:.1} s",
+            started.elapsed().as_secs_f32()
+        );
+    }
+    result
 }
 
 /// Clears a download's entry however its task ends, a panic included, so its
@@ -332,7 +400,7 @@ async fn install(app: &AppHandle, file: &CatalogFile) -> Result<(), String> {
 struct Finish {
     app: AppHandle,
     id: String,
-    error: Option<String>,
+    failure: Option<Failure>,
 }
 
 impl Drop for Finish {
@@ -341,8 +409,8 @@ impl Drop for Finish {
             let downloads = self.app.state::<ModelDownloads>();
             let mut table = downloads.lock();
             table.running.remove(&self.id);
-            if let Some(error) = self.error.take() {
-                table.failed.insert(self.id.clone(), error);
+            if let Some(failure) = self.failure.take() {
+                table.failed.insert(self.id.clone(), failure);
             }
         }
         files_changed(&self.app);

@@ -6,8 +6,8 @@
 //! backend can read that language (`local::native`), and as American English
 //! where it cannot.
 //!
-//! The Japanese dictionary comes from jpreprocess's own release, the archive
-//! its build script fetches, with our sha256 of it.
+//! The Japanese dictionary is jpreprocess's own v0.15.0 release asset, with
+//! our sha256 of it.
 
 use super::{ja_dictionary, local};
 use crate::settings::ModelVariant;
@@ -35,10 +35,15 @@ const MODELS: &[(&str, ModelVariant, &str, u64, &str)] = &[
     ),
 ];
 
-/// Id, URL, size and sha256 of the Japanese dictionary's archive.
-const DICTIONARY: (&str, &str, u64, &str) = (
+/// The Japanese dictionary's only source, a release asset GitHub lets its
+/// owner replace or delete: the sha256 below catches a replacement.
+const DICTIONARY_URL: &str =
+    "https://github.com/jpreprocess/jpreprocess/releases/download/v0.15.0/naist-jdic-jpreprocess.tar.gz";
+
+/// Id, size and sha256 of the Japanese dictionary's archive. Linux CI
+/// downloads the same file for the tests that read with it.
+const DICTIONARY: (&str, u64, &str) = (
     "naist-jdic",
-    "https://github.com/jpreprocess/jpreprocess/releases/download/v0.15.0/naist-jdic-jpreprocess.tar.gz",
     28_668_638,
     "8a930bbc57bf4adcf521d53544c7dc9ab8ab3aa997a591b1b1608dc5539017b8",
 );
@@ -198,11 +203,11 @@ pub fn all(models_dir: &Path) -> Vec<CatalogFile> {
             language: VoiceLanguage::of(id),
         })
     });
-    let (id, url, size, sha256) = DICTIONARY;
+    let (id, size, sha256) = DICTIONARY;
     let dictionary = CatalogFile {
         id: id.to_string(),
         kind: ModelFileKind::Dictionary,
-        url: url.to_string(),
+        url: DICTIONARY_URL.to_string(),
         size,
         sha256,
         path: ja_dictionary::archive(models_dir),
@@ -288,6 +293,13 @@ mod tests {
             .unwrap()
             .url
             .ends_with("/voices/bm_lewis.bin"));
+    }
+
+    #[test]
+    fn linux_ci_tests_with_the_dictionary_the_app_downloads() {
+        let workflow = include_str!("../../../.github/workflows/linux.yml");
+        assert!(workflow.contains(&format!("URL: {DICTIONARY_URL}")));
+        assert!(workflow.contains(&format!("SHA256: {}", DICTIONARY.2)));
     }
 
     #[test]

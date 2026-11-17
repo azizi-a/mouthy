@@ -60,7 +60,8 @@ ort = { version = "=2.0.0-rc.14", default-features = false, features = [
 # English G2P with embedded lexicons; no espeak-ng, which is GPL.
 misaki-rs = { version = "0.6", default-features = false }
 # Japanese words and their readings, from a dictionary downloaded at run time.
-jpreprocess = "0.15"
+# Exact: the dictionary archive is built for this version's reader.
+jpreprocess = "=0.15.0"
 # Unpacks that dictionary's .tar.gz; already linked through png.
 flate2 = "1"
 # Model downloads: checksums, and cancelling a download mid-transfer.
@@ -122,9 +123,6 @@ tao-macros = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08
 
 [dev-dependencies]
 tempfile = "3"
-# The same Japanese dictionary the app downloads, built in for tests only: its
-# build script fetches it from a pinned, checksummed release.
-jpreprocess-naist-jdic = { version = "0.15", features = ["naist-jdic"] }
 
 [profile.release]
 lto = true
