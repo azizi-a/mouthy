@@ -371,6 +371,10 @@
   "errors": {
     "loadDirectory": "Fel vid laddning av mapp: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "Applikationsspråk",
     "description": "Ändra språket i Mouthy-gränssnittet"

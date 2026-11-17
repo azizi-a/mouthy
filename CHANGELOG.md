@@ -21,12 +21,14 @@ All notable changes to this project are documented here. The format follows [Kee
 - Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language where Mouthy can read it.
 - Japanese voices (`jf_*`, `jm_*`) read Japanese written in kana, with its numbers in Japanese and any English in it as English. Kanji cannot be read yet: they are skipped, and text that is mostly kanji is refused with a notice.
 - **Changed:** Japanese voices read kana as Japanese rather than dropping it; text with no Japanese in it reads exactly as before.
+- Accented letters typed or copied as a letter plus a separate accent, as macOS file names often are, read like ordinary accented letters in Spanish, French, Italian, Portuguese and Hindi; Japanese voices also read half-width katakana.
 
 ### Fixed
 
 - A command such as `mouthy --stop` no longer opens, or rotates away, the running app's log file.
 - On Linux, Mouthy runs without a tray icon when no appindicator library is installed, instead of failing to start.
 - On Linux and Windows, closing Settings quits Mouthy whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), since there is no other way to quit.
+- When the Settings window fails to start, it shows the error instead of staying empty.
 
 ## 0.5.0 — 2026-11-02
 
