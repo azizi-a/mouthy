@@ -50,7 +50,7 @@ sudo apt-get install -y \
 bun run tauri build --bundles deb,rpm,appimage
 ```
 
-The bundles land in `src-tauri/target/release/bundle/{deb,rpm,appimage}/`. CI does the same in `.github/workflows/linux.yml`: its `check` job runs `cargo test` and `cargo clippy` on every pull request, and its `bundle` job builds the three bundles. To bundle a branch, tag or commit by hand:
+The bundles land in `src-tauri/target/release/bundle/{deb,rpm,appimage}/`. CI does the same in `.github/workflows/linux.yml`: its `check` job runs `cargo test` and `cargo clippy` on every pull request, and its `bundle` job builds the three bundles. An AppImage built with the commands above carries the build host's Wayland libraries and opens a blank Settings window on newer distributions; the `bundle` job leaves them out by putting a newer linuxdeploy in Tauri's tool cache and setting `LINUXDEPLOY_EXCLUDED_LIBRARIES`, then fails if any are still inside. To bundle a branch, tag or commit by hand:
 
 ```bash
 gh workflow run linux.yml -f ref=main
@@ -58,7 +58,7 @@ gh run watch "$(gh run list --workflow linux.yml --event workflow_dispatch --lim
 gh run download <run-id> -n mouthy-linux
 ```
 
-A pushed `v*` tag runs the bundle job too, and then an `attach` job that adds the bundles to the tag's draft release (see Release). A manual run never touches a release.
+This runs `main`'s copy of the workflow; to try a branch's edits to `linux.yml`, add `--ref <branch>`. A pushed `v*` tag runs the bundle job too, and then an `attach` job that adds the bundles to the tag's draft release (see Release). A manual run never touches a release.
 
 ## Release
 

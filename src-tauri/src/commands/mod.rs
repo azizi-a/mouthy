@@ -2,7 +2,10 @@ pub mod audio;
 pub mod models;
 
 use crate::settings::{get_settings, write_settings, AppSettings, LogLevel, TtsBackend};
-use std::path::PathBuf;
+use serde::Serialize;
+use specta::Type;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
 
@@ -38,6 +41,68 @@ pub async fn fetch_tts_voices(app: AppHandle) -> Result<Vec<String>, String> {
 #[specta::specta]
 pub fn find_espeak_ng() -> Option<String> {
     crate::tts::espeak::find().map(|path| path.display().to_string())
+}
+
+/// Where wl-paste, which reads the selection and clipboard on Linux, is.
+/// Always `None` elsewhere.
+#[tauri::command]
+#[specta::specta]
+pub fn find_wl_paste() -> Option<String> {
+    #[cfg(target_os = "linux")]
+    return crate::clipboard::find_wl_paste().map(|path| path.display().to_string());
+    #[cfg(not(target_os = "linux"))]
+    return None;
+}
+
+/// The commands to bind in the desktop's shortcut settings.
+#[derive(Serialize, Type)]
+pub struct ShortcutHelp {
+    /// What runs Mouthy, ready to have `--speak-selection` and the like added.
+    pub command: String,
+}
+
+/// What to bind in the desktop's shortcut settings, when Mouthy's own
+/// shortcuts cannot work (Wayland, unless Event Tap is in use).
+#[tauri::command]
+#[specta::specta]
+pub fn shortcut_help(app: AppHandle) -> Option<ShortcutHelp> {
+    crate::shortcut::desktop_binds_shortcuts(&app).then(|| ShortcutHelp {
+        command: launch_command(
+            std::env::var_os("APPIMAGE").as_deref(),
+            std::env::current_exe().ok().as_deref(),
+        ),
+    })
+}
+
+/// The AppImage when Mouthy runs from one (its binary sits in a mount that
+/// moves on every launch), else the binary's name, as installed on `PATH`.
+fn launch_command(appimage: Option<&OsStr>, exe: Option<&Path>) -> String {
+    let program = appimage
+        .filter(|path| !path.is_empty())
+        .or_else(|| exe.and_then(Path::file_name))
+        .map(|program| program.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "mouthy".into());
+    quoted(program)
+}
+
+/// `word` as one argument for a shell or a desktop's command field: in double
+/// quotes, with `"`, `` ` ``, `$` and `\` escaped, unless it is plain.
+fn quoted(word: String) -> String {
+    let plain = word
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || "/._-+".contains(c));
+    if plain && !word.is_empty() {
+        return word;
+    }
+    let mut quoted = String::from('"');
+    for c in word.chars() {
+        if matches!(c, '"' | '`' | '$' | '\\') {
+            quoted.push('\\');
+        }
+        quoted.push(c);
+    }
+    quoted.push('"');
+    quoted
 }
 
 #[tauri::command]
@@ -208,4 +273,37 @@ pub fn initialize_shortcuts(app: AppHandle) -> Result<(), String> {
 
     log::info!("Shortcuts initialized successfully");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_appimage_is_what_a_shortcut_runs() {
+        let exe = Path::new("/tmp/.mount_MouthyX1/usr/bin/mouthy");
+        assert_eq!(
+            launch_command(
+                Some(OsStr::new("/home/me/Applications/Mouthy.AppImage")),
+                Some(exe)
+            ),
+            "/home/me/Applications/Mouthy.AppImage"
+        );
+        assert_eq!(launch_command(None, Some(exe)), "mouthy");
+        assert_eq!(launch_command(Some(OsStr::new("")), Some(exe)), "mouthy");
+        assert_eq!(launch_command(None, None), "mouthy");
+    }
+
+    #[test]
+    fn a_path_with_spaces_or_shell_characters_is_quoted() {
+        assert_eq!(
+            launch_command(Some(OsStr::new("/home/me/My Apps/Mouthy.AppImage")), None),
+            "\"/home/me/My Apps/Mouthy.AppImage\""
+        );
+        assert_eq!(quoted("/a/$b\"c`d\\e".into()), "\"/a/\\$b\\\"c\\`d\\\\e\"");
+        assert_eq!(
+            quoted("Mouthy_0.6.0-x86_64.AppImage".into()),
+            "Mouthy_0.6.0-x86_64.AppImage"
+        );
+    }
 }
