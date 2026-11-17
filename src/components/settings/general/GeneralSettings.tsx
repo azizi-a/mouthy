@@ -11,6 +11,7 @@ import { ShowOverlay } from "../ShowOverlay";
 import { BackendUrl } from "../BackendUrl";
 import { TtsBackendSelector } from "../TtsBackendSelector";
 import { VoicePicker } from "../VoicePicker";
+import { ReadingLanguageSelector } from "../ReadingLanguageSelector";
 import { EspeakFallback } from "../EspeakFallback";
 import { SpeedSlider } from "../SpeedSlider";
 import { VolumeSlider } from "../VolumeSlider";
@@ -57,7 +58,10 @@ export const GeneralSettings: React.FC = () => {
         {usesServer && <BackendUrl descriptionMode="tooltip" grouped={true} />}
         <VoicePicker descriptionMode="tooltip" />
         {!usesServer && (
-          <EspeakFallback descriptionMode="tooltip" grouped={true} />
+          <>
+            <ReadingLanguageSelector descriptionMode="tooltip" grouped={true} />
+            <EspeakFallback descriptionMode="tooltip" grouped={true} />
+          </>
         )}
         <SpeedSlider descriptionMode="tooltip" grouped={true} />
         <VolumeSlider descriptionMode="tooltip" grouped={true} />

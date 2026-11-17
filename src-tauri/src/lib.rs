@@ -338,6 +338,7 @@ pub fn run(cli_args: CliArgs) {
         shortcut::change_tts_backend_setting,
         shortcut::change_tts_model_variant_setting,
         shortcut::change_tts_espeak_fallback_setting,
+        shortcut::change_tts_language_setting,
         shortcut::handy_keys::start_handy_keys_recording,
         shortcut::handy_keys::stop_handy_keys_recording,
         secure_input::get_secure_input_status,
@@ -400,7 +401,7 @@ pub fn run(cli_args: CliArgs) {
             } else if args.iter().any(|a| a == "--speak-clipboard") {
                 actions::speak_clipboard(app, "CLI");
             } else if let Some(request) = CliArgs::handed_over_speak_file(&args, &cwd) {
-                actions::speak_file(app, &request.path, request.voice, "CLI");
+                actions::speak_file(app, &request.path, request.voice, request.language, "CLI");
             } else if args.iter().any(|a| a == "--stop") {
                 actions::stop_speaking(app, "CLI");
             } else {
@@ -536,7 +537,13 @@ pub fn run(cli_args: CliArgs) {
             // handing over text expects it spoken even when it launched Mouthy.
             let cwd = std::env::current_dir().unwrap_or_default();
             if let Some(request) = cli_args.speak_file_in(&cwd) {
-                actions::speak_file(&app_handle, &request.path, request.voice, "CLI");
+                actions::speak_file(
+                    &app_handle,
+                    &request.path,
+                    request.voice,
+                    request.language,
+                    "CLI",
+                );
             }
 
             Ok(())

@@ -156,6 +156,20 @@ pub enum ModelVariant {
     Fp32,
 }
 
+/// The language the local voice reads text in. Stored as the code `--lang`
+/// takes.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+pub enum ReadingLanguage {
+    /// The voice's own language.
+    #[default]
+    #[serde(rename = "voice")]
+    Voice,
+    /// English, so a non-English voice can read English text; a British voice
+    /// stays British, any other reads American English.
+    #[serde(rename = "en")]
+    English,
+}
+
 /// The container-level `serde(default)` (backed by the `Default` impl below)
 /// guarantees every field — including ones added in the future — falls back to
 /// its `get_default_settings()` value when missing from a stored settings
@@ -211,6 +225,9 @@ pub struct AppSettings {
     /// Read words the lexicon lacks with a separately installed espeak-ng.
     #[serde(default)]
     pub tts_espeak_fallback: bool,
+    /// The language local voices read text in; the server decides its own.
+    #[serde(default)]
+    pub tts_language: ReadingLanguage,
 }
 
 fn default_start_hidden() -> bool {
@@ -339,6 +356,7 @@ pub fn get_default_settings() -> AppSettings {
         tts_backend: default_tts_backend(),
         tts_model_variant: default_tts_model_variant(),
         tts_espeak_fallback: false,
+        tts_language: ReadingLanguage::Voice,
     }
 }
 
@@ -837,6 +855,30 @@ mod tests {
                 variant
             );
         }
+    }
+
+    #[test]
+    fn the_reading_language_defaults_to_the_voices_and_survives_an_unknown_code() {
+        assert_eq!(get_default_settings().tts_language, ReadingLanguage::Voice);
+        let (settings, updated) = parse_stored_settings(serde_json::json!({}));
+        assert_eq!(settings.tts_language, ReadingLanguage::Voice);
+        assert!(!updated);
+
+        let mut stored = default_settings_json();
+        stored["tts_language"] = serde_json::json!("en");
+        let (settings, _) = parse_stored_settings(stored);
+        assert_eq!(settings.tts_language, ReadingLanguage::English);
+        assert_eq!(
+            serde_json::to_value(&settings).unwrap()["tts_language"],
+            "en"
+        );
+
+        let mut stored = default_settings_json();
+        stored["tts_language"] = serde_json::json!("es");
+        stored["tts_voice"] = serde_json::json!("ef_dora");
+        let (settings, _) = parse_stored_settings(stored);
+        assert_eq!(settings.tts_language, ReadingLanguage::Voice);
+        assert_eq!(settings.tts_voice, "ef_dora");
     }
 
     #[test]

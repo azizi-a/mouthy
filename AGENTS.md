@@ -56,7 +56,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 - `tts/mod.rs` - `Backend` (chosen per request from settings) and `Synth` (opened on the synth thread)
 - `tts/text.rs` - `normalize` (`reflow` of hard-wrapped lines, then URLs, markdown, whitespace) and `split_sentences` (cuts a sentence longer than `Backend::max_chunk_chars`: 300 for HTTP, 450 for Local); for the local backend only, `split_sentences_with` and `split_first_clause` at the reading language's `Marks` (Chinese and Japanese fullwidth marks need no space after them; Hindi adds the danda), `expand_abbreviations` (titles and abbreviations such as "Dr." and "etc." in full, sharing `ABBREVIATIONS` with `split_sentences`), `expand_numbers` and `spell_out` (initialisms, camel case, a full stop inside a name; queries misaki's gold lexicon through the `text::Lexicon` trait) (the HTTP path speaks `normalize` + `split_sentences` output)
 - `tts/http.rs` - `synthesize` (PCM s16le mono 24 kHz) and `list_voices` against the HTTP backend
-- `tts/local.rs` - in-process Kokoro: model files, the loaded model (`LOADED`), the last preload error (`PRELOAD_ERROR`), the reading language (`ModelFiles::language`: the first voice's, by `catalog::VoiceLanguage::of`; American English for an unknown prefix or a language not in `native`; `ModelFiles::reading_as` overrides it), text clean-up (`plain_text`, which folds accents for English only), `reading` (`plain_text`, then for English only `expand_abbreviations` → `expand_numbers` → `spell_out`, whose letter names reach misaki as `[letters](/phonemes/)` overrides), phoneme mapping, one inference per chunk of up to `PIECE_TOKENS` (510, Kokoro's limit) ids
+- `tts/local.rs` - in-process Kokoro: model files, the loaded model (`LOADED`), the last preload error (`PRELOAD_ERROR`), the reading language (`ModelFiles::language`: the first voice's, by `catalog::VoiceLanguage::of`; American English for an unknown prefix or a language not in `native`; `ModelFiles::reading_as` overrides it, through `actions::read_in` for the `tts_language` setting and `--lang`), text clean-up (`plain_text`, which folds accents for English only), `reading` (`plain_text`, then for English only `expand_abbreviations` → `expand_numbers` → `spell_out`, whose letter names reach misaki as `[letters](/phonemes/)` overrides), phoneme mapping, one inference per chunk of up to `PIECE_TOKENS` (510, Kokoro's limit) ids
 - `tts/espeak.rs` - optional reading of words the lexicon lacks by a user-installed `espeak-ng` (GPL-3), run as a subprocess per word, never linked or bundled; looked for in Homebrew's, Linuxbrew's and the system's `bin` before `PATH`
 - `tts/catalog.rs` / `tts/download.rs` - the downloadable Kokoro files (URL pinned to one Hugging Face revision, size, sha256) and the resumable, checksum-verified downloader
 - `clipboard.rs` - `capture_selection`: snapshot pasteboard, send ⌘C, poll, read, restore; `read_text`: the clipboard as it is, refusing text marked `org.nspasteboard.ConcealedType`/`TransientType`. On Linux (`wayland` module) both run wl-clipboard's `wl-paste` (PRIMARY for the selection; `--list-types` naming `x-kde-passwordManagerHint` is a secret), found in `/usr/bin`, Linuxbrew, then `PATH`, and never on the main thread
@@ -90,7 +90,7 @@ Speech comes from Kokoro-82M running in-process (`tts_backend = local`, the defa
 
 **Voice preview:** the `preview_voice` command checks the voice and its files before posting, so the UI gets the error; then the main thread stops any session and starts one reading `preview_text` in the language that voice reads (English for the HTTP server). The first hotkey press stops a preview, and when one ends the settings voice is preloaded again. The main thread sends `speech-state` (`{ state: "started" | "speaking" | "ended", preview, error? }`) as each session starts, plays its first audio and ends (`error` only when it failed), so a replaced session's end always arrives first and a replaced session never reports `speaking`.
 
-**Speak file:** `--speak-file` replaces rather than toggles. `actions::speak_file` reads the file before posting (regular files only: opening a pipe would stall every later CLI request); the main thread then stops any session, normalises and splits as for the clipboard, and starts a session the first hotkey press stops. A file that cannot be spoken still stops the speech. The single-instance callback takes handoffs one at a time, so files are spoken in the order sent. `--voice` picks the file's voice (`actions::usable_voice`); one that does not parse or is not downloaded falls back to the settings voice with a log warning. A session in another voice than the settings one (`Session::other_voice`: every preview, and a file in another voice) preloads the settings voice when it ends or is stopped, but not when a new session replaces it.
+**Speak file:** `--speak-file` replaces rather than toggles. `actions::speak_file` reads the file before posting (regular files only: opening a pipe would stall every later CLI request); the main thread then stops any session, normalises and splits as for the clipboard, and starts a session the first hotkey press stops. A file that cannot be spoken still stops the speech. The single-instance callback takes handoffs one at a time, so files are spoken in the order sent. `--voice` picks the file's voice (`actions::usable_voice`); one that does not parse or is not downloaded falls back to the settings voice with a log warning. `--lang` picks the file's reading language over the `tts_language` setting (`actions::read_in`: `en` keeps a British voice British and reads any other as American English). A session in another voice or language than the settings give (`Session::other_reading`: every preview, and a file in another voice or language) preloads the settings voice when it ends or is stopped, but not when a new session replaces it.
 
 **Command-Event Architecture:** Frontend → Backend via Tauri commands; Backend → Frontend via events.
 
@@ -160,16 +160,17 @@ Locales live in `src/i18n/locales/<lang>/translation.json`; `en` is the source.
 
 **Implementation:** `cli.rs` (definitions), `main.rs` (parsing), `lib.rs` (applying), `signal_handle.rs` (signals); they call `actions::speak_selection` / `speak_clipboard` / `speak_file` / `stop_speaking`
 
-| Flag                  | Description                                                                                  |
-| --------------------- | -------------------------------------------------------------------------------------------- |
-| `--speak-selection`   | Speak the selection on a running instance, or stop speech                                    |
-| `--speak-clipboard`   | Speak the clipboard on a running instance, or stop speech                                    |
-| `--speak-file <PATH>` | Speak a UTF-8 text file, cutting off any speech; a first launch speaks it too                |
-| `--voice <SPEC>`      | With `--speak-file`: its voice or blend; one not downloaded falls back to the Settings voice |
-| `--stop`              | Stop playback on a running instance                                                          |
-| `--start-hidden`      | Launch without showing the main window (tray icon visible)                                   |
-| `--no-tray`           | Launch without system tray (closing window quits the app)                                    |
-| `--debug`             | Enable debug mode with verbose (Trace) logging                                               |
+| Flag                  | Description                                                                                              |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `--speak-selection`   | Speak the selection on a running instance, or stop speech                                                |
+| `--speak-clipboard`   | Speak the clipboard on a running instance, or stop speech                                                |
+| `--speak-file <PATH>` | Speak a UTF-8 text file, cutting off any speech; a first launch speaks it too                            |
+| `--voice <SPEC>`      | With `--speak-file`: its voice or blend; one not downloaded falls back to the Settings voice             |
+| `--lang <LANG>`       | With `--speak-file`: `en` reads it as English, `voice` in the voice's language; overrides `tts_language` |
+| `--stop`              | Stop playback on a running instance                                                                      |
+| `--start-hidden`      | Launch without showing the main window (tray icon visible)                                               |
+| `--no-tray`           | Launch without system tray (closing window quits the app)                                                |
+| `--debug`             | Enable debug mode with verbose (Trace) logging                                                           |
 
 On macOS, `SIGUSR2` speaks the selection and `SIGUSR1` stops. Linux handles only `SIGUSR2` (WebKitGTK uses `SIGUSR1`).
 
