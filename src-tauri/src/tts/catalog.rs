@@ -2,8 +2,8 @@
 //! Kokoro-82M (Apache-2.0), pinned to one revision so the sizes and sha256
 //! below (the repo's LFS metadata) always describe what the URL serves.
 //!
-//! misaki-rs phonemises English only, so every voice reads English text: a
-//! voice trained on another language reads English, never its own language.
+//! A voice reads its own language when this build can (`local::native`); a
+//! voice of any other language reads English text.
 
 use super::local;
 use crate::settings::ModelVariant;

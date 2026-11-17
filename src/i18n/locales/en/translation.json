@@ -172,7 +172,7 @@
       },
       "voices": {
         "title": "Voices",
-        "description": "Mouthy reads all text as English, with British pronunciation for British voices and American for the rest. Voices for other languages cannot read their own language.",
+        "description": "English voices read English (British voices with British pronunciation, the rest American), Japanese voices read Japanese kana but not kanji yet, and the other voices, Chinese among them, read English for now.",
         "female": "Female",
         "male": "Male",
         "language": {
