@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Linux
+
+- Linux builds: a deb, an rpm and an AppImage for x86_64, built by GitHub Actions and attached to each release.
+- espeak-ng is found where Linuxbrew and the system package manager put it, and Settings says how to install it on Linux.
+
+### Languages
+
 ## 0.5.0 — 2026-11-02
 
 For scripts: a tool such as a Claude Code skill can have Mouthy read each of its replies aloud, each new one cutting off the last. Mouthy is still not signed or notarised and does not update itself.
