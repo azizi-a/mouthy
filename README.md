@@ -97,7 +97,7 @@ Open Settings from the tray. Besides the hotkeys and voices above, General sets 
 
 ## Linux
 
-x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need glibc 2.38 or newer: Ubuntu 24.04, Fedora 39 or later, Debian 13; not Ubuntu 22.04 or Debian 12. To build one yourself, see [BUILD.md](BUILD.md#linux).
+x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need glibc 2.39 or newer: Ubuntu 24.04, Fedora 40 or later (Bazzite included), Debian 13 or later; not Ubuntu 22.04, Debian 12 or Fedora 39. To build one yourself, see [BUILD.md](BUILD.md#linux).
 
 On Linux, install [espeak-ng](#better-pronunciation-of-unknown-words) with your distribution's package manager, or with `brew install espeak-ng` on an immutable distribution such as Bazzite.
 

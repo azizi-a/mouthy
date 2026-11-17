@@ -6,7 +6,7 @@ This file provides guidance to AI coding assistants working with code in this re
 
 **Prerequisites:**
 
-- An Apple Silicon Mac on macOS 13.4 or later: ONNX Runtime's prebuilt macOS archive is arm64 only, so Intel and universal builds fail to link. Or x86_64 Linux with glibc 2.38 or newer (pyke's prebuilt ONNX Runtime needs it) and the packages listed in [BUILD.md](BUILD.md#linux)
+- An Apple Silicon Mac on macOS 13.4 or later: ONNX Runtime's prebuilt macOS archive is arm64 only, so Intel and universal builds fail to link. Or x86_64 Linux with glibc 2.39 or newer (the packages are built on Ubuntu 24.04; pyke's prebuilt ONNX Runtime does not link on older systems) and the packages listed in [BUILD.md](BUILD.md#linux)
 - [Rust](https://rustup.rs/) 1.92 or newer (`ort` rc.14's `rust-version`)
 - [Bun](https://bun.sh/) package manager
 - Network for the first `cargo build`: `ort-sys` downloads ONNX Runtime (~10 MB) from `cdn.pyke.io` into `~/Library/Caches/ort.pyke.io` (`~/.cache/ort.pyke.io` on Linux)
