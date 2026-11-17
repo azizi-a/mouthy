@@ -1008,14 +1008,37 @@ mod tests {
         assert_eq!(marks("Hola, ¿qué tal? ¿Bien?"), ending(&[",", "?", "?"]));
     }
 
+    /// Where an older espeak-ng reads a sentence of `READINGS` differently:
+    /// its version, the sentence and what Kokoro gets. 1.51 (Ubuntu 24.04)
+    /// says the Spanish "etc." as written rather than "etcétera".
+    const OLDER_READINGS: &[(&str, &str, &str)] = &[(
+        "1.51",
+        "Compré manzanas, peras, etc. y dime ¿quieres una?",
+        "kompɾˈe manθˈanas, pˈeɾas, ˈetk i ðˈime kjˈeɾes ˈuna?",
+    )];
+
+    /// "1.52.0" from "eSpeak NG text-to-speech: 1.52.0  Data at: …".
+    fn version(program: &Path) -> String {
+        let said = run(program, &["--version".to_string()], SENTENCE_TIMEOUT).unwrap();
+        said.split_whitespace()
+            .nth(3)
+            .unwrap_or_default()
+            .to_string()
+    }
+
     #[test]
     fn real_espeak_ng_reads_each_sentence_as_captured() {
         let Some(program) = installed_for_test() else {
             return;
         };
+        let version = version(&program);
         let mismatches: Vec<String> = READINGS
             .iter()
             .filter_map(|&(voice, text, _, kokoro)| {
+                let kokoro = OLDER_READINGS
+                    .iter()
+                    .find(|&&(older, sentence, _)| version.starts_with(older) && sentence == text)
+                    .map_or(kokoro, |&(_, _, older)| older);
                 let read = Sentences::new(program.clone(), voice).read(text).unwrap();
                 (read != (kokoro.to_string(), 0))
                     .then(|| format!("{voice} {text}\n  expected {kokoro}\n  read     {read:?}"))
