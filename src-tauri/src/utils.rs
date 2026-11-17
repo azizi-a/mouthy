@@ -31,11 +31,14 @@ fn is_wayland_session(wayland_display: Option<&OsStr>, session_type: Option<&OsS
 /// own value is replaced: its launch hook exports `GDK_BACKEND=x11` over the
 /// user's, so `MOUTHY_GDK_BACKEND` is the way to choose there. Without it, a
 /// Wayland session gets native Wayland, where the overlay can use the GTK
-/// layer shell.
+/// layer shell, with X11 as GDK's fallback should the Wayland socket be gone.
+/// GNOME has no layer shell, and its overlay can be kept from taking focus
+/// only under XWayland, so GNOME keeps the hook's `x11`.
 #[cfg(any(target_os = "linux", test))]
 pub fn gdk_backend<'a>(
     in_appimage: bool,
     wayland_display: Option<&OsStr>,
+    current_desktop: Option<&OsStr>,
     requested: Option<&'a str>,
 ) -> Option<&'a str> {
     if !in_appimage {
@@ -45,7 +48,20 @@ pub fn gdk_backend<'a>(
     requested
         .map(str::trim)
         .filter(|backend| !backend.is_empty())
-        .or(wayland_session.then_some("wayland"))
+        .or((wayland_session && !is_gnome(current_desktop)).then_some("wayland,x11"))
+}
+
+/// Whether `XDG_CURRENT_DESKTOP`, a colon-separated list, names GNOME. Desktops
+/// built on GNOME Shell list it after their own name (`ubuntu:GNOME`).
+#[cfg(any(target_os = "linux", test))]
+fn is_gnome(current_desktop: Option<&OsStr>) -> bool {
+    current_desktop
+        .and_then(OsStr::to_str)
+        .is_some_and(|desktops| {
+            desktops
+                .split(':')
+                .any(|desktop| desktop.trim().eq_ignore_ascii_case("gnome"))
+        })
 }
 
 /// Returns true when the environment variable is set to a truthy value
@@ -115,20 +131,46 @@ mod tests {
 
     #[test]
     fn the_appimage_runs_on_wayland_unless_told_otherwise() {
-        let wayland = Some(OsStr::new("wayland-0"));
+        let os = |s: &'static str| Some(OsStr::new(s));
+        let wayland = os("wayland-0");
         // The hook's GDK_BACKEND=x11 is always replaced inside the image, so
         // it is not an input.
-        assert_eq!(gdk_backend(true, wayland, None), Some("wayland"));
-        assert_eq!(gdk_backend(true, wayland, Some("  ")), Some("wayland"));
-        assert_eq!(gdk_backend(true, wayland, Some(" x11 ")), Some("x11"));
-        assert_eq!(gdk_backend(true, wayland, Some("wayland")), Some("wayland"));
+        for desktop in [None, os("KDE"), os("niri"), os("GNOMEish")] {
+            assert_eq!(
+                gdk_backend(true, wayland, desktop, None),
+                Some("wayland,x11")
+            );
+            assert_eq!(
+                gdk_backend(true, wayland, desktop, Some("  ")),
+                Some("wayland,x11")
+            );
+        }
+        assert_eq!(
+            gdk_backend(true, wayland, os("KDE"), Some(" x11 ")),
+            Some("x11")
+        );
+        assert_eq!(
+            gdk_backend(true, wayland, os("KDE"), Some("wayland")),
+            Some("wayland")
+        );
+        // GNOME keeps the hook's x11 unless asked.
+        for gnome in [os("GNOME"), os("ubuntu:GNOME"), os("Pop:gnome")] {
+            assert_eq!(gdk_backend(true, wayland, gnome, None), None);
+            assert_eq!(
+                gdk_backend(true, wayland, gnome, Some("wayland")),
+                Some("wayland")
+            );
+        }
         // An X11 session keeps the hook's x11 unless asked.
-        assert_eq!(gdk_backend(true, None, None), None);
-        assert_eq!(gdk_backend(true, Some(OsStr::new("")), None), None);
-        assert_eq!(gdk_backend(true, None, Some("wayland")), Some("wayland"));
+        assert_eq!(gdk_backend(true, None, os("KDE"), None), None);
+        assert_eq!(gdk_backend(true, os(""), os("KDE"), None), None);
+        assert_eq!(
+            gdk_backend(true, None, None, Some("wayland")),
+            Some("wayland")
+        );
         // A deb or rpm user's own GDK_BACKEND is never touched.
-        assert_eq!(gdk_backend(false, wayland, None), None);
-        assert_eq!(gdk_backend(false, wayland, Some("x11")), None);
-        assert_eq!(gdk_backend(false, None, Some("wayland")), None);
+        assert_eq!(gdk_backend(false, wayland, os("KDE"), None), None);
+        assert_eq!(gdk_backend(false, wayland, os("GNOME"), Some("x11")), None);
+        assert_eq!(gdk_backend(false, None, None, Some("wayland")), None);
     }
 }

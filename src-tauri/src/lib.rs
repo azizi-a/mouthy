@@ -521,10 +521,20 @@ pub fn run(cli_args: CliArgs) {
 
             #[cfg(target_os = "linux")]
             {
+                use gtk::glib::prelude::ObjectExt;
+                // GDK_BACKEND may list several backends, so name the one GTK opened.
                 log::info!(
-                    "GDK_BACKEND: {}",
+                    "Display backend: {} (GDK_BACKEND {})",
+                    gtk::gdk::Display::default()
+                        .map_or("none".into(), |display| display.type_().name().to_string()),
                     std::env::var("GDK_BACKEND").unwrap_or_else(|_| "not set".into())
                 );
+                if matches!(
+                    std::env::var("MOUTHY_GDK_BACKEND"),
+                    Err(std::env::VarError::NotUnicode(_))
+                ) {
+                    log::debug!("MOUTHY_GDK_BACKEND is not valid UTF-8, so it was ignored");
+                }
                 // Decided once the overlay window exists, and only for a new store.
                 if new_store {
                     utils::choose_first_overlay_style(&app_handle);

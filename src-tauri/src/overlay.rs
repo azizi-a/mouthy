@@ -133,8 +133,8 @@ fn init_gtk_layer_shell(overlay_window: &tauri::webview::WebviewWindow) -> bool 
 /// would take the keyboard from the app being typed in. `.focusable(false)`
 /// only clears the X11 input hint; GTK still offers `WM_TAKE_FOCUS`, so KWin
 /// and Mutter focus the window anyway. Both hints are read at map, so set them
-/// before the first show. Native Wayland has no equivalent: the compositor
-/// decides.
+/// before the first show. GDK's Wayland backend ignores both: there the
+/// compositor decides.
 #[cfg(target_os = "linux")]
 fn refuse_focus_on_map(overlay_window: &tauri::webview::WebviewWindow) {
     use gtk::prelude::GtkWindowExt;

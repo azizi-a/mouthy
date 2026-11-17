@@ -15,10 +15,12 @@ fn main() {
         }
         let in_appimage = std::env::var_os("APPIMAGE").is_some_and(|path| !path.is_empty());
         let wayland_display = std::env::var_os("WAYLAND_DISPLAY");
+        let current_desktop = std::env::var_os("XDG_CURRENT_DESKTOP");
         let requested = std::env::var("MOUTHY_GDK_BACKEND").ok();
         if let Some(backend) = mouthy_app_lib::gdk_backend(
             in_appimage,
             wayland_display.as_deref(),
+            current_desktop.as_deref(),
             requested.as_deref(),
         ) {
             std::env::set_var("GDK_BACKEND", backend);
