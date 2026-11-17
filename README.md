@@ -100,7 +100,7 @@ Plain `http://` is unencrypted, so use `https://` for a server on another machin
 
 ## Settings
 
-Open Settings from the tray. Besides the hotkeys and voices above, General sets launch at login, start hidden, the overlay, speed (0.5×–2×), volume and the output device. Advanced hides the tray icon and, under experimental features, changes the shortcut backend. About sets the language and theme, opens the app data and log folders, and opens the third-party licences.
+Open Settings from the tray or by launching Mouthy again. Besides the hotkeys and voices above, General sets launch at login, start hidden, the overlay, speed (0.5×–2×), volume and the output device. Advanced hides the tray icon and, under experimental features, changes the shortcut backend. About sets the language and theme, opens the app data and log folders, and opens the third-party licences.
 
 ## Linux
 
@@ -120,7 +120,7 @@ Mouthy reads the highlighted text and the clipboard with `wl-paste` from **wl-cl
 
 ### Shortcuts on Wayland
 
-Wayland does not let an app listen for a hotkey of its own, so you bind Mouthy's commands to keys in the desktop's settings. Settings → General lists them with the right path, ready to copy:
+Wayland does not let an app listen for a hotkey of its own, so you bind Mouthy's commands to keys in the desktop's settings. Settings → General lists them with the right path, as text you can select and copy:
 
 ```bash
 mouthy --speak-selection   # read the highlighted text, or stop if speaking
@@ -130,6 +130,16 @@ mouthy --stop
 
 For the AppImage, use its full path instead of `mouthy`, such as `/home/you/Applications/Mouthy.AppImage --speak-selection`. In KDE Plasma, open System Settings → Keyboard → Shortcuts → Add New → Command or Script, enter the command and choose a key. A shortcut pressed while Mouthy is not running only starts it, so turn on Launch on Startup.
 
+If a shortcut runs but nothing happens, the desktop may be dropping the command's arguments (Plasma 6.0 did). Bind a script instead: each is two lines, `#!/bin/sh` and `exec "$HOME/Applications/Mouthy.AppImage" --speak-selection` (or `--speak-clipboard`, `--stop`; use `mouthy` for the rpm or deb). This makes all three in `~/.local/bin`:
+
+```bash
+mkdir -p ~/.local/bin
+for action in speak-selection speak-clipboard stop; do
+  printf '#!/bin/sh\nexec "$HOME/Applications/Mouthy.AppImage" --%s\n' "$action" > ~/.local/bin/mouthy-$action
+done
+chmod +x ~/.local/bin/mouthy-*
+```
+
 The highlighted text is the PRIMARY selection: whatever you last highlighted in any app. Some apps, such as terminals and browsers, keep it after you click elsewhere, so a press can read text you highlighted earlier.
 
 On Linux most password managers do not mark a password they copy. Mouthy refuses to read the clipboard only when it carries KDE's password hint, so Speak Clipboard may read a copied password aloud.
@@ -138,9 +148,8 @@ On Linux most password managers do not mark a password they copy. Mouthy refuses
 
 ### Overlay, tray and sound on Linux
 
-- The overlay sits at the screen's edge on desktops with the GTK layer shell, such as KDE Plasma, and starts on there. Elsewhere it would be an ordinary window that takes focus, so it starts off; Settings → General turns it on. With it off, notices such as "Nothing selected" go only to the log.
-- The tray icon needs an appindicator library; the AppImage carries one, and the rpm and deb install it. Without one Mouthy runs without a tray: launch it again to open Settings.
-- The AppImage runs under XWayland. To try native Wayland, start it with `MOUTHY_GDK_BACKEND=wayland`.
+- Under native Wayland on a desktop with the GTK layer shell, such as KDE Plasma, the overlay sits at the screen's edge and starts on: the rpm and deb run that way. The AppImage runs under XWayland, where the overlay would be an ordinary window that takes focus, so it starts off; Settings → General turns it on, and `MOUTHY_GDK_BACKEND=wayland` starts the AppImage on native Wayland. With the overlay off, notices such as "Nothing selected" go only to the log.
+- The tray icon needs an appindicator library; the AppImage carries one, and the rpm and deb install it. Without one Mouthy runs without a tray: launch it again to open Settings, and closing Settings quits Mouthy.
 - Sound goes through ALSA, which PipeWire serves on current desktops.
 
 ## Known issues
