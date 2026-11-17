@@ -61,6 +61,9 @@ jobs:
           bun run build
       - name: Test
         working-directory: src-tauri
+        # The espeak-ng tests fail rather than pass unchecked if it is missing.
+        env:
+          MOUTHY_REQUIRE_ESPEAK: "1"
         run: cargo test
       - name: Clippy
         working-directory: src-tauri

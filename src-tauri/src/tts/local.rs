@@ -140,12 +140,8 @@ fn language_for(language: VoiceLanguage, text: &str) -> VoiceLanguage {
     }
 }
 
-#[cfg(target_os = "macos")]
-const INSTALL_ESPEAK: &str = "Install it with: brew install espeak-ng";
-#[cfg(not(target_os = "macos"))]
-const INSTALL_ESPEAK: &str = "Install it with your package manager.";
-
-/// The notice for a language espeak-ng reads when it is not installed.
+/// The notice for a language espeak-ng reads when it is not installed. Short
+/// enough for the overlay; Settings says how to install espeak-ng.
 fn espeak_missing(language: VoiceLanguage) -> String {
     let name = match language {
         VoiceLanguage::Spanish => "Spanish",
@@ -155,7 +151,7 @@ fn espeak_missing(language: VoiceLanguage) -> String {
         VoiceLanguage::Hindi => "Hindi",
         _ => "These",
     };
-    format!("{name} voices need espeak-ng. {INSTALL_ESPEAK}")
+    format!("{name} voices need espeak-ng, or Reading Language set to English.")
 }
 
 /// Which misaki lexicon English text is read with.
@@ -598,6 +594,12 @@ impl Phonemizer {
         Ok(Self::Espeak(espeak::Sentences::new(program, voice)))
     }
 
+    /// Whether a pause mark can sit inside a word: espeak-ng writes Hindi
+    /// `ड़` and `ढ़` as `r.`.
+    fn has_marks_in_words(&self) -> bool {
+        matches!(self, Self::Espeak(_))
+    }
+
     /// Kokoro ids for `text` in `language`, and how many symbols had no id.
     fn ids(&self, language: VoiceLanguage, text: &str) -> Result<(Vec<i64>, usize), String> {
         match self {
@@ -668,7 +670,7 @@ impl LocalSynth {
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
-        let pieces: Vec<_> = split_tokens(&ids, PIECE_TOKENS)
+        let pieces: Vec<_> = split_tokens(&ids, PIECE_TOKENS, self.phonemizer.has_marks_in_words())
             .into_iter()
             .filter(|p| has_phonemes(p))
             .collect();
@@ -1159,8 +1161,8 @@ fn has_phonemes(ids: &[i64]) -> bool {
 
 /// Cuts ids into runs of at most `max`: after the last pause that fits, else
 /// at the last space, else at `max`. Nothing is dropped but the spaces at a
-/// cut.
-fn split_tokens(ids: &[i64], max: usize) -> Vec<&[i64]> {
+/// cut. With `marks_in_words`, only a pause before a space or the end counts.
+fn split_tokens(ids: &[i64], max: usize, marks_in_words: bool) -> Vec<&[i64]> {
     let mut pieces = Vec::new();
     let mut rest = trim_spaces(ids);
     while rest.len() > max {
@@ -1170,7 +1172,11 @@ fn split_tokens(ids: &[i64], max: usize) -> Vec<&[i64]> {
                 .map(|i| i + 1)
                 .filter(|&cut| has_phonemes(&window[..cut]))
         };
-        let cut = cut_after(window.iter().rposition(|id| PAUSE_IDS.contains(id)))
+        let ends_word = |i: usize| !marks_in_words || rest.get(i + 1) == Some(&SPACE_ID);
+        let pause = (0..max)
+            .rev()
+            .find(|&i| PAUSE_IDS.contains(&rest[i]) && ends_word(i));
+        let cut = cut_after(pause)
             .or_else(|| cut_after(window.iter().rposition(|&id| id == SPACE_ID)))
             .unwrap_or(max);
         let (piece, tail) = rest.split_at(cut);
@@ -1665,12 +1671,12 @@ mod tests {
         let program = || Some(PathBuf::from("/opt/homebrew/bin/espeak-ng"));
         assert_eq!(
             files("ef_dora").unmet_requirement().as_deref(),
-            Some(format!("Spanish voices need espeak-ng. {INSTALL_ESPEAK}").as_str())
+            Some("Spanish voices need espeak-ng, or Reading Language set to English.")
         );
         assert!(files("pf_dora")
             .unmet_requirement()
             .unwrap()
-            .starts_with("Portuguese voices need espeak-ng."));
+            .starts_with("Portuguese voices need espeak-ng,"));
         for voice in ["ef_dora", "ff_siwis", "if_sara", "pf_dora", "hf_alpha"] {
             assert!(files(voice).unmet_requirement().is_some(), "{voice}");
             let found = files(voice).with_espeak(program());
@@ -1994,9 +2000,9 @@ mod tests {
     #[test]
     fn short_input_is_one_piece() {
         let ids = vec![43; PIECE_TOKENS];
-        assert_eq!(split_tokens(&ids, PIECE_TOKENS), vec![&ids[..]]);
-        assert!(split_tokens(&[], PIECE_TOKENS).is_empty());
-        assert!(split_tokens(&[SPACE_ID, SPACE_ID], PIECE_TOKENS).is_empty());
+        assert_eq!(split_tokens(&ids, PIECE_TOKENS, false), vec![&ids[..]]);
+        assert!(split_tokens(&[], PIECE_TOKENS, false).is_empty());
+        assert!(split_tokens(&[SPACE_ID, SPACE_ID], PIECE_TOKENS, false).is_empty());
     }
 
     #[test]
@@ -2009,7 +2015,7 @@ mod tests {
             .cycle()
             .take(8 * PIECE_TOKENS)
             .collect();
-        let pieces = split_tokens(&ids, PIECE_TOKENS);
+        let pieces = split_tokens(&ids, PIECE_TOKENS, false);
         assert!(pieces.len() >= 8);
         for piece in &pieces {
             assert!(piece.len() <= PIECE_TOKENS);
@@ -2035,7 +2041,7 @@ mod tests {
             .cycle()
             .take(4 * PIECE_TOKENS)
             .collect();
-        let pieces = split_tokens(&words, PIECE_TOKENS);
+        let pieces = split_tokens(&words, PIECE_TOKENS, false);
         assert_eq!(pieces.len(), 4);
         for piece in &pieces {
             assert!(piece.len() <= PIECE_TOKENS);
@@ -2043,7 +2049,7 @@ mod tests {
         }
 
         let solid = vec![43; 2 * PIECE_TOKENS + 100];
-        let pieces = split_tokens(&solid, PIECE_TOKENS);
+        let pieces = split_tokens(&solid, PIECE_TOKENS, false);
         assert_eq!(
             pieces.iter().map(|p| p.len()).collect::<Vec<_>>(),
             vec![PIECE_TOKENS, PIECE_TOKENS, 100]
@@ -2063,8 +2069,66 @@ mod tests {
         // send a piece with nothing to say.
         let mut ids = vec![3, SPACE_ID];
         ids.extend(std::iter::repeat_n(43, 2 * PIECE_TOKENS));
-        let pieces = split_tokens(&ids, PIECE_TOKENS);
+        let pieces = split_tokens(&ids, PIECE_TOKENS, false);
         assert!(pieces.iter().all(|p| has_phonemes(p)), "{pieces:?}");
+    }
+
+    /// Where each piece ends in `ids`.
+    fn piece_ends(ids: &[i64], pieces: &[&[i64]]) -> Vec<usize> {
+        pieces
+            .iter()
+            .map(|piece| piece.as_ptr() as usize - ids.as_ptr() as usize)
+            .zip(pieces)
+            .map(|(offset, piece)| offset / size_of::<i64>() + piece.len())
+            .collect()
+    }
+
+    #[test]
+    fn a_mark_inside_a_word_is_no_place_to_cut() {
+        // "lˈʌr.kˌaː", "lˈʌr.kˌaː", …: a "." inside every word.
+        let ids: Vec<i64> = [54, 138, 123, 4, 53, 43, SPACE_ID]
+            .iter()
+            .copied()
+            .cycle()
+            .take(3 * PIECE_TOKENS)
+            .collect();
+        let inside = split_tokens(&ids, PIECE_TOKENS, false);
+        assert!(inside.iter().any(|piece| piece.last() == Some(&4)));
+        let pieces = split_tokens(&ids, PIECE_TOKENS, true);
+        for end in piece_ends(&ids, &pieces) {
+            assert!(
+                ids.get(end).is_none_or(|&id| id == SPACE_ID),
+                "cut at {end}"
+            );
+        }
+        assert!(pieces.iter().all(|piece| piece.len() <= PIECE_TOKENS));
+    }
+
+    #[test]
+    fn a_long_hindi_sentence_is_cut_between_words() {
+        let Some(program) = espeak::installed_for_test() else {
+            return;
+        };
+        let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "hf_alpha")
+            .with_espeak(Some(program));
+        let phonemizer = Phonemizer::new(&files.reading()).unwrap();
+        let sentence = format!(
+            "{}यह बात सब जानते हैं।",
+            "यह बड़ा लड़का और वह बड़ी लड़की पढ़ते हैं और ".repeat(9)
+        );
+        let chunks = chunks(&files, &sentence);
+        assert_eq!(chunks.len(), 1, "{chunks:?}");
+        assert!(chunks[0].text.chars().count() > 400);
+        let (ids, dropped) = phonemizer.ids(files.language(), &chunks[0].text).unwrap();
+        assert_eq!(dropped, 0);
+        let pieces = split_tokens(&ids, PIECE_TOKENS, phonemizer.has_marks_in_words());
+        assert!(pieces.len() > 1, "{} ids", ids.len());
+        for end in piece_ends(&ids, &pieces) {
+            assert!(
+                ids.get(end).is_none_or(|&id| id == SPACE_ID),
+                "cut at {end}"
+            );
+        }
     }
 
     #[test]
@@ -2082,7 +2146,10 @@ mod tests {
                         what had been done with the money during the year.";
         let chunks = split_sentences(sentence, MAX_CHUNK_CHARS);
         assert_eq!(chunks.len(), 1);
-        assert_eq!(split_tokens(&ids(&chunks[0].text), PIECE_TOKENS).len(), 1);
+        assert_eq!(
+            split_tokens(&ids(&chunks[0].text), PIECE_TOKENS, false).len(),
+            1
+        );
 
         // As long as a chunk gets: the limit plus a tail too short to stand alone.
         let prose = sentence.repeat(2);
@@ -2558,8 +2625,7 @@ mod tests {
 
     #[test]
     fn each_espeak_ng_language_reads_its_paragraph_without_dropping_a_symbol() {
-        let Some(program) = espeak::find() else {
-            eprintln!("espeak-ng is not installed, so this test checks nothing");
+        let Some(program) = espeak::installed_for_test() else {
             return;
         };
         for &(voice, paragraph) in PARAGRAPHS {
