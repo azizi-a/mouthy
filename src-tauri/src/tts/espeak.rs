@@ -7,18 +7,14 @@
 use super::catalog::VoiceLanguage;
 use super::local::{in_vocab, Dialect, TIES_COMMON};
 use super::text::CLOSERS;
+use crate::program;
 use log::{debug, info, warn};
 use misaki_rs::fallback::FallbackError;
 use misaki_rs::{Fallback, G2P};
 use std::collections::HashMap;
-use std::ffi::OsString;
-use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
-use std::thread;
 use std::time::{Duration, Instant};
 
 /// Homebrew's prefixes and the system's, checked before `PATH`: an app opened
@@ -33,12 +29,8 @@ const KNOWN_LOCATIONS: &[&str] = &[
 const TIMEOUT: Duration = Duration::from_millis(500);
 /// The longest wait for one sentence, which is all a sentence's audio waits on.
 const SENTENCE_TIMEOUT: Duration = Duration::from_secs(2);
-const POLL: Duration = Duration::from_millis(1);
-/// How long output may still be on its way once the program has exited.
-const OUTPUT_GRACE: Duration = Duration::from_millis(100);
-/// Far more than any sentence gives. Past it the pipe is closed, so a
-/// program that writes on dies of SIGPIPE and memory stays bounded.
-const OUTPUT_LIMIT: u64 = 1 << 20;
+/// Far more than any sentence gives; past it espeak-ng is stopped.
+const OUTPUT_LIMIT: usize = 1 << 20;
 /// Longer "words" are spelled out rather than sent.
 const LONGEST_WORD: usize = 48;
 /// Pronunciations kept per G2P; the cache starts over when full.
@@ -109,7 +101,11 @@ const CLAUSE_MARKS: &[char] = &[',', ';', ':', '.', '!', '?', '…', '—', '–
 
 /// The espeak-ng program, if one is installed where Mouthy looks.
 pub fn find() -> Option<PathBuf> {
-    find_in(KNOWN_LOCATIONS, std::env::var_os("PATH"))
+    program::find(
+        KNOWN_LOCATIONS,
+        &format!("espeak-ng{}", std::env::consts::EXE_SUFFIX),
+        std::env::var_os("PATH"),
+    )
 }
 
 /// espeak-ng for a test that runs it: without it the test passes having
@@ -138,32 +134,6 @@ pub fn find_if_enabled(enabled: bool) -> Option<PathBuf> {
         info!("espeak-ng was not found, so unknown words are spelled out");
     }
     found
-}
-
-fn find_in(known: &[&str], path_var: Option<OsString>) -> Option<PathBuf> {
-    let program = format!("espeak-ng{}", std::env::consts::EXE_SUFFIX);
-    known
-        .iter()
-        .map(PathBuf::from)
-        .chain(
-            path_var
-                .iter()
-                .flat_map(std::env::split_paths)
-                .map(|dir| dir.join(&program)),
-        )
-        .find(|path| is_executable(path))
-}
-
-#[cfg(unix)]
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    path.metadata()
-        .is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
-}
-
-#[cfg(not(unix))]
-fn is_executable(path: &Path) -> bool {
-    path.is_file()
 }
 
 /// A misaki G2P that asks `program` for the words its lexicon lacks.
@@ -519,82 +489,24 @@ fn without_language_flags(line: &str) -> String {
     out
 }
 
-/// Runs `program` without a shell or stdin and returns its output, killing it
-/// after `timeout`. The output is read while it runs, so a long one cannot
-/// fill the pipe and stall it.
+/// What `program` printed, as UTF-8; an error unless it exited successfully
+/// within `timeout`.
 fn run(program: &Path, args: &[String], timeout: Duration) -> Result<String, String> {
-    let mut child = Command::new(program)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("cannot start {}: {e}", program.display()))?;
-    let deadline = Instant::now() + timeout;
-    let (output, errors) = match (
-        read_in_background(child.stdout.take()),
-        read_in_background(child.stderr.take()),
-    ) {
-        (Ok(output), Ok(errors)) => (output, errors),
-        (Err(e), _) | (_, Err(e)) => {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err(e);
-        }
-    };
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break status,
-            Ok(None) if Instant::now() < deadline => thread::sleep(POLL),
-            Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(format!("no answer within {} ms", timeout.as_millis()));
-            }
-            Err(e) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(format!("cannot wait for it: {e}"));
-            }
-        }
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+    let output = program::run(program, &args, timeout, OUTPUT_LIMIT).map_err(|e| match e {
+        program::Error::Late => format!("no answer within {} ms", timeout.as_millis()),
+        program::Error::Other(e) => e,
+    })?;
+    let Some(status) = output.status else {
+        return Err(format!("it printed more than {OUTPUT_LIMIT} bytes"));
     };
     if !status.success() {
-        let said = errors
-            .recv_timeout(OUTPUT_GRACE)
-            .ok()
-            .and_then(Result::ok)
-            .and_then(|bytes| first_line(&bytes));
-        return Err(match said {
+        return Err(match first_line(&output.stderr) {
             Some(said) => format!("it exited with {status}: {said}"),
             None => format!("it exited with {status}"),
         });
     }
-    let wait = deadline
-        .saturating_duration_since(Instant::now())
-        .max(OUTPUT_GRACE);
-    let bytes = output
-        .recv_timeout(wait)
-        .map_err(|_| "its output did not end".to_string())?
-        .map_err(|e| format!("cannot read its output: {e}"))?;
-    String::from_utf8(bytes).map_err(|e| format!("cannot read its output: {e}"))
-}
-
-/// Reads one of the program's pipes to the end on a thread of its own, so
-/// neither can fill and stall it.
-fn read_in_background(
-    pipe: Option<impl Read + Send + 'static>,
-) -> Result<Receiver<std::io::Result<Vec<u8>>>, String> {
-    let pipe = pipe.ok_or_else(|| "its output was not captured".to_string())?;
-    let (send, receive) = mpsc::channel();
-    thread::Builder::new()
-        .name("espeak-output".into())
-        .spawn(move || {
-            let mut output = Vec::new();
-            let read = pipe.take(OUTPUT_LIMIT).read_to_end(&mut output);
-            let _ = send.send(read.map(|_| output));
-        })
-        .map_err(|e| format!("cannot read its output: {e}"))?;
-    Ok(receive)
+    String::from_utf8(output.stdout).map_err(|e| format!("cannot read its output: {e}"))
 }
 
 /// The first line a program wrote, if it wrote one.
@@ -1063,49 +975,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn found_in_known_locations_then_path() {
-        let dir = tempfile::tempdir().unwrap();
-        let first = dir.path().join("first");
-        let second = dir.path().join("second");
-        let on_path = dir.path().join("bin");
-        std::fs::create_dir_all(&on_path).unwrap();
-        let path_var = Some(std::env::join_paths([&on_path]).unwrap());
-        let known = [first.to_str().unwrap(), second.to_str().unwrap()];
-
-        assert_eq!(find_in(&known, path_var.clone()), None);
-
-        let program = on_path.join("espeak-ng");
-        make_executable(&program);
-        assert_eq!(find_in(&known, path_var.clone()), Some(program));
-
-        make_executable(&second);
-        assert_eq!(find_in(&known, path_var.clone()), Some(second.clone()));
-
-        make_executable(&first);
-        assert_eq!(find_in(&known, path_var), Some(first));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn a_file_that_cannot_run_is_not_found() {
-        use std::os::unix::fs::PermissionsExt;
-        let dir = tempfile::tempdir().unwrap();
-        let program = dir.path().join("espeak-ng");
-        std::fs::write(&program, b"").unwrap();
-        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o644)).unwrap();
-        assert_eq!(find_in(&[program.to_str().unwrap()], None), None);
-    }
-
-    fn make_executable(path: &Path) {
-        std::fs::write(path, b"#!/bin/sh\n").unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
-        }
-    }
-
     #[cfg(unix)]
     #[test]
     fn a_program_that_hangs_is_killed_at_the_timeout() {
@@ -1150,7 +1019,7 @@ mod tests {
         let started = Instant::now();
         let error = run(Path::new("/usr/bin/yes"), &[], Duration::from_millis(200)).unwrap_err();
         assert!(
-            error.contains("no answer") || error.contains("exited"),
+            error.contains("no answer") || error.contains("more than"),
             "{error}"
         );
         assert!(started.elapsed() < Duration::from_secs(2));
