@@ -31,6 +31,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - On Linux, Mouthy runs without a tray icon when no appindicator library is installed, instead of failing to start.
 - On Linux and Windows, closing Settings quits Mouthy whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), since there is no other way to quit.
 - When the Settings window fails to start, it shows the error instead of staying empty.
+- A web address in Chinese or Japanese text is read as "link" and the text after it is read too; it used to swallow everything up to the next space.
 
 ## 0.5.0 — 2026-11-02
 
