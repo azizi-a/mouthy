@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The overlay starts on under native Wayland with the GTK layer shell (KDE Plasma), and off elsewhere. It does not take the keyboard from the app you are typing in, except perhaps when Mouthy runs natively on a desktop without the layer shell, such as the rpm or deb on GNOME.
 - In a Wayland session the AppImage runs as a native Wayland app, except on GNOME, where it stays under XWayland for the overlay's sake; `MOUTHY_GDK_BACKEND=x11` or `=wayland` chooses.
 - From the AppImage, `--speak-file` takes a relative path from the folder it was run in.
+- The tray icon is the plain mouth glyph, as on the Mac: white, or black on a light KDE Plasma panel.
 
 ### Languages
 
