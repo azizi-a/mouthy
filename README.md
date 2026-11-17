@@ -70,7 +70,7 @@ Call the binary directly: `open -a Mouthy --args …` drops the arguments. With 
 
 Mouthy runs the [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) voice itself, with no server. Settings → General → Speech lists the voices you have downloaded, each with Preview and Use. Turn on **Show uninstalled voices** to see all 54 and download any of them (0.5 MB each). The Blend row mixes the voice in use with a second voice on a slider, and Other… takes any voice name or a blend of up to four voices, such as `bm_lewis(70)+bm_george(30)`.
 
-A voice reads text in its own language where Mouthy can (see Languages), and a blend reads in its first voice's. English voices starting with `b` get British pronunciations, the other English voices American. Voices of the remaining languages read English with their language's accent.
+A voice reads text in its own language (see Languages), and a blend reads in its first voice's. English voices starting with `b` get British pronunciations, the other English voices American, as does a voice name Mouthy does not recognise.
 
 Settings → Models manages the files: the int8 model, the fp32 model (326 MB; about twice as slow) and the voices, each of which you can preview, use or delete. Downloads show progress, can be cancelled and pick up where they stopped, and each file is checked against its published SHA-256. The files live in `~/Library/Application Support/com.azizi.mouthy/models/kokoro-v1.0/`.
 
@@ -82,12 +82,13 @@ Words an English voice's dictionary lacks, such as many names and product terms,
 
 ## Languages
 
-English voices read English, and Chinese voices read English for now. The others read their own language:
+English voices read English. The others read their own language:
 
 - **Spanish, French, Italian, Brazilian Portuguese and Hindi** (`ef_*`, `ff_*`, `if_*`, `pf_*`, `hf_*` and their male voices): read as Kokoro learned these languages. Mouthy asks [espeak-ng](https://github.com/espeak-ng/espeak-ng) how to say each sentence, numbers and times included, so these voices need it installed (`brew install espeak-ng`; on Linux see below), whatever the unknown-words setting says. Without it they show a notice instead of speaking, and `--voice` with one of them falls back to the Settings voice unless the file is read as English. English text in one of these voices is read with its language's rules unless Reading Language is English (below).
 - **Japanese** (`jf_*`, `jm_*`): reads kana (hiragana and katakana) and numbers. English inside Japanese text is read as English, and text with no Japanese in it is read as an American English voice reads it. Mouthy cannot read kanji yet: they are skipped, and text where more than a fifth of the letters are kanji is not read at all. Without a dictionary, words run together, the particles は and へ are read "ha" and "he", and long vowels follow the spelling.
+- **Mandarin** (`zf_*`, `zm_*`): reads Chinese characters with their tones, as Kokoro learned Mandarin. Words are found with jieba's dictionary, and a word such as 银行 or 重新 takes its reading from a phrase dictionary; other characters take their most common reading. Numbers are read in Chinese: "2024年" as 二零二四年, "3.14" as 三点一四, "50%" as 百分之五十. English inside Chinese text is read as English, and text with no Chinese in it is read as an American English voice reads it. The tone changes of 一 and 不 and of third tones in a row are read only where the phrase dictionary spells them. The dictionaries add about 40 MB to Mouthy's memory once a Chinese voice is in use.
 
-Settings → General → **Reading Language** matters only for a voice whose language Mouthy can read (see Voices); any other voice reads English either way. For such a voice it chooses between its own language (the default) and English, read with the voice's accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
+Settings → General → **Reading Language** chooses between the voice's own language (the default) and English, read with the voice's accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
 
 ## Using a speech server instead
 
