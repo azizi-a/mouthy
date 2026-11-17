@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language where Mouthy can read it.
 - Japanese voices (`jf_*`, `jm_*`) read Japanese written in kana, with its numbers in Japanese and any English in it as English. Kanji cannot be read yet: they are skipped, and text that is mostly kanji is refused with a notice.
 - **Changed:** Japanese voices read kana as Japanese rather than dropping it; text with no Japanese in it reads exactly as before.
+- Accented letters typed or copied as a letter plus a separate accent, as macOS file names often are, read like ordinary accented letters in Spanish, French, Italian, Portuguese and Hindi; Japanese voices also read half-width katakana.
 - Chinese voices (`zf_*`, `zm_*`) read Mandarin, with each word's tones and numbers read in Chinese, and any English in it as English. Settings no longer marks any voice as reading English only.
 - **Changed:** Chinese voices read Chinese text as Mandarin rather than dropping it; text with no Chinese in it reads exactly as before.
 
