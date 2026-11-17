@@ -17,9 +17,14 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
-/// Homebrew's prefixes, checked before `PATH`: an app opened from Finder gets
-/// a `PATH` without them.
-const KNOWN_LOCATIONS: &[&str] = &["/opt/homebrew/bin/espeak-ng", "/usr/local/bin/espeak-ng"];
+/// Homebrew's prefixes and the system's, checked before `PATH`: an app opened
+/// from Finder or a desktop menu gets a `PATH` without Homebrew.
+const KNOWN_LOCATIONS: &[&str] = &[
+    "/opt/homebrew/bin/espeak-ng",
+    "/usr/local/bin/espeak-ng",
+    "/home/linuxbrew/.linuxbrew/bin/espeak-ng",
+    "/usr/bin/espeak-ng",
+];
 /// The longest wait for one word. Speech waits for it, so it stays short.
 const TIMEOUT: Duration = Duration::from_millis(500);
 const POLL: Duration = Duration::from_millis(1);
@@ -427,20 +432,24 @@ mod tests {
     #[test]
     fn found_in_known_locations_then_path() {
         let dir = tempfile::tempdir().unwrap();
-        let known = dir.path().join("known");
+        let first = dir.path().join("first");
+        let second = dir.path().join("second");
         let on_path = dir.path().join("bin");
         std::fs::create_dir_all(&on_path).unwrap();
         let path_var = Some(std::env::join_paths([&on_path]).unwrap());
-        let known_program = known.to_str().unwrap();
+        let known = [first.to_str().unwrap(), second.to_str().unwrap()];
 
-        assert_eq!(find_in(&[known_program], path_var.clone()), None);
+        assert_eq!(find_in(&known, path_var.clone()), None);
 
         let program = on_path.join("espeak-ng");
         make_executable(&program);
-        assert_eq!(find_in(&[known_program], path_var.clone()), Some(program));
+        assert_eq!(find_in(&known, path_var.clone()), Some(program));
 
-        make_executable(&known);
-        assert_eq!(find_in(&[known_program], path_var), Some(known));
+        make_executable(&second);
+        assert_eq!(find_in(&known, path_var.clone()), Some(second.clone()));
+
+        make_executable(&first);
+        assert_eq!(find_in(&known, path_var), Some(first));
     }
 
     #[cfg(unix)]

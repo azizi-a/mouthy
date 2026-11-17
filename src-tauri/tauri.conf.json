@@ -36,10 +36,13 @@
     },
     "linux": {
       "deb": {
-        "depends": ["libgtk-layer-shell0"]
+        "depends": ["libgtk-layer-shell0", "libc6 (>= 2.38)"]
       },
       "rpm": {
-        "depends": ["libgtk-layer-shell.so.0()(64bit)"],
+        "depends": [
+          "libgtk-layer-shell.so.0()(64bit)",
+          "libc.so.6(GLIBC_2.38)(64bit)"
+        ],
         "compression": {
           "type": "none"
         }
