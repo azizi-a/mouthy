@@ -74,6 +74,7 @@ pub struct Output {
     /// `None` when it was stopped after printing more than the bytes asked for.
     pub status: Option<ExitStatus>,
     pub stdout: Vec<u8>,
+    /// After a success, only what had arrived by the exit.
     pub stderr: Vec<u8>,
 }
 
@@ -127,8 +128,8 @@ fn run_in(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    if let Some(appdir) = var("APPDIR").filter(|dir| !dir.is_empty()) {
-        for (name, value) in host_environment(Path::new(&appdir), &var) {
+    if let Some(appdir) = appimage_mount(&var) {
+        for (name, value) in host_environment(&appdir, &var) {
             match value {
                 Some(value) => command.env(name, value),
                 None => command.env_remove(name),
@@ -144,6 +145,17 @@ fn run_in(
         let _ = child.wait();
     }
     output
+}
+
+/// Where the AppImage Mouthy runs from is mounted. The launcher sets both
+/// variables; an AppImage exists only on Linux.
+fn appimage_mount(var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    if !cfg!(target_os = "linux") || var("APPIMAGE").is_none_or(|image| image.is_empty()) {
+        return None;
+    }
+    var("APPDIR")
+        .filter(|dir| !dir.is_empty())
+        .map(PathBuf::from)
 }
 
 /// What a host program's environment needs changed when Mouthy runs from an
@@ -209,9 +221,9 @@ fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Out
             Err(e) => return Err(Error::Other(format!("cannot wait for it: {e}"))),
         }
     };
-    // Output cut short is what was asked for: a helper still holding the
-    // error output open must not turn it into a timeout.
-    let stderr = if cut_short {
+    // Error output matters only for a failure: a helper still holding it open
+    // must not turn output cut short, or a success, into a timeout.
+    let stderr = if cut_short || status.success() {
         received_so_far(stderr)
     } else {
         received(stderr, deadline)?.0
@@ -236,7 +248,8 @@ fn received_so_far(reading: Option<io::Result<Reading>>) -> Vec<u8> {
 }
 
 /// Reads `pipe` on its own thread: up to `max_bytes`, saying whether there
-/// was more, then to the end only if `drain`.
+/// was more, then to the end only if `drain`. What it keeps is sent before
+/// draining, so it is there as soon as the program has written that much.
 fn read_up_to(
     mut pipe: impl Read + Send + 'static,
     max_bytes: usize,
@@ -251,15 +264,16 @@ fn read_up_to(
                 .by_ref()
                 .take(max_bytes as u64 + 1)
                 .read_to_end(&mut bytes)
-                .and_then(|_| {
+                .map(|_| {
                     let more = bytes.len() > max_bytes;
                     bytes.truncate(max_bytes);
-                    if more && drain {
-                        io::copy(&mut pipe, &mut io::sink())?;
-                    }
-                    Ok((bytes, more))
+                    (bytes, more)
                 });
+            let more = matches!(read, Ok((_, true)));
             let _ = send.send(read);
+            if more && drain {
+                let _ = io::copy(&mut pipe, &mut io::sink());
+            }
         })?;
     Ok(reading)
 }
@@ -335,6 +349,23 @@ mod tests {
         .unwrap();
         assert_eq!(output.status, None);
         assert_eq!(output.stdout.len(), 100_000);
+        assert!(
+            started.elapsed() < Duration::from_secs(4),
+            "did not wait for the helper"
+        );
+    }
+
+    #[test]
+    fn a_success_is_not_held_up_by_a_helper_holding_the_error_output() {
+        let started = Instant::now();
+        let output = sh(
+            "sleep 5 >/dev/null & printf ok",
+            Duration::from_secs(10),
+            1024,
+        )
+        .unwrap();
+        assert!(output.status.unwrap().success());
+        assert_eq!(output.stdout, b"ok");
         assert!(
             started.elapsed() < Duration::from_secs(4),
             "did not wait for the helper"
@@ -480,21 +511,15 @@ mod tests {
         path
     }
 
-    #[test]
-    fn a_program_started_from_an_appimage_gets_the_hosts_libraries() {
+    /// What a stand-in espeak-ng is given as arguments and `LD_LIBRARY_PATH`
+    /// when Mouthy's environment holds `vars`.
+    fn espeak_sees(vars: &[(&str, &str)]) -> String {
         let dir = tempfile::tempdir().unwrap();
         let espeak = script(
             dir.path(),
             "espeak-ng",
             r#"printf '%s|' "$@"; printf '%s' "$LD_LIBRARY_PATH""#,
         );
-        let vars = [
-            ("APPDIR", "/tmp/.mount_Mouthy1"),
-            (
-                "LD_LIBRARY_PATH",
-                "/tmp/.mount_Mouthy1/usr/lib/:/opt/host/lib",
-            ),
-        ];
         let var = |name: &str| {
             vars.iter()
                 .find(|(key, _)| *key == name)
@@ -508,10 +533,38 @@ mod tests {
             var,
         )
         .unwrap();
-        assert_eq!(
-            String::from_utf8(output.stdout).unwrap(),
-            "-q|--ipa=3|-v|es|--|Hola|/opt/host/lib"
-        );
+        String::from_utf8(output.stdout).unwrap()
+    }
+
+    const IMAGE_LIBRARIES: (&str, &str) = (
+        "LD_LIBRARY_PATH",
+        "/tmp/.mount_Mouthy1/usr/lib/:/opt/host/lib",
+    );
+
+    /// Unchanged: the test process's own value.
+    fn inherited_libraries() -> String {
+        let value = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+        format!("-q|--ipa=3|-v|es|--|Hola|{value}")
+    }
+
+    #[test]
+    fn a_program_started_from_an_appimage_gets_the_hosts_libraries() {
+        let seen = espeak_sees(&[
+            ("APPIMAGE", "/home/me/Applications/Mouthy.AppImage"),
+            ("APPDIR", "/tmp/.mount_Mouthy1"),
+            IMAGE_LIBRARIES,
+        ]);
+        if cfg!(target_os = "linux") {
+            assert_eq!(seen, "-q|--ipa=3|-v|es|--|Hola|/opt/host/lib");
+        } else {
+            assert_eq!(seen, inherited_libraries(), "no AppImage off Linux");
+        }
+    }
+
+    #[test]
+    fn appdir_alone_is_not_an_appimage() {
+        let seen = espeak_sees(&[("APPDIR", "/tmp/.mount_Mouthy1"), IMAGE_LIBRARIES]);
+        assert_eq!(seen, inherited_libraries());
     }
 
     #[test]
@@ -525,6 +578,7 @@ mod tests {
             path
         };
         let known = make("known/wl-paste", 0o755);
+        let second = make("second/wl-paste", 0o755);
         let on_path = make("bin/wl-paste", 0o755);
         make("plain/wl-paste", 0o644);
         let path_var =
@@ -535,6 +589,23 @@ mod tests {
         assert_eq!(
             find(&[known_str], "wl-paste", path_var.clone()),
             Some(known.clone())
+        );
+        assert_eq!(
+            find(
+                &[known_str, second.to_str().unwrap()],
+                "wl-paste",
+                path_var.clone()
+            ),
+            Some(known.clone()),
+            "the first known path wins"
+        );
+        assert_eq!(
+            find(
+                &[missing.to_str().unwrap(), second.to_str().unwrap()],
+                "wl-paste",
+                path_var.clone()
+            ),
+            Some(second.clone())
         );
         assert_eq!(
             find(&[missing.to_str().unwrap()], "wl-paste", path_var.clone()),
