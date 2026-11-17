@@ -10,8 +10,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - espeak-ng is found where Linuxbrew and the system package manager put it, and the AppImage starts it with the system's own libraries; Settings says how to install it on Linux.
 - On Wayland, bind `mouthy --speak-selection`, `--speak-clipboard` and `--stop` to keys in the desktop's settings; Settings → General lists them with the right path. The highlighted text and the clipboard are read as plain text with wl-clipboard's `wl-paste`, and Settings says whether it is installed. A held shortcut cannot stop what its first press started, and presses less than 0.7 s apart count as one.
 - On Linux a copied password is refused only when it carries KDE's password hint. Most password managers add none there, so Speak Clipboard may read a copied password aloud.
-- The overlay starts on under native Wayland with the GTK layer shell (KDE Plasma with the rpm or deb), and off elsewhere, including the AppImage, which runs under XWayland.
-- `MOUTHY_GDK_BACKEND` chooses the AppImage's display backend.
+- The overlay starts on under native Wayland with the GTK layer shell (KDE Plasma), and off elsewhere. It does not take the keyboard from the app you are typing in, except perhaps when Mouthy runs natively on a desktop without the layer shell, such as the rpm or deb on GNOME.
+- In a Wayland session the AppImage runs as a native Wayland app, except on GNOME, where it stays under XWayland for the overlay's sake; `MOUTHY_GDK_BACKEND=x11` or `=wayland` chooses.
 - From the AppImage, `--speak-file` takes a relative path from the folder it was run in.
 - The tray icon is the plain mouth glyph, as on the Mac: white, or black on a light KDE Plasma panel.
 
