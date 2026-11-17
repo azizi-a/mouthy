@@ -149,7 +149,8 @@ On Linux most password managers do not mark a password they copy. Mouthy refuses
 
 ### Overlay, tray and sound on Linux
 
-- Under native Wayland on a desktop with the GTK layer shell, such as KDE Plasma, the overlay sits at the screen's edge and starts on: the rpm and deb run that way. The AppImage runs under XWayland, where the overlay would be an ordinary window that takes focus, so it starts off; Settings → General turns it on, and `MOUTHY_GDK_BACKEND=wayland` starts the AppImage on native Wayland. With the overlay off, notices such as "Nothing selected" go only to the log.
+- In a Wayland session Mouthy runs as a native Wayland app, the AppImage included. If the AppImage misbehaves on your desktop, start it with `MOUTHY_GDK_BACKEND=x11` to run it under XWayland instead.
+- On a desktop with the GTK layer shell, such as KDE Plasma, the overlay sits at the screen's edge and starts on. Elsewhere it is an ordinary window and starts off; Settings → General turns it on. It does not take the keyboard from the app you are typing in, except perhaps on a Wayland desktop without the layer shell, such as GNOME, where the desktop decides. With the overlay off, notices such as "Nothing selected" go only to the log.
 - The tray icon needs an appindicator library; the AppImage carries one, and the rpm and deb install it. Without one Mouthy runs without a tray: launch it again to open Settings. Whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), closing Settings quits Mouthy.
 - Sound goes through ALSA, which PipeWire serves on current desktops.
 

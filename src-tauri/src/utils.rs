@@ -29,12 +29,23 @@ fn is_wayland_session(wayland_display: Option<&OsStr>, session_type: Option<&OsS
 
 /// The `GDK_BACKEND` to set before GTK starts, if any. Only the AppImage's
 /// own value is replaced: its launch hook exports `GDK_BACKEND=x11` over the
-/// user's, so `MOUTHY_GDK_BACKEND` is the way to choose there.
+/// user's, so `MOUTHY_GDK_BACKEND` is the way to choose there. Without it, a
+/// Wayland session gets native Wayland, where the overlay can use the GTK
+/// layer shell.
 #[cfg(any(target_os = "linux", test))]
-pub fn gdk_backend(in_appimage: bool, requested: Option<&str>) -> Option<&str> {
+pub fn gdk_backend<'a>(
+    in_appimage: bool,
+    wayland_display: Option<&OsStr>,
+    requested: Option<&'a str>,
+) -> Option<&'a str> {
+    if !in_appimage {
+        return None;
+    }
+    let wayland_session = wayland_display.is_some_and(|display| !display.is_empty());
     requested
         .map(str::trim)
-        .filter(|backend| in_appimage && !backend.is_empty())
+        .filter(|backend| !backend.is_empty())
+        .or(wayland_session.then_some("wayland"))
 }
 
 /// Returns true when the environment variable is set to a truthy value
@@ -103,12 +114,21 @@ mod tests {
     }
 
     #[test]
-    fn only_the_appimage_takes_mouthy_gdk_backend() {
-        assert_eq!(gdk_backend(true, Some("wayland")), Some("wayland"));
-        assert_eq!(gdk_backend(true, Some(" x11 ")), Some("x11"));
-        assert_eq!(gdk_backend(true, Some("  ")), None);
-        assert_eq!(gdk_backend(true, None), None);
+    fn the_appimage_runs_on_wayland_unless_told_otherwise() {
+        let wayland = Some(OsStr::new("wayland-0"));
+        // The hook's GDK_BACKEND=x11 is always replaced inside the image, so
+        // it is not an input.
+        assert_eq!(gdk_backend(true, wayland, None), Some("wayland"));
+        assert_eq!(gdk_backend(true, wayland, Some("  ")), Some("wayland"));
+        assert_eq!(gdk_backend(true, wayland, Some(" x11 ")), Some("x11"));
+        assert_eq!(gdk_backend(true, wayland, Some("wayland")), Some("wayland"));
+        // An X11 session keeps the hook's x11 unless asked.
+        assert_eq!(gdk_backend(true, None, None), None);
+        assert_eq!(gdk_backend(true, Some(OsStr::new("")), None), None);
+        assert_eq!(gdk_backend(true, None, Some("wayland")), Some("wayland"));
         // A deb or rpm user's own GDK_BACKEND is never touched.
-        assert_eq!(gdk_backend(false, Some("wayland")), None);
+        assert_eq!(gdk_backend(false, wayland, None), None);
+        assert_eq!(gdk_backend(false, wayland, Some("x11")), None);
+        assert_eq!(gdk_backend(false, None, Some("wayland")), None);
     }
 }
