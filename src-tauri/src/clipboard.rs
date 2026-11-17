@@ -217,30 +217,30 @@ mod wayland {
 
     #[cfg(target_os = "linux")]
     pub fn read_primary() -> Result<Option<String>, String> {
-        read(&wl_paste("selection")?, true)
+        read(&wl_paste("selection")?, true, TIMEOUT)
     }
 
     #[cfg(target_os = "linux")]
     pub fn read_clipboard() -> Result<ClipboardText, String> {
-        read_clipboard_with(&wl_paste("clipboard")?)
+        read_clipboard_with(&wl_paste("clipboard")?, TIMEOUT)
     }
 
     /// The selection's (PRIMARY's) or the clipboard's text, `None` if empty.
-    fn read(wl_paste: &Path, primary: bool) -> Result<Option<String>, String> {
+    fn read(wl_paste: &Path, primary: bool, timeout: Duration) -> Result<Option<String>, String> {
         let args: &[&str] = if primary {
             &["--primary", "--no-newline", "--type", "text"]
         } else {
             &["--no-newline", "--type", "text"]
         };
-        let text = pasted(program::run(wl_paste, args, TIMEOUT, TEXT_BYTES))?;
+        let text = pasted(program::run(wl_paste, args, timeout, TEXT_BYTES))?;
         Ok(text.filter(|text| !text.is_empty()))
     }
 
-    fn read_clipboard_with(wl_paste: &Path) -> Result<ClipboardText, String> {
+    fn read_clipboard_with(wl_paste: &Path, timeout: Duration) -> Result<ClipboardText, String> {
         let types = pasted(program::run(
             wl_paste,
             &["--list-types"],
-            TIMEOUT,
+            timeout,
             TYPES_BYTES,
         ))?;
         let Some(types) = types else {
@@ -250,7 +250,7 @@ mod wayland {
             info!("The clipboard holds a password manager's secret; not reading it");
             return Ok(ClipboardText::Secret);
         }
-        Ok(match read(wl_paste, false)? {
+        Ok(match read(wl_paste, false, timeout)? {
             Some(text) => ClipboardText::Text(text),
             None => ClipboardText::Empty,
         })
@@ -303,14 +303,17 @@ mod wayland {
             path
         }
 
+        /// Long enough for a busy test machine; only the hung owner waits it out.
+        const SLOW: Duration = Duration::from_secs(10);
+
         fn primary(body: &str) -> Result<Option<String>, String> {
             let dir = tempfile::tempdir().unwrap();
-            read(&fake(&dir, body), true)
+            read(&fake(&dir, body), true, SLOW)
         }
 
         fn clipboard(body: &str) -> Result<ClipboardText, String> {
             let dir = tempfile::tempdir().unwrap();
-            read_clipboard_with(&fake(&dir, body))
+            read_clipboard_with(&fake(&dir, body), SLOW)
         }
 
         #[test]
@@ -355,8 +358,9 @@ printf 'Read this.\nAnd this.'"#,
 
         #[test]
         fn a_hung_owner_is_given_up_on() {
+            let dir = tempfile::tempdir().unwrap();
             assert_eq!(
-                primary("exec sleep 10"),
+                read(&fake(&dir, "exec sleep 10"), true, TIMEOUT),
                 Err("wl-paste: no answer within 500 ms".into())
             );
         }
