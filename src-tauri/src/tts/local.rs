@@ -6,7 +6,7 @@
 
 use super::catalog::VoiceLanguage;
 use super::espeak;
-use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out};
+use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out, Marks};
 use super::voice::{is_voice_name, VoiceSpec};
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
@@ -235,6 +235,15 @@ impl ModelFiles {
     /// English needs nothing beyond the model files.
     pub fn unmet_requirement(&self) -> Option<String> {
         None
+    }
+
+    /// Where this language's text is cut into sentences and clauses.
+    pub fn marks(&self) -> &'static Marks {
+        match self.language {
+            VoiceLanguage::Japanese | VoiceLanguage::Mandarin => &Marks::CJK,
+            VoiceLanguage::Hindi => &Marks::HINDI,
+            _ => &Marks::DEFAULT,
+        }
     }
 
     /// The first file that is not there, described for the log.
@@ -1547,6 +1556,26 @@ mod tests {
             dora.reading_as(VoiceLanguage::BritishEnglish).language,
             VoiceLanguage::BritishEnglish
         );
+    }
+
+    #[test]
+    fn each_language_cuts_its_text_at_its_own_marks() {
+        let reading_in = |language| ModelFiles {
+            language,
+            ..ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "af_alloy")
+        };
+        for (language, marks) in [
+            (VoiceLanguage::AmericanEnglish, &Marks::DEFAULT),
+            (VoiceLanguage::Spanish, &Marks::DEFAULT),
+            (VoiceLanguage::Japanese, &Marks::CJK),
+            (VoiceLanguage::Mandarin, &Marks::CJK),
+            (VoiceLanguage::Hindi, &Marks::HINDI),
+        ] {
+            assert_eq!(reading_in(language).marks(), marks, "{language:?}");
+        }
+        // Until this build reads Chinese, a Chinese voice's text is cut as English.
+        let xiaobei = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "zf_xiaobei");
+        assert_eq!(xiaobei.marks(), &Marks::DEFAULT);
     }
 
     #[test]

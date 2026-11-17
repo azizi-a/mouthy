@@ -701,11 +701,14 @@ fn emit_speech_state(app: &AppHandle, state: SessionPhase, input: Input, error: 
 
 /// Normalised `text` cut into the requests `backend` gets.
 fn sentences_for(text: &str, backend: &tts::Backend) -> Vec<tts::text::Chunk> {
-    let sentences = tts::text::split_sentences(text, backend.max_chunk_chars());
-    if matches!(backend, tts::Backend::Local(_)) {
-        tts::text::split_first_clause(sentences)
-    } else {
-        sentences
+    let max_chars = backend.max_chunk_chars();
+    match backend {
+        tts::Backend::Http { .. } => tts::text::split_sentences(text, max_chars),
+        tts::Backend::Local(files) => {
+            let marks = files.marks();
+            let sentences = tts::text::split_sentences_with(text, max_chars, marks);
+            tts::text::split_first_clause(sentences, marks)
+        }
     }
 }
 

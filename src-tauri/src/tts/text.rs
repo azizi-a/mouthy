@@ -17,6 +17,43 @@ const INITIALS_AND_MONTHS: &[&str] = &[
     "aug.", "sep.", "sept.", "oct.", "nov.", "dec.",
 ];
 
+/// The marks that end sentences and clauses in one language's writing.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Marks {
+    terminators: &'static [char],
+    /// Where a long sentence may be cut.
+    clause_breaks: &'static [char],
+    /// Marks above that end a sentence or clause with no space after them, as
+    /// Chinese and Japanese are written. Any other mark needs whitespace after
+    /// it, so "3.14", "1,500" and "10:30" stay whole.
+    unspaced: &'static [char],
+}
+
+impl Marks {
+    pub const DEFAULT: Marks = Marks {
+        terminators: TERMINATORS,
+        clause_breaks: CLAUSE_BREAKS,
+        unspaced: &[],
+    };
+    /// Chinese and Japanese.
+    pub const CJK: Marks = Marks {
+        terminators: &['.', '!', '?', '…', '。', '！', '？'],
+        clause_breaks: &[',', ';', ':', '、', '，', '；', '：'],
+        unspaced: &['。', '！', '？', '、', '，', '；', '：'],
+    };
+    pub const HINDI: Marks = Marks {
+        terminators: &['.', '!', '?', '…', '।', '॥'],
+        clause_breaks: CLAUSE_BREAKS,
+        unspaced: &[],
+    };
+
+    /// Whether `mark` ends a clause when `after` follows it.
+    fn ends_clause(&self, mark: char, after: &str) -> bool {
+        self.clause_breaks.contains(&mark)
+            && (self.unspaced.contains(&mark) || after.starts_with(char::is_whitespace))
+    }
+}
+
 /// An abbreviation whose "." does not end a sentence, and which the local
 /// voice says in full: misaki-rs reads every "." as a full stop.
 struct Abbreviation {
@@ -653,18 +690,18 @@ fn wrapped_hyphen(body: &str) -> bool {
 /// its audio is ready sooner.
 const FIRST_CHUNK_WORDS: usize = 8;
 
-/// Cuts the first sentence at its first clause break (`,;:` or a dash, but
-/// not one inside a range such as "1914–1918") when it is longer than
-/// `FIRST_CHUNK_WORDS`. Both parts keep at least `MIN_SENTENCE_CHARS`; without
-/// such a break it stays whole.
-pub fn split_first_clause(mut chunks: Vec<Chunk>) -> Vec<Chunk> {
+/// Cuts the first sentence at its first clause break (one of `marks`, or a
+/// dash, but not one inside a range such as "1914–1918") when it is longer
+/// than `FIRST_CHUNK_WORDS`. Both parts keep at least `MIN_SENTENCE_CHARS`;
+/// without such a break it stays whole.
+pub fn split_first_clause(mut chunks: Vec<Chunk>, marks: &Marks) -> Vec<Chunk> {
     let Some(first) = chunks.first() else {
         return chunks;
     };
     if first.text.split_whitespace().count() <= FIRST_CHUNK_WORDS {
         return chunks;
     }
-    if let Some((head, tail)) = first_clause_break(&first.text) {
+    if let Some((head, tail)) = first_clause_break(&first.text, marks) {
         let parts = [
             Chunk {
                 text: head.to_string(),
@@ -680,14 +717,12 @@ pub fn split_first_clause(mut chunks: Vec<Chunk>) -> Vec<Chunk> {
     chunks
 }
 
-fn first_clause_break(sentence: &str) -> Option<(&str, &str)> {
+fn first_clause_break<'a>(sentence: &'a str, marks: &Marks) -> Option<(&'a str, &'a str)> {
     let is_short = |s: &str| s.chars().count() < MIN_SENTENCE_CHARS;
     for (i, c) in sentence.char_indices() {
         let end = i + c.len_utf8();
         let after = &sentence[end..];
         let is_break = match c {
-            // Not inside "1,500" or "10:30".
-            ',' | ';' | ':' => after.starts_with(char::is_whitespace),
             '—' | '–' => !joins_numbers(&sentence[..i], after),
             // A spaced hyphen is a dash; "long-delayed" is not.
             '-' => {
@@ -695,7 +730,8 @@ fn first_clause_break(sentence: &str) -> Option<(&str, &str)> {
                     && after.starts_with(' ')
                     && !joins_numbers(&sentence[..i], after)
             }
-            _ => false,
+            // Not inside "1,500" or "10:30".
+            _ => marks.ends_clause(c, after),
         };
         if !is_break {
             continue;
@@ -727,18 +763,23 @@ pub struct Chunk {
     pub ends_sentence: bool,
 }
 
+/// `split_sentences_with` the default marks, as the HTTP server always gets.
+pub fn split_sentences(text: &str, max_chars: usize) -> Vec<Chunk> {
+    split_sentences_with(text, max_chars, &Marks::DEFAULT)
+}
+
 /// Splits normalized text into chunks to synthesise one request at a time,
 /// cutting sentences longer than `max_chars`. Every line break ends a
 /// sentence, so headings and bullets need no punctuation.
-pub fn split_sentences(text: &str, max_chars: usize) -> Vec<Chunk> {
+pub fn split_sentences_with(text: &str, max_chars: usize, marks: &Marks) -> Vec<Chunk> {
     let sentences = text
         .lines()
-        .flat_map(raw_sentences)
+        .flat_map(|line| raw_sentences(line, marks))
         .map(collapse_whitespace);
     merge_short(sentences)
         .iter()
         .flat_map(|sentence| {
-            let parts = merge_short(split_long(sentence, max_chars));
+            let parts = merge_short(split_long(sentence, max_chars, marks));
             let last = parts.len().saturating_sub(1);
             parts.into_iter().enumerate().map(move |(i, text)| Chunk {
                 text,
@@ -765,24 +806,27 @@ fn merge_short(fragments: impl IntoIterator<Item = String>) -> Vec<String> {
 }
 
 /// Splits after terminal punctuation (plus closing quotes/brackets) that is
-/// followed by whitespace, so "3.14" stays intact, unless it ends an abbreviation.
-fn raw_sentences(text: &str) -> Vec<&str> {
+/// followed by whitespace, so "3.14" stays intact, unless it ends an
+/// abbreviation. An unspaced mark needs no whitespace after it.
+fn raw_sentences<'a>(text: &'a str, marks: &Marks) -> Vec<&'a str> {
     let mut sentences = Vec::new();
     let mut start = 0;
     let mut chars = text.char_indices().peekable();
     while let Some((i, c)) = chars.next() {
-        if !TERMINATORS.contains(&c) {
+        if !marks.terminators.contains(&c) {
             continue;
         }
         let mut end = i + c.len_utf8();
+        let mut unspaced = marks.unspaced.contains(&c);
         while let Some(&(j, next)) = chars.peek() {
-            if !TERMINATORS.contains(&next) && !CLOSERS.contains(&next) {
+            if !marks.terminators.contains(&next) && !CLOSERS.contains(&next) {
                 break;
             }
             end = j + next.len_utf8();
+            unspaced |= marks.unspaced.contains(&next);
             chars.next();
         }
-        let at_break = chars.peek().is_none_or(|&(_, next)| next.is_whitespace());
+        let at_break = unspaced || chars.peek().is_none_or(|&(_, next)| next.is_whitespace());
         if at_break && !ends_with_abbreviation(&text[start..end], &text[end..]) {
             sentences.push(text[start..end].trim());
             start = end;
@@ -813,10 +857,10 @@ fn ends_with_abbreviation(text: &str, after: &str) -> bool {
         })
 }
 
-/// Cuts at the last clause break (`,;:` then whitespace, so "$1,500" and "10:30"
-/// survive) before `max_chars`, else the last space, else mid-word; always on
-/// a char boundary.
-fn split_long(sentence: &str, max_chars: usize) -> Vec<String> {
+/// Cuts at the last clause break before `max_chars` (`,;:` only before
+/// whitespace, so "$1,500" and "10:30" survive), else the last space, else
+/// mid-word; always on a char boundary.
+fn split_long(sentence: &str, max_chars: usize, marks: &Marks) -> Vec<String> {
     let mut pieces = Vec::new();
     let mut rest = sentence.trim();
     while let Some((limit, _)) = rest.char_indices().nth(max_chars) {
@@ -824,10 +868,8 @@ fn split_long(sentence: &str, max_chars: usize) -> Vec<String> {
         let clause_break = head
             .char_indices()
             .rev()
-            .find(|&(i, c)| {
-                CLAUSE_BREAKS.contains(&c) && rest[i + 1..].starts_with(char::is_whitespace)
-            })
-            .map(|(i, _)| i + 1);
+            .find(|&(i, c)| marks.ends_clause(c, &rest[i + c.len_utf8()..]))
+            .map(|(i, c)| i + c.len_utf8());
         let cut = clause_break
             .or_else(|| head.rfind(char::is_whitespace))
             .filter(|&i| i > 0)
@@ -2885,7 +2927,7 @@ mod tests {
             text: "When the committee reconvened after the recess, it became clear that none had survived".into(),
             ends_sentence: false,
         };
-        let ends: Vec<bool> = split_first_clause(vec![first])
+        let ends: Vec<bool> = split_first_clause(vec![first], &Marks::DEFAULT)
             .iter()
             .map(|chunk| chunk.ends_sentence)
             .collect();
@@ -2993,7 +3035,10 @@ mod tests {
     }
 
     fn first_chunks(text: &str) -> Vec<String> {
-        texts(split_first_clause(split_sentences(text, MAX_CHARS)))
+        texts(split_first_clause(
+            split_sentences(text, MAX_CHARS),
+            &Marks::DEFAULT,
+        ))
     }
 
     #[test]
@@ -3119,7 +3164,98 @@ mod tests {
         let chunks = first_chunks(text);
         assert_eq!(chunks.join(" "), text);
         assert!(chunks.iter().all(|c| !c.is_empty()));
-        assert!(split_first_clause(Vec::new()).is_empty());
+        assert!(split_first_clause(Vec::new(), &Marks::DEFAULT).is_empty());
+    }
+
+    fn sentences_in(text: &str, marks: &Marks) -> Vec<String> {
+        texts(split_sentences_with(text, MAX_CHARS, marks))
+    }
+
+    #[test]
+    fn chinese_and_japanese_split_at_their_marks_with_no_space_after() {
+        let chinese = [
+            "今天的天气非常好，我们一起去公园散步吧，顺便买点水果。",
+            "明天可能会下大雨，所以出门的时候一定要记得带上雨伞！",
+            "你觉得这个计划怎么样，如果有问题的话请随时告诉我？",
+        ];
+        assert_eq!(sentences_in(&chinese.concat(), &Marks::CJK), chinese);
+        let japanese = [
+            "きょうはとてもいいてんきなので、こうえんにいきましょう。",
+            "あしたはあめがふるかもしれないので、かさをもっていってね！",
+        ];
+        assert_eq!(sentences_in(&japanese.concat(), &Marks::CJK), japanese);
+    }
+
+    #[test]
+    fn the_server_gets_chinese_cut_as_before() {
+        let text = "今天的天气非常好，我们一起去公园散步吧。明天可能会下大雨，所以要带伞。";
+        assert_eq!(sentences(text), vec![text]);
+    }
+
+    #[test]
+    fn a_stop_or_comma_in_chinese_text_still_needs_a_space_after_it() {
+        let text = "版本3.14已经发布了，价格是1,500元，时间是10:30。";
+        assert_eq!(sentences_in(text, &Marks::CJK), vec![text]);
+        let mixed = "我们用的是Node.js和Python，效果很好。Version 2.0 ships today.";
+        assert_eq!(
+            sentences_in(mixed, &Marks::CJK),
+            vec![
+                "我们用的是Node.js和Python，效果很好。",
+                "Version 2.0 ships today."
+            ]
+        );
+    }
+
+    #[test]
+    fn a_long_chinese_sentence_is_cut_at_a_fullwidth_comma() {
+        let clause = "我们在会议上讨论了很多关于明年预算的问题";
+        let sentence = format!("{}{clause}。", format!("{clause}，").repeat(14));
+        assert!(sentence.chars().count() > 300);
+        let chunks = split_sentences_with(&sentence, 100, &Marks::CJK);
+        assert_eq!(chunks.len(), 4, "{chunks:?}");
+        assert!(chunks.iter().all(|c| c.text.chars().count() <= 100));
+        for chunk in &chunks[..3] {
+            assert!(chunk.text.ends_with('，'), "{}", chunk.text);
+            assert!(!chunk.ends_sentence);
+        }
+        assert!(chunks[3].ends_sentence);
+        assert_eq!(texts(chunks).concat(), sentence);
+    }
+
+    #[test]
+    fn hindi_ends_a_sentence_at_a_danda() {
+        let text = "आज मौसम बहुत अच्छा है, इसलिए हम पार्क में टहलने जाएंगे। \
+                    कल शायद बारिश होगी, तो छाता ज़रूर ले जाना॥ \
+                    क्या आप हमारे साथ आना चाहेंगे?";
+        assert_eq!(
+            sentences_in(text, &Marks::HINDI),
+            vec![
+                "आज मौसम बहुत अच्छा है, इसलिए हम पार्क में टहलने जाएंगे।",
+                "कल शायद बारिश होगी, तो छाता ज़रूर ले जाना॥",
+                "क्या आप हमारे साथ आना चाहेंगे?",
+            ]
+        );
+        assert_eq!(sentences(text), vec![text]);
+    }
+
+    #[test]
+    fn a_first_sentence_splits_at_an_unspaced_clause_mark() {
+        let text = "きのうは ともだちと いっしょに えきまえの えいがかんで あたらしい えいがを \
+                    みました、それから みんなで ばんごはんを たべました。";
+        let first = |marks| {
+            texts(split_first_clause(
+                split_sentences_with(text, MAX_CHARS, marks),
+                marks,
+            ))
+        };
+        assert_eq!(first(&Marks::DEFAULT), vec![text]);
+        assert_eq!(
+            first(&Marks::CJK),
+            vec![
+                "きのうは ともだちと いっしょに えきまえの えいがかんで あたらしい えいがを みました、",
+                "それから みんなで ばんごはんを たべました。",
+            ]
+        );
     }
 
     #[test]
