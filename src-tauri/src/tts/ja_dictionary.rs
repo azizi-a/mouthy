@@ -299,7 +299,7 @@ pub(crate) fn tagger_for_test() -> Option<&'static Tagger> {
                 .sha256;
             // Kept between runs and named after the archive, so a run unpacks
             // only once and a new archive unpacks afresh.
-            let cache = root.join(&pinned);
+            let cache = root.join(pinned);
             if !installed(&cache) {
                 let actual = download::sha256_file(&downloaded).unwrap();
                 assert_eq!(actual, pinned, "{}", downloaded.display());
