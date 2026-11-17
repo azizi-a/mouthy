@@ -370,6 +370,10 @@
   "errors": {
     "loadDirectory": "Fejl ved indlæsning af mappe: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "Applikationssprog",
     "description": "Skift sproget for Mouthy-grænsefladen"

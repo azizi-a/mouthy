@@ -7,7 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Linux
 
 - Linux builds: a deb, an rpm and an AppImage for x86_64, built by GitHub Actions and attached to each release.
-- espeak-ng is found where Linuxbrew and the system package manager put it, and Settings says how to install it on Linux.
+- espeak-ng is found where Linuxbrew and the system package manager put it, and the AppImage starts it with the system's own libraries; Settings says how to install it on Linux.
 - On Wayland, bind `mouthy --speak-selection`, `--speak-clipboard` and `--stop` to keys in the desktop's settings; Settings → General lists them with the right path. The highlighted text and the clipboard are read as plain text with wl-clipboard's `wl-paste`, and Settings says whether it is installed. A held shortcut cannot stop what its first press started, and presses less than 0.7 s apart count as one.
 - On Linux a copied password is refused only when it carries KDE's password hint. Most password managers add none there, so Speak Clipboard may read a copied password aloud.
 - The overlay starts on under native Wayland with the GTK layer shell (KDE Plasma with the rpm or deb), and off elsewhere, including the AppImage, which runs under XWayland.
@@ -30,6 +30,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - A command such as `mouthy --stop` no longer opens, or rotates away, the running app's log file.
 - On Linux, Mouthy runs without a tray icon when no appindicator library is installed, instead of failing to start.
 - On Linux and Windows, closing Settings quits Mouthy whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), since there is no other way to quit.
+- When the Settings window fails to start, it shows the error instead of staying empty.
 
 ## 0.5.0 — 2026-11-02
 

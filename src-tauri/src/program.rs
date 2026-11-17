@@ -2,6 +2,7 @@
 //! with a deadline.
 
 use std::ffi::OsString;
+use std::fmt;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
@@ -73,7 +74,25 @@ pub struct Output {
     /// `None` when it was stopped after printing more than the bytes asked for.
     pub status: Option<ExitStatus>,
     pub stdout: Vec<u8>,
+    /// After a success, only what had arrived by the exit.
     pub stderr: Vec<u8>,
+}
+
+/// Why a program gave no output.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Error {
+    /// The deadline passed first.
+    Late,
+    Other(String),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Late => f.write_str("no answer in time"),
+            Self::Other(e) => f.write_str(e),
+        }
+    }
 }
 
 /// Runs `program` without a shell or stdin and returns its output, killing it
@@ -88,7 +107,20 @@ pub fn run(
     args: &[&str],
     timeout: Duration,
     max_bytes: usize,
-) -> Result<Output, String> {
+) -> Result<Output, Error> {
+    run_in(program, args, timeout, max_bytes, |name| {
+        std::env::var_os(name)
+    })
+}
+
+/// `run`, with Mouthy's environment read through `var`.
+fn run_in(
+    program: &Path,
+    args: &[&str],
+    timeout: Duration,
+    max_bytes: usize,
+    var: impl Fn(&str) -> Option<OsString>,
+) -> Result<Output, Error> {
     let deadline = Instant::now() + timeout;
     let mut command = Command::new(program);
     command
@@ -96,8 +128,8 @@ pub fn run(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    if let Some(appdir) = std::env::var_os("APPDIR").filter(|dir| !dir.is_empty()) {
-        for (name, value) in host_environment(Path::new(&appdir), |name| std::env::var_os(name)) {
+    if let Some(appdir) = appimage_mount(&var) {
+        for (name, value) in host_environment(&appdir, &var) {
             match value {
                 Some(value) => command.env(name, value),
                 None => command.env_remove(name),
@@ -106,16 +138,24 @@ pub fn run(
     }
     let mut child = command
         .spawn()
-        .map_err(|e| format!("cannot start {}: {e}", program.display()))?;
+        .map_err(|e| Error::Other(format!("cannot start {}: {e}", program.display())))?;
     let output = collect(&mut child, deadline, max_bytes);
     if output.is_err() {
         let _ = child.kill();
         let _ = child.wait();
     }
-    output.map_err(|e| match e {
-        Failure::Late => "no answer in time".to_string(),
-        Failure::Other(e) => e,
-    })
+    output
+}
+
+/// Where the AppImage Mouthy runs from is mounted. The launcher sets both
+/// variables; an AppImage exists only on Linux.
+fn appimage_mount(var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    if !cfg!(target_os = "linux") || var("APPIMAGE").is_none_or(|image| image.is_empty()) {
+        return None;
+    }
+    var("APPDIR")
+        .filter(|dir| !dir.is_empty())
+        .map(PathBuf::from)
 }
 
 /// What a host program's environment needs changed when Mouthy runs from an
@@ -160,12 +200,7 @@ fn host_environment(
     changes
 }
 
-enum Failure {
-    Late,
-    Other(String),
-}
-
-fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Output, Failure> {
+fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Output, Error> {
     let stdout = child
         .stdout
         .take()
@@ -182,13 +217,13 @@ fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Out
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() < deadline => thread::sleep(POLL),
-            Ok(None) => return Err(Failure::Late),
-            Err(e) => return Err(Failure::Other(format!("cannot wait for it: {e}"))),
+            Ok(None) => return Err(Error::Late),
+            Err(e) => return Err(Error::Other(format!("cannot wait for it: {e}"))),
         }
     };
-    // Output cut short is what was asked for: a helper still holding the
-    // error output open must not turn it into a timeout.
-    let stderr = if cut_short {
+    // Error output matters only for a failure: a helper still holding it open
+    // must not turn output cut short, or a success, into a timeout.
+    let stderr = if cut_short || status.success() {
         received_so_far(stderr)
     } else {
         received(stderr, deadline)?.0
@@ -213,7 +248,8 @@ fn received_so_far(reading: Option<io::Result<Reading>>) -> Vec<u8> {
 }
 
 /// Reads `pipe` on its own thread: up to `max_bytes`, saying whether there
-/// was more, then to the end only if `drain`.
+/// was more, then to the end only if `drain`. What it keeps is sent before
+/// draining, so it is there as soon as the program has written that much.
 fn read_up_to(
     mut pipe: impl Read + Send + 'static,
     max_bytes: usize,
@@ -228,15 +264,16 @@ fn read_up_to(
                 .by_ref()
                 .take(max_bytes as u64 + 1)
                 .read_to_end(&mut bytes)
-                .and_then(|_| {
+                .map(|_| {
                     let more = bytes.len() > max_bytes;
                     bytes.truncate(max_bytes);
-                    if more && drain {
-                        io::copy(&mut pipe, &mut io::sink())?;
-                    }
-                    Ok((bytes, more))
+                    (bytes, more)
                 });
+            let more = matches!(read, Ok((_, true)));
             let _ = send.send(read);
+            if more && drain {
+                let _ = io::copy(&mut pipe, &mut io::sink());
+            }
         })?;
     Ok(reading)
 }
@@ -246,18 +283,18 @@ fn read_up_to(
 fn received(
     reading: Option<io::Result<Reading>>,
     deadline: Instant,
-) -> Result<(Vec<u8>, bool), Failure> {
+) -> Result<(Vec<u8>, bool), Error> {
     let reading = match reading {
         None => return Ok((Vec::new(), false)),
         Some(reading) => {
-            reading.map_err(|e| Failure::Other(format!("cannot read its output: {e}")))?
+            reading.map_err(|e| Error::Other(format!("cannot read its output: {e}")))?
         }
     };
     match reading.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
-        Ok(read) => read.map_err(|e| Failure::Other(format!("cannot read its output: {e}"))),
-        Err(RecvTimeoutError::Timeout) => Err(Failure::Late),
+        Ok(read) => read.map_err(|e| Error::Other(format!("cannot read its output: {e}"))),
+        Err(RecvTimeoutError::Timeout) => Err(Error::Late),
         Err(RecvTimeoutError::Disconnected) => {
-            Err(Failure::Other("its output reader stopped".into()))
+            Err(Error::Other("its output reader stopped".into()))
         }
     }
 }
@@ -268,7 +305,7 @@ mod tests {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
-    fn sh(script: &str, timeout: Duration, max_bytes: usize) -> Result<Output, String> {
+    fn sh(script: &str, timeout: Duration, max_bytes: usize) -> Result<Output, Error> {
         run(Path::new("/bin/sh"), &["-c", script], timeout, max_bytes)
     }
 
@@ -319,6 +356,23 @@ mod tests {
     }
 
     #[test]
+    fn a_success_is_not_held_up_by_a_helper_holding_the_error_output() {
+        let started = Instant::now();
+        let output = sh(
+            "sleep 5 >/dev/null & printf ok",
+            Duration::from_secs(10),
+            1024,
+        )
+        .unwrap();
+        assert!(output.status.unwrap().success());
+        assert_eq!(output.stdout, b"ok");
+        assert!(
+            started.elapsed() < Duration::from_secs(4),
+            "did not wait for the helper"
+        );
+    }
+
+    #[test]
     fn output_of_exactly_the_cap_is_whole() {
         let output = sh("printf abcd", Duration::from_secs(10), 4).unwrap();
         assert!(output.status.unwrap().success());
@@ -335,7 +389,7 @@ mod tests {
             1024,
         )
         .unwrap_err();
-        assert_eq!(error, "no answer in time");
+        assert_eq!(error, Error::Late);
         assert!(started.elapsed() < Duration::from_secs(5));
     }
 
@@ -373,7 +427,8 @@ mod tests {
             Duration::from_secs(1),
             1024,
         )
-        .unwrap_err();
+        .unwrap_err()
+        .to_string();
         assert!(
             error.starts_with("cannot start /nonexistent/wl-paste"),
             "{error}"
@@ -441,6 +496,77 @@ mod tests {
         assert_eq!(changes, vec![("PATH", Some(OsString::from("/usr/bin")))]);
     }
 
+    /// A stand-in program running `body` as a shell script. A child process
+    /// writes it: had this one, a test forking meanwhile could hold the file
+    /// open for writing, failing its exec with "Text file busy".
+    fn script(dir: &Path, name: &str, body: &str) -> PathBuf {
+        let path = dir.join(name);
+        let written = Command::new("/bin/sh")
+            .args(["-c", r#"printf '%s\n' "$1" > "$2" && chmod 755 "$2""#, "sh"])
+            .arg(format!("#!/bin/sh\n{body}"))
+            .arg(&path)
+            .status()
+            .unwrap();
+        assert!(written.success());
+        path
+    }
+
+    /// What a stand-in espeak-ng is given as arguments and `LD_LIBRARY_PATH`
+    /// when Mouthy's environment holds `vars`.
+    fn espeak_sees(vars: &[(&str, &str)]) -> String {
+        let dir = tempfile::tempdir().unwrap();
+        let espeak = script(
+            dir.path(),
+            "espeak-ng",
+            r#"printf '%s|' "$@"; printf '%s' "$LD_LIBRARY_PATH""#,
+        );
+        let var = |name: &str| {
+            vars.iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| OsString::from(value))
+        };
+        let output = run_in(
+            &espeak,
+            &["-q", "--ipa=3", "-v", "es", "--", "Hola"],
+            Duration::from_secs(10),
+            1024,
+            var,
+        )
+        .unwrap();
+        String::from_utf8(output.stdout).unwrap()
+    }
+
+    const IMAGE_LIBRARIES: (&str, &str) = (
+        "LD_LIBRARY_PATH",
+        "/tmp/.mount_Mouthy1/usr/lib/:/opt/host/lib",
+    );
+
+    /// Unchanged: the test process's own value.
+    fn inherited_libraries() -> String {
+        let value = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+        format!("-q|--ipa=3|-v|es|--|Hola|{value}")
+    }
+
+    #[test]
+    fn a_program_started_from_an_appimage_gets_the_hosts_libraries() {
+        let seen = espeak_sees(&[
+            ("APPIMAGE", "/home/me/Applications/Mouthy.AppImage"),
+            ("APPDIR", "/tmp/.mount_Mouthy1"),
+            IMAGE_LIBRARIES,
+        ]);
+        if cfg!(target_os = "linux") {
+            assert_eq!(seen, "-q|--ipa=3|-v|es|--|Hola|/opt/host/lib");
+        } else {
+            assert_eq!(seen, inherited_libraries(), "no AppImage off Linux");
+        }
+    }
+
+    #[test]
+    fn appdir_alone_is_not_an_appimage() {
+        let seen = espeak_sees(&[("APPDIR", "/tmp/.mount_Mouthy1"), IMAGE_LIBRARIES]);
+        assert_eq!(seen, inherited_libraries());
+    }
+
     #[test]
     fn find_checks_known_paths_then_path_and_skips_what_cannot_run() {
         let dir = tempfile::tempdir().unwrap();
@@ -452,6 +578,7 @@ mod tests {
             path
         };
         let known = make("known/wl-paste", 0o755);
+        let second = make("second/wl-paste", 0o755);
         let on_path = make("bin/wl-paste", 0o755);
         make("plain/wl-paste", 0o644);
         let path_var =
@@ -462,6 +589,23 @@ mod tests {
         assert_eq!(
             find(&[known_str], "wl-paste", path_var.clone()),
             Some(known.clone())
+        );
+        assert_eq!(
+            find(
+                &[known_str, second.to_str().unwrap()],
+                "wl-paste",
+                path_var.clone()
+            ),
+            Some(known.clone()),
+            "the first known path wins"
+        );
+        assert_eq!(
+            find(
+                &[missing.to_str().unwrap(), second.to_str().unwrap()],
+                "wl-paste",
+                path_var.clone()
+            ),
+            Some(second.clone())
         );
         assert_eq!(
             find(&[missing.to_str().unwrap()], "wl-paste", path_var.clone()),

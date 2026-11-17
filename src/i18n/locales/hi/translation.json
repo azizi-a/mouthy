@@ -370,6 +370,10 @@
   "errors": {
     "loadDirectory": "फ़ोल्डर लोड करने में गड़बड़ी: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "ऐप्लिकेशन की भाषा",
     "description": "Mouthy इंटरफ़ेस की भाषा बदलें"

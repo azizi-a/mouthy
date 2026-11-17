@@ -370,6 +370,10 @@
   "errors": {
     "loadDirectory": "Грешка при зареждане на папката: {{error}}"
   },
+  "crash": {
+    "title": "Mouthy could not show this window",
+    "hint": "Select the details below and include them when you report the problem. Restarting Mouthy may help."
+  },
   "appLanguage": {
     "title": "Език на приложението",
     "description": "Промяна на езика на интерфейса на Mouthy"
