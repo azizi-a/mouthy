@@ -171,7 +171,7 @@ pub fn find_wl_paste() -> Option<std::path::PathBuf> {
 mod wayland {
     use super::ClipboardText;
     use crate::program::{self, Output};
-    use log::info;
+    use log::{debug, info};
     use std::path::Path;
     use std::time::Duration;
 
@@ -181,6 +181,15 @@ mod wayland {
     /// Enough for every character read aloud: at most four bytes each.
     const TEXT_BYTES: usize = crate::actions::TEXT_CHAR_CAP * 4;
     const TYPES_BYTES: usize = 64 * 1024;
+    /// Plain-text types, best first. The first one offered is read, so a
+    /// browser's `text/html` never is.
+    const PLAIN_TEXT: [&str; 5] = [
+        "text/plain;charset=utf-8",
+        "UTF8_STRING",
+        "text/plain",
+        "STRING",
+        "TEXT",
+    ];
     /// What KDE's password managers add to a secret they copy. Many others,
     /// and apps copying through XWayland, add nothing.
     const PASSWORD_HINT: &str = "x-kde-passwordManagerHint";
@@ -225,34 +234,65 @@ mod wayland {
         read_clipboard_with(&wl_paste("clipboard")?, TIMEOUT)
     }
 
-    /// The selection's (PRIMARY's) or the clipboard's text, `None` if empty.
+    /// The selection's (PRIMARY's) or the clipboard's plain text, `None` if
+    /// it has none.
     fn read(wl_paste: &Path, primary: bool, timeout: Duration) -> Result<Option<String>, String> {
-        let args: &[&str] = if primary {
-            &["--primary", "--no-newline", "--type", "text"]
-        } else {
-            &["--no-newline", "--type", "text"]
-        };
-        let text = pasted(program::run(wl_paste, args, timeout, TEXT_BYTES))?;
-        Ok(text.filter(|text| !text.is_empty()))
+        match types(wl_paste, primary, timeout)? {
+            Some(types) => read_as(wl_paste, primary, &types, timeout),
+            None => Ok(None),
+        }
     }
 
     fn read_clipboard_with(wl_paste: &Path, timeout: Duration) -> Result<ClipboardText, String> {
-        let types = pasted(program::run(
-            wl_paste,
-            &["--list-types"],
-            timeout,
-            TYPES_BYTES,
-        ))?;
-        let Some(types) = types else {
+        let Some(types) = types(wl_paste, false, timeout)? else {
             return Ok(ClipboardText::Empty);
         };
         if names_secret(&types) {
             info!("The clipboard holds a password manager's secret; not reading it");
             return Ok(ClipboardText::Secret);
         }
-        Ok(match read(wl_paste, false, timeout)? {
+        Ok(match read_as(wl_paste, false, &types, timeout)? {
             Some(text) => ClipboardText::Text(text),
             None => ClipboardText::Empty,
+        })
+    }
+
+    /// The types offered, one a line; `None` when nothing is.
+    fn types(wl_paste: &Path, primary: bool, timeout: Duration) -> Result<Option<String>, String> {
+        let args: &[&str] = if primary {
+            &["--primary", "--list-types"]
+        } else {
+            &["--list-types"]
+        };
+        pasted(program::run(wl_paste, args, timeout, TYPES_BYTES))
+    }
+
+    /// The text in the best plain-text type among `types`; `None` when none
+    /// is offered or it is empty.
+    fn read_as(
+        wl_paste: &Path,
+        primary: bool,
+        types: &str,
+        timeout: Duration,
+    ) -> Result<Option<String>, String> {
+        let Some(mime) = plain_text_type(types) else {
+            debug!("No plain text among {} types", types.lines().count());
+            return Ok(None);
+        };
+        let mut args = vec!["--no-newline", "--type", mime];
+        if primary {
+            args.insert(0, "--primary");
+        }
+        let text = pasted(program::run(wl_paste, &args, timeout, TEXT_BYTES))?;
+        Ok(text.filter(|text| !text.is_empty()))
+    }
+
+    fn plain_text_type(types: &str) -> Option<&str> {
+        PLAIN_TEXT.iter().find_map(|wanted| {
+            types
+                .lines()
+                .map(str::trim)
+                .find(|offered| offered.eq_ignore_ascii_case(wanted))
         })
     }
 
@@ -316,13 +356,48 @@ mod wayland {
             read_clipboard_with(&fake(&dir, body), SLOW)
         }
 
+        /// A stand-in offering `types` on PRIMARY and running `text` for the
+        /// first of them.
+        fn offering(types: &str, text: &str) -> String {
+            let first = types.lines().next().unwrap_or_default();
+            format!(
+                r#"case "$*" in
+"--primary --list-types") printf '{types}\n' ;;
+"--primary --no-newline --type {first}") {text} ;;
+*) exit 9 ;;
+esac"#
+            )
+        }
+
         #[test]
-        fn the_selection_is_primary_as_text_without_a_newline() {
+        fn the_selection_is_primary_as_plain_text_without_a_newline() {
             let read = primary(
-                r#"[ "$*" = "--primary --no-newline --type text" ] || exit 9
-printf 'Read this.\nAnd this.'"#,
+                r#"case "$*" in
+"--primary --list-types") printf 'text/html\ntext/plain;charset=utf-8\nUTF8_STRING\n' ;;
+"--primary --no-newline --type text/plain;charset=utf-8") printf 'Read this.\nAnd this.' ;;
+*) exit 9 ;;
+esac"#,
             );
             assert_eq!(read, Ok(Some("Read this.\nAnd this.".into())));
+        }
+
+        #[test]
+        fn html_alone_is_not_read() {
+            assert_eq!(primary("printf 'text/html\\n'"), Ok(None));
+        }
+
+        #[test]
+        fn the_best_plain_text_type_offered_is_chosen() {
+            assert_eq!(
+                plain_text_type("text/html\nSTRING\nUTF8_STRING\n"),
+                Some("UTF8_STRING")
+            );
+            assert_eq!(
+                plain_text_type("text/plain;charset=UTF-8\ntext/plain\n"),
+                Some("text/plain;charset=UTF-8")
+            );
+            assert_eq!(plain_text_type("TEXT\n"), Some("TEXT"));
+            assert_eq!(plain_text_type("image/png\ntext/html\n"), None);
         }
 
         #[test]
@@ -367,14 +442,20 @@ printf 'Read this.\nAnd this.'"#,
 
         #[test]
         fn invalid_utf8_is_read_with_replacements() {
-            assert_eq!(primary(r"printf 'caf\351'"), Ok(Some("caf\u{fffd}".into())));
+            assert_eq!(
+                primary(&offering("STRING", r"printf 'caf\351'")),
+                Ok(Some("caf\u{fffd}".into()))
+            );
         }
 
         #[test]
         fn a_long_selection_is_read_up_to_the_cap() {
-            let read = primary("head -c 204800 /dev/zero | tr '\\0' a")
-                .unwrap()
-                .unwrap();
+            let read = primary(&offering(
+                "UTF8_STRING",
+                "head -c 204800 /dev/zero | tr '\\0' a",
+            ))
+            .unwrap()
+            .unwrap();
             assert_eq!(read.len(), TEXT_BYTES);
         }
 
@@ -385,7 +466,7 @@ printf 'Read this.\nAnd this.'"#,
             let read = clipboard(&format!(
                 r#"case "$*" in
 --list-types) {PLAIN_TYPES} ;;
-"--no-newline --type text") printf 'Copied text' ;;
+"--no-newline --type text/plain;charset=utf-8") printf 'Copied text' ;;
 *) exit 9 ;;
 esac"#
             ));

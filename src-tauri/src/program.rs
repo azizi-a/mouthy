@@ -14,6 +14,32 @@ use std::time::{Duration, Instant};
 const STDERR_BYTES: usize = 4096;
 const POLL: Duration = Duration::from_millis(2);
 
+/// Path variables an AppImage's launcher points into the image. A host
+/// program started with them would load the image's libraries (its
+/// `libwayland-client`, say) and data instead of its own.
+const IMAGE_PATHS: &[&str] = &[
+    "PATH",
+    "LD_LIBRARY_PATH",
+    "XDG_DATA_DIRS",
+    "PYTHONPATH",
+    "PYTHONHOME",
+    "PERLLIB",
+    "GSETTINGS_SCHEMA_DIR",
+    "QT_PLUGIN_PATH",
+    "GST_PLUGIN_SYSTEM_PATH",
+    "GST_PLUGIN_SYSTEM_PATH_1_0",
+    "GTK_DATA_PREFIX",
+    "GTK_EXE_PREFIX",
+    "GTK_PATH",
+    "GTK_IM_MODULE_FILE",
+    "GDK_PIXBUF_MODULE_FILE",
+    "GI_TYPELIB_PATH",
+    "GIO_MODULE_DIR",
+    "GIO_EXTRA_MODULES",
+];
+/// Settings the AppImage's launcher makes for Mouthy's own GTK and Python.
+const IMAGE_SETTINGS: &[&str] = &["PYTHONDONTWRITEBYTECODE", "GTK_THEME", "GDK_BACKEND"];
+
 /// The first executable `program` in `known` (absolute paths, checked first:
 /// an app opened from a desktop menu has a shorter `PATH`), then on `path_var`.
 pub fn find(known: &[&str], program: &str, path_var: Option<OsString>) -> Option<PathBuf> {
@@ -54,7 +80,9 @@ pub struct Output {
 /// once `timeout` has passed. Output is read while it runs, since a program
 /// that fills a pipe's buffer (64 KiB on Linux) waits for it to be read. Past
 /// `max_bytes` of output the program is stopped and the first `max_bytes`
-/// returned.
+/// returned. Only `program` itself is killed: a helper it started that holds
+/// the output open can outlive it. From an AppImage, it runs with the host's
+/// environment, not the image's.
 pub fn run(
     program: &Path,
     args: &[&str],
@@ -62,11 +90,21 @@ pub fn run(
     max_bytes: usize,
 ) -> Result<Output, String> {
     let deadline = Instant::now() + timeout;
-    let mut child = Command::new(program)
+    let mut command = Command::new(program);
+    command
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    if let Some(appdir) = std::env::var_os("APPDIR").filter(|dir| !dir.is_empty()) {
+        for (name, value) in host_environment(Path::new(&appdir), |name| std::env::var_os(name)) {
+            match value {
+                Some(value) => command.env(name, value),
+                None => command.env_remove(name),
+            };
+        }
+    }
+    let mut child = command
         .spawn()
         .map_err(|e| format!("cannot start {}: {e}", program.display()))?;
     let output = collect(&mut child, deadline, max_bytes);
@@ -78,6 +116,40 @@ pub fn run(
         Failure::Late => format!("no answer within {} ms", timeout.as_millis()),
         Failure::Other(e) => e,
     })
+}
+
+/// What a host program's environment needs changed when Mouthy runs from an
+/// AppImage mounted at `appdir`, given how `var` reads Mouthy's own: each
+/// path variable without its entries in the image (`None`, removed, when none
+/// is left) and the launcher's settings removed.
+fn host_environment(
+    appdir: &Path,
+    var: impl Fn(&str) -> Option<OsString>,
+) -> Vec<(&'static str, Option<OsString>)> {
+    let mut changes = Vec::new();
+    for &name in IMAGE_PATHS {
+        let Some(value) = var(name) else {
+            continue;
+        };
+        let entries: Vec<PathBuf> = std::env::split_paths(&value).collect();
+        let kept: Vec<&PathBuf> = entries
+            .iter()
+            .filter(|entry| !entry.as_os_str().is_empty() && !entry.starts_with(appdir))
+            .collect();
+        if kept.len() == entries.len() {
+            continue;
+        }
+        let value = (!kept.is_empty())
+            .then(|| std::env::join_paths(kept).ok())
+            .flatten();
+        changes.push((name, value));
+    }
+    for &name in IMAGE_SETTINGS {
+        if var(name).is_some() {
+            changes.push((name, None));
+        }
+    }
+    changes
 }
 
 enum Failure {
@@ -106,7 +178,13 @@ fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Out
             Err(e) => return Err(Failure::Other(format!("cannot wait for it: {e}"))),
         }
     };
-    let (stderr, _) = received(stderr, deadline)?;
+    // Output cut short is what was asked for: a helper still holding the
+    // error output open must not turn it into a timeout.
+    let stderr = if cut_short {
+        received_so_far(stderr)
+    } else {
+        received(stderr, deadline)?.0
+    };
     Ok(Output {
         status: (!cut_short).then_some(status),
         stdout,
@@ -115,6 +193,16 @@ fn collect(child: &mut Child, deadline: Instant, max_bytes: usize) -> Result<Out
 }
 
 type Reading = Receiver<io::Result<(Vec<u8>, bool)>>;
+
+/// What a reader has finished reading, without waiting for it.
+fn received_so_far(reading: Option<io::Result<Reading>>) -> Vec<u8> {
+    reading
+        .and_then(Result::ok)
+        .and_then(|reading| reading.try_recv().ok())
+        .and_then(Result::ok)
+        .map(|(bytes, _)| bytes)
+        .unwrap_or_default()
+}
 
 /// Reads `pipe` on its own thread: up to `max_bytes`, saying whether there
 /// was more, then to the end only if `drain`.
@@ -204,6 +292,22 @@ mod tests {
     }
 
     #[test]
+    fn output_cut_short_is_kept_while_a_helper_holds_the_pipes() {
+        // The background sleep keeps stdout and stderr open after `yes` is
+        // stopped, so waiting for either to close would run into the deadline.
+        let started = Instant::now();
+        let output = sh(
+            "sleep 3 & exec yes 0123456789",
+            Duration::from_secs(2),
+            100_000,
+        )
+        .unwrap();
+        assert_eq!(output.status, None);
+        assert_eq!(output.stdout.len(), 100_000);
+        assert!(started.elapsed() < Duration::from_secs(2));
+    }
+
+    #[test]
     fn output_of_exactly_the_cap_is_whole() {
         let output = sh("printf abcd", Duration::from_secs(10), 4).unwrap();
         assert!(output.status.unwrap().success());
@@ -263,6 +367,54 @@ mod tests {
             error.starts_with("cannot start /nonexistent/wl-paste"),
             "{error}"
         );
+    }
+
+    #[test]
+    fn a_host_program_gets_no_appimage_paths_or_settings() {
+        let appdir = Path::new("/tmp/.mount_Mouthy1");
+        let vars = [
+            (
+                "PATH",
+                "/tmp/.mount_Mouthy1/usr/bin/:/tmp/.mount_Mouthy1/usr/sbin/:/usr/local/bin:/usr/bin",
+            ),
+            (
+                "LD_LIBRARY_PATH",
+                "/tmp/.mount_Mouthy1/usr/lib/:/tmp/.mount_Mouthy1/usr/lib/x86_64-linux-gnu/:",
+            ),
+            (
+                "XDG_DATA_DIRS",
+                "/tmp/.mount_Mouthy1/usr/share:/usr/share:/home/me/.local/share/flatpak/exports/share",
+            ),
+            ("GTK_PATH", "/tmp/.mount_Mouthy1/usr/lib/gtk-3.0"),
+            ("GI_TYPELIB_PATH", "/opt/mine/typelibs"),
+            ("QT_PLUGIN_PATH", "/tmp/.mount_Mouthy10/plugins"),
+            ("GDK_BACKEND", "x11"),
+            ("PYTHONDONTWRITEBYTECODE", "1"),
+            ("WAYLAND_DISPLAY", "wayland-0"),
+        ];
+        let var = |name: &str| {
+            vars.iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| OsString::from(value))
+        };
+        let changes = host_environment(appdir, var);
+        let set = |value: &str| Some(OsString::from(value));
+        assert_eq!(
+            changes,
+            vec![
+                ("PATH", set("/usr/local/bin:/usr/bin")),
+                ("LD_LIBRARY_PATH", None),
+                (
+                    "XDG_DATA_DIRS",
+                    set("/usr/share:/home/me/.local/share/flatpak/exports/share")
+                ),
+                ("GTK_PATH", None),
+                ("PYTHONDONTWRITEBYTECODE", None),
+                ("GDK_BACKEND", None),
+            ],
+            "the user's own paths, another mount's and WAYLAND_DISPLAY stay"
+        );
+        assert_eq!(host_environment(appdir, |_| None), vec![]);
     }
 
     #[test]
