@@ -8,6 +8,7 @@
 use super::catalog::VoiceLanguage;
 use super::espeak;
 use super::ja;
+use super::ja_dictionary::{self, Tagger};
 use super::text::{self, expand_abbreviations, expand_numbers, joins_numbers, spell_out, Marks};
 use super::voice::{is_voice_name, VoiceSpec};
 use super::SAMPLE_RATE;
@@ -200,6 +201,8 @@ pub struct ModelFiles {
     english_fallback: bool,
     /// The espeak-ng to run, if any.
     espeak: Option<PathBuf>,
+    /// The Japanese dictionary's folder, when it is installed.
+    dictionary: Option<PathBuf>,
 }
 
 /// One voice of a blend, or the only one.
@@ -239,6 +242,8 @@ impl ModelFiles {
             language: VoiceLanguage::AmericanEnglish,
             english_fallback: false,
             espeak: None,
+            dictionary: Some(ja_dictionary::dir(models_dir))
+                .filter(|dir| ja_dictionary::installed(dir)),
         }
         .reading_as(language)
     }
@@ -297,11 +302,13 @@ impl ModelFiles {
         }
     }
 
-    /// The notice to show instead of reading `text`, when this build cannot
-    /// read enough of it.
+    /// The notice to show instead of reading `text`, when too little of it
+    /// can be read: Japanese mostly in kanji, with no dictionary to read them.
     pub fn refuses(&self, text: &str) -> Option<String> {
         match self.language {
-            VoiceLanguage::Japanese => ja::refusal(text).map(String::from),
+            VoiceLanguage::Japanese if self.dictionary.is_none() => {
+                ja::refusal(text).map(String::from)
+            }
             _ => None,
         }
     }
@@ -509,13 +516,18 @@ fn ensure_loaded(loaded: &mut Option<LocalSynth>, files: &ModelFiles) -> Result<
         .ok_or_else(|| format!("'{}' is not a voice or blend", files.voice_id))?;
     let voice = voice_stamps(voices)?;
     let reading = files.reading();
+    // A dictionary deleted since `files` was made counts as absent.
+    let dictionary = files.dictionary.as_deref().and_then(|dir| {
+        let stamp = FileStamp::of(&ja_dictionary::stamp_path(dir), "Japanese dictionary").ok()?;
+        Some((dir.to_path_buf(), stamp))
+    });
 
     match loaded {
         // Each part is swapped only once its replacement has loaded, so a
         // failure leaves the stamps matching what is held.
-        Some(synth) => synth.refresh(model, voice, reading),
+        Some(synth) => synth.refresh(model, voice, reading, dictionary),
         None => {
-            *loaded = Some(LocalSynth::load(model, voice, reading)?);
+            *loaded = Some(LocalSynth::load(model, voice, reading, dictionary)?);
             Ok(())
         }
     }
@@ -601,14 +613,47 @@ impl Phonemizer {
     }
 
     /// Kokoro ids for `text` in `language`, and how many symbols had no id.
-    fn ids(&self, language: VoiceLanguage, text: &str) -> Result<(Vec<i64>, usize), String> {
+    fn ids(
+        &self,
+        tagger: Option<&Tagger>,
+        language: VoiceLanguage,
+        text: &str,
+    ) -> Result<(Vec<i64>, usize), String> {
         match self {
-            Self::Misaki(g2p) => text_to_ids(g2p, language, text),
+            Self::Misaki(g2p) => text_to_ids(g2p, tagger, language, text),
             Self::Espeak(sentences) => {
                 let (phonemes, unread) = sentences.read(&plain_text(text, language))?;
                 let (ids, dropped) = token_ids(&phonemes);
                 Ok((ids, unread + dropped))
             }
+        }
+    }
+}
+
+/// The Japanese dictionary as found on disk, and its tagger once Japanese
+/// text needed it.
+struct JapaneseDictionary {
+    found: Option<(PathBuf, FileStamp)>,
+    tagger: Option<Result<Tagger, String>>,
+}
+
+impl JapaneseDictionary {
+    fn new(found: Option<(PathBuf, FileStamp)>) -> Self {
+        Self {
+            found,
+            tagger: None,
+        }
+    }
+
+    /// The tagger, loaded the first time it is asked for; `None` when there is
+    /// no dictionary.
+    fn tagger(&mut self) -> Result<Option<&Tagger>, String> {
+        let Some((dir, _)) = &self.found else {
+            return Ok(None);
+        };
+        match self.tagger.get_or_insert_with(|| ja_dictionary::load(dir)) {
+            Ok(tagger) => Ok(Some(tagger)),
+            Err(e) => Err(e.clone()),
         }
     }
 }
@@ -619,6 +664,7 @@ struct LocalSynth {
     voice: Voice,
     phonemizer: Phonemizer,
     reading: Reading,
+    dictionary: JapaneseDictionary,
 }
 
 impl LocalSynth {
@@ -626,6 +672,7 @@ impl LocalSynth {
         model: FileStamp,
         voice: Vec<(FileStamp, f32)>,
         reading: Reading,
+        dictionary: Option<(PathBuf, FileStamp)>,
     ) -> Result<Self, String> {
         let session = load_session(&model.path)?;
         let voice = Voice::load(voice)?;
@@ -636,6 +683,7 @@ impl LocalSynth {
             voice,
             phonemizer,
             reading,
+            dictionary: JapaneseDictionary::new(dictionary),
         })
     }
 
@@ -644,6 +692,7 @@ impl LocalSynth {
         model: FileStamp,
         voice: Vec<(FileStamp, f32)>,
         reading: Reading,
+        dictionary: Option<(PathBuf, FileStamp)>,
     ) -> Result<(), String> {
         if self.model != model {
             self.session = load_session(&model.path)?;
@@ -653,6 +702,10 @@ impl LocalSynth {
         if self.reading != reading {
             self.phonemizer = Phonemizer::new(&reading)?;
             self.reading = reading;
+        }
+        // A dictionary downloaded, deleted or replaced loads afresh when next needed.
+        if self.dictionary.found != dictionary {
+            self.dictionary = JapaneseDictionary::new(dictionary);
         }
         Ok(())
     }
@@ -666,7 +719,11 @@ impl LocalSynth {
         ends_sentence: bool,
         run_options: &RunOptions,
     ) -> Result<Vec<i16>, String> {
-        let (ids, dropped) = self.phonemizer.ids(self.reading.language, text)?;
+        let tagger = match language_for(self.reading.language, text) {
+            VoiceLanguage::Japanese => self.dictionary.tagger()?,
+            _ => None,
+        };
+        let (ids, dropped) = self.phonemizer.ids(tagger, self.reading.language, text)?;
         if dropped > 0 {
             debug!("Dropped {dropped} symbols Kokoro has no token for");
         }
@@ -909,21 +966,29 @@ fn style_row(rows: &[f32], tokens: usize) -> &[f32] {
 /// Kokoro ids for `text`, and how many symbols had no id.
 fn text_to_ids(
     g2p: &G2P,
+    tagger: Option<&Tagger>,
     language: VoiceLanguage,
     text: &str,
 ) -> Result<(Vec<i64>, usize), String> {
-    Ok(token_ids(&text_to_phonemes(g2p, language, text)?))
+    Ok(token_ids(&text_to_phonemes(g2p, tagger, language, text)?))
 }
 
-/// Kokoro's symbols for `text`, before they become ids.
-fn text_to_phonemes(g2p: &G2P, language: VoiceLanguage, text: &str) -> Result<String, String> {
+/// Kokoro's symbols for `text`, before they become ids. Japanese is read with
+/// `tagger` when there is one, and from its kana alone when not.
+fn text_to_phonemes(
+    g2p: &G2P,
+    tagger: Option<&Tagger>,
+    language: VoiceLanguage,
+    text: &str,
+) -> Result<String, String> {
     let language = language_for(language, text);
     if language == VoiceLanguage::Japanese {
         // English inside Japanese text is read as American English.
-        let english = |latin: &str| text_to_phonemes(g2p, VoiceLanguage::AmericanEnglish, latin);
-        let (phonemes, skipped) = ja::phonemes(&plain_text(text, language), english)?;
+        let english =
+            |latin: &str| text_to_phonemes(g2p, None, VoiceLanguage::AmericanEnglish, latin);
+        let (phonemes, skipped) = ja::phonemes(&plain_text(text, language), tagger, english)?;
         if skipped > 0 {
-            debug!("Skipped {skipped} kanji this build cannot read");
+            debug!("Skipped {skipped} kanji with no reading");
         }
         return Ok(phonemes);
     }
@@ -934,9 +999,20 @@ fn text_to_phonemes(g2p: &G2P, language: VoiceLanguage, text: &str) -> Result<St
 }
 
 /// The symbols the local voice for `files` reads each of `texts` as, without
-/// espeak-ng, so every machine gives the same.
+/// espeak-ng or the Japanese dictionary, so every machine gives the same.
 #[cfg(test)]
 pub(crate) fn phonemes_without_espeak(files: &ModelFiles, texts: &[String]) -> Vec<String> {
+    phonemes_with(files, texts, None)
+}
+
+/// The same, with the Japanese dictionary the tests have built in.
+#[cfg(test)]
+pub(crate) fn phonemes_with_dictionary(files: &ModelFiles, texts: &[String]) -> Vec<String> {
+    phonemes_with(files, texts, Some(ja_dictionary::test_tagger()))
+}
+
+#[cfg(test)]
+fn phonemes_with(files: &ModelFiles, texts: &[String], tagger: Option<&Tagger>) -> Vec<String> {
     let reading = Reading {
         espeak: None,
         ..files.reading()
@@ -944,7 +1020,7 @@ pub(crate) fn phonemes_without_espeak(files: &ModelFiles, texts: &[String]) -> V
     let g2p = build_g2p(&reading);
     texts
         .iter()
-        .map(|text| text_to_phonemes(&g2p, reading.language, text).unwrap())
+        .map(|text| text_to_phonemes(&g2p, tagger, reading.language, text).unwrap())
         .collect()
 }
 
@@ -1406,7 +1482,7 @@ mod tests {
 
     /// Kokoro symbols for `text` as the local voice reads it.
     fn read(g2p: &G2P, language: VoiceLanguage, text: &str) -> String {
-        text_to_phonemes(g2p, language, text).unwrap()
+        text_to_phonemes(g2p, None, language, text).unwrap()
     }
 
     #[test]
@@ -1551,14 +1627,14 @@ mod tests {
     #[test]
     fn a_minus_sign_reads_as_minus() {
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let ids = |text| text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text).unwrap();
+        let ids = |text| text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text).unwrap();
         assert_eq!(ids("\u{2212}5 degrees"), ids("minus five degrees"));
     }
 
     #[test]
     fn curly_double_quotes_read_as_straight_ones() {
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let ids = |text| text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text).unwrap();
+        let ids = |text| text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text).unwrap();
         let (curly, dropped) = ids("She said “no” twice.");
         assert_eq!(dropped, 0);
         assert_eq!((curly.clone(), dropped), ids("She said \"no\" twice."));
@@ -1573,7 +1649,7 @@ mod tests {
     fn a_sentence_with_curly_apostrophes_loses_no_symbol() {
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
         let text = "I don’t think it’s the user’s fault that the naïve café shuts at nine o’clock.";
-        let (ids, dropped) = text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text).unwrap();
+        let (ids, dropped) = text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text).unwrap();
         assert_eq!(dropped, 0);
         assert!(has_phonemes(&ids));
         assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
@@ -1600,7 +1676,8 @@ mod tests {
             assert_eq!(plain_english(kept), kept);
         }
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let (ids, _) = text_to_ids(&g2p, VoiceLanguage::BritishEnglish, "Tea — or coffee").unwrap();
+        let (ids, _) =
+            text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, "Tea — or coffee").unwrap();
         assert!(ids.contains(&3), "a comma id: {ids:?}");
     }
 
@@ -1758,10 +1835,18 @@ mod tests {
         );
     }
 
-    fn japanese(text: &str) -> String {
+    fn japanese_with(tagger: Option<&Tagger>, text: &str) -> String {
         let g2p =
             build_g2p(&ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "jm_kumo").reading());
-        text_to_phonemes(&g2p, VoiceLanguage::Japanese, text).unwrap()
+        text_to_phonemes(&g2p, tagger, VoiceLanguage::Japanese, text).unwrap()
+    }
+
+    fn japanese(text: &str) -> String {
+        japanese_with(None, text)
+    }
+
+    fn japanese_tagged(text: &str) -> String {
+        japanese_with(Some(ja_dictionary::test_tagger()), text)
     }
 
     #[test]
@@ -1772,6 +1857,12 @@ mod tests {
             "koɾeha ˈI fˈOn fˈɪftin desɨ."
         );
         assert_eq!(japanese("「API」をつかう。"), "“ˌApˌiˈI” oʦɨkaɯ.");
+        // With the dictionary: word spaces, は as "wa" and long vowels.
+        assert_eq!(japanese_tagged("きょうはOKです。"), "kʲoː βa ˌOkˈA desɨ.");
+        assert_eq!(
+            japanese_tagged("私はiPhone 15を使う。"),
+            "βataɕi βa ˈI fˈOn fˈɪftin o ʦɨkaɯ."
+        );
     }
 
     /// The listening test's Japanese paragraph.
@@ -1781,35 +1872,48 @@ mod tests {
     fn a_japanese_chunk_fits_one_inference() {
         let files = ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "jf_alpha");
         let g2p = build_g2p(&files.reading());
-        // One sentence of about 380 characters, cut at its commas.
-        let long_sentence = KANA_PARAGRAPH.replace(['。', '？'], "、").repeat(3);
-        let text = format!("{KANA_PARAGRAPH}{long_sentence}");
-        let chunks =
-            text::split_sentences_with(&text, files.max_chunk_chars(&text), files.marks(&text));
-        assert!(chunks.iter().any(|chunk| chunk.text.chars().count() > 150));
-        for chunk in &chunks {
-            let (ids, dropped) = text_to_ids(&g2p, VoiceLanguage::Japanese, &chunk.text).unwrap();
-            assert_eq!(dropped, 0, "{}", chunk.text);
-            assert!(
-                ids.len() <= PIECE_TOKENS,
-                "{} ids: {}",
-                ids.len(),
-                chunk.text
-            );
+        for (paragraph, tagger) in [
+            (KANA_PARAGRAPH, None),
+            (KANA_PARAGRAPH, Some(ja_dictionary::test_tagger())),
+            (ja::KANJI_PROSE, Some(ja_dictionary::test_tagger())),
+        ] {
+            // One sentence of several hundred characters, cut at its commas.
+            let long_sentence = paragraph.replace(['。', '？'], "、").repeat(2);
+            let text = format!("{paragraph}{long_sentence}");
+            let chunks =
+                text::split_sentences_with(&text, files.max_chunk_chars(&text), files.marks(&text));
+            assert!(chunks.iter().any(|chunk| chunk.text.chars().count() > 120));
+            for chunk in &chunks {
+                let (ids, dropped) =
+                    text_to_ids(&g2p, tagger, VoiceLanguage::Japanese, &chunk.text).unwrap();
+                assert_eq!(dropped, 0, "{}", chunk.text);
+                assert!(
+                    ids.len() <= PIECE_TOKENS,
+                    "{} ids: {}",
+                    ids.len(),
+                    chunk.text
+                );
+            }
         }
     }
 
     #[test]
-    fn only_japanese_refuses_kanji() {
+    fn only_japanese_without_the_dictionary_refuses_kanji() {
         let files = |voice| ModelFiles::new(Path::new("/m"), ModelVariant::Int8, voice);
         let kanji = "東京に行きます。";
         assert_eq!(
             files("jm_kumo").refuses(kanji).as_deref(),
-            Some("Japanese text with kanji is not supported yet")
+            Some("Kanji need the dictionary in Settings → Models")
         );
         assert_eq!(files("jm_kumo").refuses(KANA_PARAGRAPH), None);
         assert_eq!(files("af_alloy").refuses(kanji), None);
         assert_eq!(files("zf_xiaobei").refuses(kanji), None);
+
+        let models = tempfile::tempdir().unwrap();
+        ja_dictionary::install_placeholder(models.path());
+        let kumo = ModelFiles::new(models.path(), ModelVariant::Int8, "jm_kumo");
+        assert_eq!(kumo.refuses(kanji), None);
+        assert_eq!(kumo.refuses(ja::KANJI_PROSE), None);
     }
 
     #[test]
@@ -1836,9 +1940,14 @@ mod tests {
     #[test]
     fn english_inside_japanese_reads_as_an_american_voice_reads_it() {
         let g2p = G2P::new(Language::EnglishUS);
-        let american =
-            |text: &str| text_to_phonemes(&g2p, VoiceLanguage::AmericanEnglish, text).unwrap();
-        let japanese = |text: &str| text_to_phonemes(&g2p, VoiceLanguage::Japanese, text).unwrap();
+        let american = |text: &str| {
+            text_to_phonemes(&g2p, None, VoiceLanguage::AmericanEnglish, text).unwrap()
+        };
+        let japanese =
+            |text: &str| text_to_phonemes(&g2p, None, VoiceLanguage::Japanese, text).unwrap();
+        let tagger = Some(ja_dictionary::test_tagger());
+        let tagged =
+            |text: &str| text_to_phonemes(&g2p, tagger, VoiceLanguage::Japanese, text).unwrap();
         for english in [
             "£4.99",
             "10:30 a.m.",
@@ -1856,7 +1965,13 @@ mod tests {
                 format!("koɾeha {} desɨ.", american(english)),
                 "{english}"
             );
+            assert_eq!(
+                tagged(&format!("これは{english}です。")),
+                format!("koɾe βa {} desɨ.", american(english)),
+                "{english}"
+            );
             assert_eq!(japanese(english), american(english), "{english}");
+            assert_eq!(tagged(english), american(english), "{english}");
         }
     }
 
@@ -2119,7 +2234,9 @@ mod tests {
         let chunks = chunks(&files, &sentence);
         assert_eq!(chunks.len(), 1, "{chunks:?}");
         assert!(chunks[0].text.chars().count() > 400);
-        let (ids, dropped) = phonemizer.ids(files.language(), &chunks[0].text).unwrap();
+        let (ids, dropped) = phonemizer
+            .ids(None, files.language(), &chunks[0].text)
+            .unwrap();
         assert_eq!(dropped, 0);
         let pieces = split_tokens(&ids, PIECE_TOKENS, phonemizer.has_marks_in_words());
         assert!(pieces.len() > 1, "{} ids", ids.len());
@@ -2135,7 +2252,7 @@ mod tests {
     fn a_long_sentence_is_read_in_one_inference() {
         let g2p = G2P::new(Language::EnglishGB);
         let ids = |text: &str| {
-            text_to_ids(&g2p, VoiceLanguage::BritishEnglish, text)
+            text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text)
                 .unwrap()
                 .0
         };
@@ -2408,7 +2525,8 @@ mod tests {
             assert_eq!(token_ids(&phonemes).1, 0, "{text}");
             oov += words.len();
             let Some(espeak) = &espeak else { continue };
-            let (ids, dropped) = text_to_ids(espeak, VoiceLanguage::BritishEnglish, text).unwrap();
+            let (ids, dropped) =
+                text_to_ids(espeak, None, VoiceLanguage::BritishEnglish, text).unwrap();
             assert_eq!(dropped, 0, "{text}");
             assert!(has_phonemes(&ids));
             for word in &words {
@@ -2634,7 +2752,7 @@ mod tests {
             let phonemizer = Phonemizer::new(&files.reading()).unwrap();
             let (mut ids, mut chars) = (0, 0);
             for chunk in chunks(&files, paragraph) {
-                let (read, dropped) = phonemizer.ids(files.language(), &chunk.text).unwrap();
+                let (read, dropped) = phonemizer.ids(None, files.language(), &chunk.text).unwrap();
                 assert_eq!(dropped, 0, "{voice}: {}", chunk.text);
                 assert!(has_phonemes(&read), "{voice}: {}", chunk.text);
                 // Language flags and brackets never reach Kokoro.

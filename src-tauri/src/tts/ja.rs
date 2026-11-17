@@ -1,22 +1,27 @@
 //! Japanese as Kokoro's Japanese voices were trained to read it: misaki's port
 //! of cutlet's kana table (`misaki/cutlet.py`, from polm/cutlet, MIT), applied
-//! to the kana as written.
+//! to each word's kana reading.
 //!
-//! misaki gets each word and its kana reading from a dictionary; this build has
-//! none, so `words` stands in for it: a word is a run of one script, kanji are
-//! skipped, and は, へ and long vowels read as they are spelled.
+//! misaki takes each word and its pronunciation from a dictionary tagger, and
+//! so does this with the Japanese dictionary when it is installed. Without it,
+//! a word is a run of one script, kanji are skipped, and は, へ and long vowels
+//! read as they are spelled.
 
-/// Longer sentences are cut before this. Kana prose runs about 1.8 ids a
-/// character, so its chunks fit one inference; numbers, runs of `き`-like kana
-/// and alternating scripts can pass 510 ids, and `split_tokens` then cuts the
-/// chunk, mid-word where it has no pause or space.
-pub(super) const MAX_CHUNK_CHARS: usize = 180;
+use super::ja_dictionary::Tagger;
 
-/// Above this share of the text's letters in kanji, so much would be skipped
-/// that it is refused instead.
+/// Longer sentences are cut before this. Prose mostly in kanji runs about
+/// three ids a character with the dictionary, so its chunks fit one
+/// inference; numbers, runs of `き`-like kana and alternating scripts can pass
+/// 510 ids, and `split_tokens` then cuts the chunk, mid-word where it has no
+/// pause or space.
+pub(super) const MAX_CHUNK_CHARS: usize = 150;
+
+/// Without the dictionary, above this share of the text's letters in kanji so
+/// much would be skipped that it is refused instead.
 const MAX_KANJI_PERCENT: usize = 20;
 
-const KANJI_REFUSAL: &str = "Japanese text with kanji is not supported yet";
+/// Short enough for the overlay's two lines after "Speech failed:".
+const KANJI_REFUSAL: &str = "Kanji need the dictionary in Settings → Models";
 
 /// Kana as cutlet reads it, hiragana only: katakana is folded first. Pairs are
 /// a kana and the small kana after it.
@@ -107,20 +112,26 @@ enum Kind {
     English,
 }
 
-/// The notice for `text` when too much of it is kanji to read.
+/// The notice for `text` when too much of it is kanji to read without the
+/// dictionary.
 pub(super) fn refusal(text: &str) -> Option<&'static str> {
     let letters = text.chars().filter(|c| c.is_alphabetic()).count();
     let kanji = text.chars().filter(|&c| is_kanji(c)).count();
     (kanji * 100 > letters * MAX_KANJI_PERCENT).then_some(KANJI_REFUSAL)
 }
 
-/// Kokoro's symbols for `text`, with its English read by `english`, and how many
-/// kanji were skipped.
+/// Kokoro's symbols for `text`, with its words found by `tagger` when there is
+/// one and its English read by `english`, and how many kanji were skipped.
 pub(super) fn phonemes(
     text: &str,
+    tagger: Option<&Tagger>,
     mut english: impl FnMut(&str) -> Result<String, String>,
 ) -> Result<(String, usize), String> {
-    let (words, skipped) = words(&normalize(text));
+    let text = normalize(text);
+    let (words, skipped) = match tagger {
+        Some(tagger) => tagged_words(&text, tagger)?,
+        None => words(&text),
+    };
     // cutlet's `_romaji_tokens`: each word followed by a space, except around
     // punctuation. Python's `in` on strings is a substring test, so an empty
     // reading counts as an opening bracket.
@@ -272,6 +283,169 @@ fn words(text: &str) -> (Vec<Word>, usize) {
         }
     }
     (words, skipped)
+}
+
+/// The words of `text` as the dictionary splits and reads them, with the
+/// English and numbers in it found as `words` finds them, and how many kanji
+/// had no reading.
+fn tagged_words(text: &str, tagger: &Tagger) -> Result<(Vec<Word>, usize), String> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut words = Vec::new();
+    let mut skipped = 0;
+    let mut run = 0;
+    let mut i = 0;
+    while i < chars.len() {
+        let english = (!chars[i].is_whitespace())
+            .then(|| english_end(&chars, i))
+            .flatten();
+        match english {
+            Some(end) => {
+                skipped += tag(&chars[run..i], tagger, &mut words)?;
+                words.push(Word {
+                    surface: chars[i..end].iter().collect(),
+                    kind: Kind::English,
+                });
+                run = end;
+                i = end;
+            }
+            None => i += 1,
+        }
+    }
+    skipped += tag(&chars[run..], tagger, &mut words)?;
+    Ok((words, skipped))
+}
+
+/// Reads `run`, text with no English in it, word by word through the
+/// dictionary. A number reads as misaki's `num2kana` reads it, while the
+/// dictionary still sees its digits, so the counter after it reads as one:
+/// "3人" is さんにん, where the kana "さん人" would read さんじん.
+fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, String> {
+    if run.iter().all(|c| c.is_whitespace()) {
+        return Ok(0);
+    }
+    // The dictionary drops tabs and line breaks, which would shift every word
+    // after them.
+    let spaced: String = run
+        .iter()
+        .map(|&c| {
+            if c.is_whitespace() || c.is_control() {
+                ' '
+            } else {
+                c
+            }
+        })
+        .collect();
+    let nodes = tagger
+        .text_to_njd(&spaced)
+        .map_err(|e| format!("Cannot read the Japanese text: {e}"))?
+        .nodes;
+    // The dictionary sees one character for each of `run`'s, but a sound mark
+    // joins the kana before it.
+    let starts: Vec<usize> = (0..run.len()).filter(|&i| !is_sound_mark(run[i])).collect();
+    let numbers = number_spans(run);
+    let mut skipped = 0;
+    let mut seen = 0;
+    let mut done = 0;
+    for node in &nodes {
+        let from = starts.get(seen).copied().unwrap_or(run.len());
+        seen += node.get_string().chars().count();
+        let to = starts.get(seen).copied().unwrap_or(run.len());
+        if to <= done || from == to {
+            continue;
+        }
+        let start = from.max(done);
+        let number = numbers
+            .iter()
+            .find(|&&(number, end)| number < to && end > start);
+        match number {
+            None if start == from => {
+                let reading = kana_reading(
+                    &node.get_pron().to_string(),
+                    node.get_read(),
+                    node.get_string(),
+                );
+                skipped += read(&run[from..to], reading, words);
+            }
+            // What is left of a word that ran on from a number.
+            None => skipped += tag(&run[start..to], tagger, words)?,
+            Some(&(number, end)) => {
+                if start < number {
+                    skipped += tag(&run[start..number], tagger, words)?;
+                }
+                // The dictionary says じゅう and きゅう long, as misaki's
+                // tagger reads its numbers.
+                let reading = number_kana(&run[number..end].iter().collect::<String>())
+                    .replace("ゅう", "ゅー");
+                words.push(Word {
+                    kind: Kind::Kana(reading.chars().map(to_hiragana).collect()),
+                    surface: reading,
+                });
+                if end < to {
+                    skipped += tag(&run[end..to], tagger, words)?;
+                }
+            }
+        }
+        done = to.max(number.map_or(to, |&(_, end)| end));
+    }
+    Ok(skipped)
+}
+
+/// One dictionary word written `surface`: read from `reading`; with none,
+/// skipped when it has kanji, and as its symbols otherwise.
+fn read(surface: &[char], reading: Option<String>, words: &mut Vec<Word>) -> usize {
+    if let Some(reading) = reading {
+        words.push(Word {
+            surface: surface.iter().collect(),
+            kind: Kind::Kana(reading),
+        });
+        return 0;
+    }
+    let kanji = surface.iter().filter(|&&c| is_kanji(c)).count();
+    if kanji == 0 {
+        words.extend(
+            surface
+                .iter()
+                .filter(|c| !c.is_whitespace())
+                .map(|&c| Word {
+                    surface: c.to_string(),
+                    kind: Kind::Symbol,
+                }),
+        );
+    }
+    kanji
+}
+
+/// cutlet reads a word from its `pron`, else its `kana`, else as written: here
+/// the first of the dictionary's pronunciation, its reading and the written
+/// word that is all kana, in hiragana.
+fn kana_reading(pronunciation: &str, reading: Option<&str>, written: &str) -> Option<String> {
+    // `’` marks a mora said without voice; Kokoro has no symbol for that.
+    let pronunciation: String = pronunciation.chars().filter(|&c| c != '’').collect();
+    let kana = [pronunciation.as_str(), reading.unwrap_or_default(), written]
+        .into_iter()
+        .find(|kana| !kana.is_empty() && kana.chars().all(|c| script(c).is_some()))?;
+    Some(kana.chars().map(to_hiragana).collect())
+}
+
+/// Where each number in `chars` starts and ends.
+fn number_spans(chars: &[char]) -> Vec<(usize, usize)> {
+    let mut spans = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i].is_ascii_digit() {
+            let end = number_end(chars, i);
+            spans.push((i, end));
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
+    spans
+}
+
+/// The voiced and semi-voiced sound marks, combining or not, full or half width.
+fn is_sound_mark(c: char) -> bool {
+    matches!(c, '\u{3099}'..='\u{309c}' | '\u{ff9e}' | '\u{ff9f}')
 }
 
 /// Where the English starting at `start` ends: the whole run of text up to the
@@ -588,14 +762,19 @@ fn millions(number: &str) -> String {
     out
 }
 
+/// Ordinary prose, mostly kanji.
+#[cfg(test)]
+pub(super) const KANJI_PROSE: &str = "昨日の夜、駅前の小さな本屋で、昔から読みたかった小説を見つけました。店の主人は七十歳を過ぎていて、この町で五十年以上も店を続けているそうです。最近は大きな書店やインターネットで本を買う人が増えたので、客は少なくなったと話していました。それでも、毎朝早く店を開けて、新しく入った本を一冊ずつ丁寧に棚に並べるのが楽しみだと笑っていました。政府は今年度の経済見通しを発表し、物価の上昇が続く中で、個人消費の回復は緩やかなものにとどまるとの見方を示しました。";
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::tts::local::in_vocab;
 
-    /// Stands in for the English voice, as the expected strings were made.
+    /// Reads without the dictionary, with a stand-in for the English voice, as
+    /// the expected strings were made.
     fn read(text: &str) -> (String, usize) {
-        phonemes(text, |latin| Ok(format!("<{latin}>"))).unwrap()
+        phonemes(text, None, |latin| Ok(format!("<{latin}>"))).unwrap()
     }
 
     fn reads(text: &str) -> String {
@@ -635,7 +814,7 @@ mod tests {
         }
         text.extend(SYMBOLS.iter().map(|(symbol, _)| symbol));
         text.push_str("ーっゝゞ〃ヽヾ「（あ）」【い】");
-        let (phonemes, _) = phonemes(&text, |_| Ok(String::new())).unwrap();
+        let (phonemes, _) = phonemes(&text, None, |_| Ok(String::new())).unwrap();
         let outside: Vec<char> = phonemes.chars().filter(|&c| !in_vocab(c)).collect();
         assert!(outside.is_empty(), "{outside:?}");
     }
@@ -831,5 +1010,159 @@ mod tests {
         assert_eq!(refusal("本あいうえ"), None);
         assert_eq!(refusal("本日あいうえ"), Some(KANJI_REFUSAL));
         assert_eq!(refusal("123。"), None);
+    }
+
+    // With the dictionary. Readings are NAIST-jdic's pronunciations, checked
+    // against the standard ones; the symbols follow from cutlet's table as
+    // the tests above check it. misaki's own tagger uses UniDic, which is not
+    // installed here, so these are not misaki's output.
+
+    /// Reads with the dictionary and a stand-in for the English voice.
+    fn tagged(text: &str) -> (String, usize) {
+        let tagger = crate::tts::ja_dictionary::test_tagger();
+        phonemes(text, Some(tagger), |latin| Ok(format!("<{latin}>"))).unwrap()
+    }
+
+    fn reads_tagged(text: &str) -> String {
+        let (phonemes, skipped) = tagged(text);
+        assert_eq!(skipped, 0, "{text}");
+        phonemes
+    }
+
+    #[test]
+    fn kanji_read_as_the_dictionary_says_them() {
+        // トーキョー ニ イキ マス
+        assert_eq!(reads_tagged("東京に行きます。"), "toːkʲoː ɲi ikʲi masɨ.");
+        // キョー ワ テンキ ガ イイ デス ネ
+        assert_eq!(
+            reads_tagged("今日は天気がいいですね。"),
+            "kʲoː βa teŋkʲi ɡa ii desɨ ne."
+        );
+        // ワタシ ワ ガクセー デス
+        assert_eq!(reads_tagged("私は学生です。"), "βataɕi βa ɡakɯseː desɨ.");
+        // ニホンゴ ヲ ベンキョー シ テ イ マス, where ヲ reads `o`
+        assert_eq!(
+            reads_tagged("日本語を勉強しています。"),
+            "ɲihoŋɡo o beŋkʲoː ɕi te i masɨ."
+        );
+        assert_eq!(
+            reads_tagged("先生、ありがとうございました。"),
+            "seɴseː, aɾʲiɡatoː ɡoʣaimaɕita."
+        );
+        assert_eq!(reads_tagged("人々"), "çitobʲito");
+    }
+
+    #[test]
+    fn particles_read_as_they_are_said() {
+        assert_eq!(reads_tagged("学校へ行く。"), "ɡaʔkoː e ikɯ.");
+        assert_eq!(reads_tagged("本を読む。"), "hoɴ o jomɯ.");
+        assert_eq!(reads_tagged("これはペンです"), "koɾe βa peɴ desɨ");
+        assert_eq!(reads_tagged("こんにちは"), "koɲɲiʨiβa");
+        // Kana the dictionary knows read as it says them too.
+        assert_eq!(
+            reads_tagged("きょうもいいてんきですね。"),
+            "kʲoː mo ii teŋkʲi desɨ ne."
+        );
+    }
+
+    #[test]
+    fn numbers_read_with_num2kana_and_the_counter_after_them_as_a_counter() {
+        assert_eq!(reads_tagged("3人"), "saɴ ɲiɴ");
+        assert_eq!(reads_tagged("2024年"), "ɲiseɲɲiʥɨːjoɴ neɴ");
+        assert_eq!(reads_tagged("10時30分"), "ʥɨː ʥi saɲʥɨː ɸɯɴ");
+        assert_eq!(
+            reads_tagged("3人で10時30分に会いました。"),
+            "saɴ ɲiɴ de ʥɨː ʥi saɲʥɨː ɸɯɴ ɲi ai maɕi ta."
+        );
+        assert_eq!(reads_tagged("1,500円"), "seŋɡoçakɯ eɴ");
+        assert_eq!(reads_tagged("3.5キロ"), "santeŋɡo kʲiɾo");
+        assert_eq!(reads_tagged("50%です"), "ɡoʥɨː paːsento desɨ");
+        assert_eq!(reads_tagged("5〜10"), "ɡo kaɾa ʥɨː");
+    }
+
+    #[test]
+    fn kanji_katakana_and_english_together() {
+        assert_eq!(
+            reads_tagged("私はiPhoneでコーヒーを買いました。"),
+            "βataɕi βa <iPhone> de koːçiː o kai maɕi ta."
+        );
+        assert_eq!(
+            reads_tagged("昨日、新しいMacBookを買って、Pythonのコードを書きました。"),
+            "kʲinoː, ataɾaɕii <MacBook> o kaʔte, <Python> no koːdo o kakʲi maɕi ta."
+        );
+        assert_eq!(
+            reads_tagged("日本語 and emoji pass through."),
+            "ɲihoŋɡo <and emoji pass through.>"
+        );
+        assert_eq!(
+            reads_tagged("「こんにちは」と言った。"),
+            "“koɲɲiʨiβa” to iʔta."
+        );
+    }
+
+    #[test]
+    fn a_word_the_dictionary_cannot_read_is_skipped_and_counted() {
+        assert_eq!(tagged("龘"), (String::new(), 1));
+        assert_eq!(tagged("龘は字です。"), ("βa ʥi desɨ.".into(), 1));
+    }
+
+    #[test]
+    fn sound_marks_and_half_width_kana_join_up() {
+        assert_eq!(reads_tagged("か\u{3099}"), "ɡa");
+        assert_eq!(reads_tagged("ｶﾞｷﾞ"), "ɡa ɡʲi");
+        assert_eq!(reads_tagged("ﾃｽﾄ"), reads_tagged("テスト"));
+    }
+
+    #[test]
+    fn line_breaks_and_tabs_keep_the_words_in_place() {
+        assert_eq!(
+            reads_tagged("東京に\n行きます。\t3人"),
+            reads_tagged("東京に 行きます。 3人")
+        );
+    }
+
+    #[test]
+    fn every_symbol_of_kanji_prose_is_one_kokoro_has() {
+        let (prose, skipped) = tagged(KANJI_PROSE);
+        assert_eq!(skipped, 0);
+        let outside: Vec<char> = prose.chars().filter(|&c| !in_vocab(c)).collect();
+        assert!(outside.is_empty(), "{outside:?}");
+        // Every kana a pronunciation can hold.
+        let katakana: String = ('\u{30a1}'..='\u{30fc}').collect();
+        let (kana, _) = phonemes(&katakana, None, |_| Ok(String::new())).unwrap();
+        let outside: Vec<char> = kana.chars().filter(|&c| !in_vocab(c)).collect();
+        assert!(outside.is_empty(), "{outside:?}");
+    }
+
+    /// The word offsets `tag` keeps depend on the dictionary seeing one
+    /// character for each of the text's, sound marks aside.
+    #[test]
+    fn the_dictionary_sees_one_character_for_each_but_sound_marks() {
+        let tagger = crate::tts::ja_dictionary::test_tagger();
+        let pool: Vec<char> = "あかがはへをんっゃーゝゞアカガハヲンッャヴヵヶ東京行日本人年分龘々〆〇0123456789,.、。！？「」（）・〜ー—%$¥\\-~`\"' 　abcＡｱｶﾞﾟ\u{3099}\u{309a}\u{309b}\u{309c}🎉\u{200d}\u{301}é\u{200b}\u{feff}"
+            .chars()
+            .collect();
+        let mut seed: u64 = 0x2545_f491_4f6c_dd1d;
+        for _ in 0..3000 {
+            let len = {
+                seed ^= seed << 13;
+                seed ^= seed >> 7;
+                seed ^= seed << 17;
+                (seed % 20) as usize
+            };
+            let text: String = (0..len)
+                .map(|_| {
+                    seed ^= seed << 13;
+                    seed ^= seed >> 7;
+                    seed ^= seed << 17;
+                    pool[(seed as usize) % pool.len()]
+                })
+                .collect();
+            let nodes = tagger.text_to_njd(&text).unwrap().nodes;
+            let seen: usize = nodes.iter().map(|n| n.get_string().chars().count()).sum();
+            let expected = text.chars().filter(|&c| !is_sound_mark(c)).count();
+            assert_eq!(seen, expected, "{text:?}");
+            phonemes(&text, Some(tagger), |_| Ok(String::new())).unwrap();
+        }
     }
 }

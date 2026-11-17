@@ -506,9 +506,18 @@ export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
 export type ModelFile = { 
 /**
- * A model variant (`int8`) or a voice (`bm_lewis`).
+ * A model variant (`int8`), a voice (`bm_lewis`) or the Japanese
+ * dictionary (`naist-jdic`).
  */
-id: string; kind: ModelFileKind; size: number; installed: boolean; 
+id: string; kind: ModelFileKind; 
+/**
+ * The download's size.
+ */
+size: number; 
+/**
+ * Ready to use: for the dictionary, once unpacked.
+ */
+installed: boolean; 
 /**
  * Bytes downloaded so far: a running download's, or a stopped one's that
  * the next download resumes from.
@@ -519,10 +528,10 @@ partial: number; downloading: boolean;
  */
 error: string | null; 
 /**
- * A voice's language; `None` for a model.
+ * A voice's language; `None` for a model or the dictionary.
  */
 language: VoiceLanguage | null }
-export type ModelFileKind = "model" | "voice"
+export type ModelFileKind = "model" | "voice" | "dictionary"
 export type ModelFileList = { 
 /**
  * The folder the files live in.

@@ -8,9 +8,9 @@
 use super::models_dir;
 use crate::settings::{self, ModelVariant};
 use crate::tts::catalog::{self, CatalogFile, ModelFileKind, VoiceLanguage};
-use crate::tts::download;
 use crate::tts::local;
 use crate::tts::voice::VoiceSpec;
+use crate::tts::{download, ja_dictionary};
 use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
 use log::{info, warn};
 use serde::Serialize;
@@ -72,10 +72,13 @@ pub struct VoicePart {
 
 #[derive(Serialize, Type)]
 pub struct ModelFile {
-    /// A model variant (`int8`) or a voice (`bm_lewis`).
+    /// A model variant (`int8`), a voice (`bm_lewis`) or the Japanese
+    /// dictionary (`naist-jdic`).
     pub id: String,
     pub kind: ModelFileKind,
+    /// The download's size.
     pub size: u64,
+    /// Ready to use: for the dictionary, once unpacked.
     pub installed: bool,
     /// Bytes downloaded so far: a running download's, or a stopped one's that
     /// the next download resumes from.
@@ -83,7 +86,7 @@ pub struct ModelFile {
     pub downloading: bool,
     /// Why the last download failed, until the next one starts.
     pub error: Option<String>,
-    /// A voice's language; `None` for a model.
+    /// A voice's language; `None` for a model or the dictionary.
     pub language: Option<VoiceLanguage>,
 }
 
@@ -111,7 +114,7 @@ pub async fn list_model_files(app: AppHandle) -> Result<ModelFileList, String> {
     let files = catalog::all(&models_dir)
         .into_iter()
         .map(|file| ModelFile {
-            installed: file.path.is_file(),
+            installed: file.installed(),
             partial: running
                 .get(&file.id)
                 .copied()
@@ -195,6 +198,7 @@ pub async fn cancel_model_download(app: AppHandle, id: String) -> Result<(), Str
 #[specta::specta]
 pub async fn delete_model_file(app: AppHandle, id: String) -> Result<(), String> {
     let file = find(&app, &id)?;
+    let models_dir = models_dir(&app)?;
     {
         let downloads = app.state::<ModelDownloads>();
         // Held while deleting, so a download of this file cannot start meanwhile.
@@ -204,6 +208,9 @@ pub async fn delete_model_file(app: AppHandle, id: String) -> Result<(), String>
         }
         download::remove_if_present(&file.path)?;
         download::remove_if_present(&download::part_path(&file.path))?;
+        if file.kind == ModelFileKind::Dictionary {
+            ja_dictionary::remove(&models_dir)?;
+        }
         table.failed.remove(&id);
     }
     info!("Deleted {}", file.path.display());
@@ -282,6 +289,13 @@ async fn run_download(
                 file.path.display(),
                 started.elapsed().as_secs_f32()
             );
+            // Not cancellable: the task holds the file's entry until this
+            // ends, so no second download can unpack beside it.
+            if let Err(e) = install(&app, &file).await {
+                warn!("Installing {} failed: {e}", file.id);
+                finish.error = Some(e);
+                return;
+            }
             finish.error = None;
             crate::actions::preload_local_voice(&app);
         }
@@ -294,6 +308,23 @@ async fn run_download(
             finish.error = None;
         }
     }
+}
+
+/// Makes a checked download ready to use: the dictionary is unpacked.
+async fn install(app: &AppHandle, file: &CatalogFile) -> Result<(), String> {
+    if file.kind != ModelFileKind::Dictionary {
+        return Ok(());
+    }
+    let models_dir = models_dir(app)?;
+    let started = Instant::now();
+    tauri::async_runtime::spawn_blocking(move || ja_dictionary::unpack(&models_dir))
+        .await
+        .map_err(|e| format!("Unpacking the dictionary failed: {e}"))??;
+    info!(
+        "Unpacked the Japanese dictionary in {:.1} s",
+        started.elapsed().as_secs_f32()
+    );
+    Ok(())
 }
 
 /// Clears a download's entry however its task ends, a panic included, so its

@@ -5,6 +5,7 @@ pub mod download;
 pub mod espeak;
 pub mod http;
 mod ja;
+pub mod ja_dictionary;
 pub mod local;
 pub mod text;
 #[cfg(test)]
