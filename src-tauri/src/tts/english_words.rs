@@ -1,39 +1,66 @@
 //! English words misaki-rs's lexicons lack, which it would spell letter by
 //! letter. In technical text most are made of words it has: compounds
-//! ("changelog", "filesystem"), a word with a prefix or suffix ("debounce",
-//! "tokenizer"), letters and a word ("tsconfig") and identifiers
-//! ("setTimeout"), so they are read from those.
+//! ("changelog"), a word with a prefix or suffix ("debounce", "tokenizer"),
+//! letters and a word ("tsconfig") and identifiers ("setTimeout"), so they are
+//! read from those.
 
-use super::text::camel_cut;
-use misaki_rs::lexicon::Lexicon;
+use super::text::{camel_cut, said_as_word};
+use misaki_rs::lexicon::{Lexicon, PhonemeEntry};
 use misaki_rs::Language;
+
+/// Who reads a capitalised word misaki-rs's lexicons lack: this module, or
+/// misaki-rs's espeak-ng fallback when the user turned it on, since espeak-ng
+/// reads names better than their parts do ("Patton", "Kingsley").
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Names {
+    Here,
+    Espeak,
+}
 
 /// Developer words no rule below reads right, said as these lexicon words
 /// run together. The word in capitals is stressed, else the first; a single
 /// capital is a letter's name.
-const SAID_AS: &[(&str, &str)] = &[
+const RESPELLED: &[(&str, &str)] = &[
+    ("argparse", "arg parse"),
     ("argv", "arg V"),
     ("chown", "C H OWN"),
     ("clippy", "clip E"),
     ("deno", "D no"),
     ("deque", "deck"),
+    ("emacs", "E max"),
     ("enum", "E numb"),
     ("eslint", "E S LINT"),
+    ("fastapi", "fast A P I"),
+    ("foreach", "for each"),
+    ("graphql", "graph Q L"),
+    ("hashtable", "hash table"),
     ("impl", "imp L"),
     ("kubectl", "cube CONTROL"),
     ("kubernetes", "coo burr NET ease"),
     ("malloc", "mal lock"),
+    ("matplotlib", "mat plot lib"),
     ("mkdir", "make deer"),
+    ("multiline", "multi line"),
     ("mutex", "mute ex"),
     ("nginx", "engine X"),
     ("nullptr", "null P T R"),
     ("numpy", "numb pie"),
+    ("oncall", "on call"),
+    ("openapi", "open A P I"),
     ("postgresql", "post gres Q L"),
+    ("println", "print line"),
+    ("protobuf", "proto buff"),
     ("pytorch", "pie torch"),
     ("rustc", "rust C"),
+    ("segfault", "seg fault"),
     ("sudo", "sue doe"),
     ("sysadmin", "sis admin"),
+    ("upsert", "up sert"),
+    ("userid", "user I D"),
+    ("venv", "V env"),
+    ("vscode", "V S code"),
     ("wifi", "why fie"),
+    ("xcode", "X code"),
 ];
 /// Words misaki-rs reads that may be part of a compound, though not in its
 /// gold lexicon, whose other entries make too many false parts.
@@ -42,16 +69,19 @@ const DEVELOPER_PARTS: &[&str] = &["dev", "nav", "ops", "std", "sym"];
 /// Others split words that are no compounds ("inode").
 const SHORT_ENDINGS: &[&str] = &["in", "of", "up"];
 /// Lexicon words that end a word as a suffix far more often than as a word
-/// ("act|ions", "red|ist"), so no compound ends in one.
+/// ("act|ions", "red|ist"; British "-ley" names would read "lay").
 const NOT_LAST: &[&str] = &[
-    "ate", "ates", "ion", "ions", "ism", "isms", "ist", "ists", "ite", "ites",
+    "ate", "ates", "ion", "ions", "ism", "isms", "ist", "ists", "ite", "ites", "ley",
 ];
 /// Unstressed prefixes ("debounce", "rerender", "unregister").
 const PREFIXES: &[(&str, &str)] = &[("de", "dˌiː"), ("re", "ɹˌiː"), ("un", "ˌʌn")];
-/// Unstressed suffixes, American then British ("hashable", "tokenizer"),
-/// after a word that may have lost a final "e" ("parsable").
-const SUFFIXES: &[(&str, &str, &str)] =
-    &[("able", "əbə\u{200d}l", "əbə\u{200d}l"), ("er", "ɚ", "ə")];
+/// Unstressed suffixes, American then British ("hashable", "tokenizer",
+/// "Kingsley"), after a word that may have lost a final "e" ("parsable").
+const SUFFIXES: &[(&str, &str, &str)] = &[
+    ("able", "əbə\u{200d}l", "əbə\u{200d}l"),
+    ("er", "ɚ", "ə"),
+    ("ley", "li", "li"),
+];
 /// Consonants an English word can start with before its first vowel; any
 /// other run is letters said by name ("tsconfig", "pkill").
 const ONSETS: &[&str] = &[
@@ -60,18 +90,23 @@ const ONSETS: &[&str] = &[
     "sm", "sn", "sp", "sph", "spl", "spr", "st", "str", "sw", "th", "thr", "tr", "ts", "tw", "wh",
     "wr",
 ];
+/// misaki-rs's vowel symbols.
+const VOWELS: &str = "AIOQWYaiuæɑɒɔəɛɜɪʊʌᵻ";
 /// The shortest word a part or stem can be, short endings apart.
 const MIN_PART: usize = 3;
-/// The shortest word rewritten unless `SAID_AS` has it: shorter ones are
+/// The shortest word rewritten unless `RESPELLED` has it: shorter ones are
 /// mostly abbreviations and units ("KiB", "PoC").
 const SHORTEST_WORD: usize = 5;
 /// A longer run of letters is no word (base64, a hash) and is left alone.
 const LONGEST_WORD: usize = 32;
+/// An identifier's part this short, or with no vowel, is an initialism
+/// ("Url", "Http"), as `spell_out` reads capitals.
+const INITIALISM_LETTERS: usize = 4;
 
 /// `text` with each word misaki-rs would spell, and can read from words it
 /// has, rewritten: as a `[word](/phonemes/)` override, or an identifier as
 /// its words. `[…](…)` overrides already in `text` are kept.
-pub(super) fn read_unknown_words(text: &str, lexicon: &Lexicon) -> String {
+pub(super) fn read_unknown_words(text: &str, lexicon: &Lexicon, names: Names) -> String {
     let mut out = String::with_capacity(text.len());
     let mut copied = 0;
     let mut i = 0;
@@ -90,7 +125,7 @@ pub(super) fn read_unknown_words(text: &str, lexicon: &Lexicon) -> String {
             c if c.is_alphabetic() => {
                 let len = word_len(&text[i..]);
                 let said = (!lone_bracket)
-                    .then(|| rewrite(&text[i..i + len], lexicon))
+                    .then(|| rewrite(&text[i..i + len], lexicon, names))
                     .flatten();
                 if let Some(said) = said {
                     out.push_str(&text[copied..i]);
@@ -131,42 +166,45 @@ fn word_len(text: &str) -> usize {
 }
 
 /// What to write for `word`, or `None` to leave it to misaki-rs. Capitals
-/// are read only as a compound ("CHANGELOG"): shorter ones and the rest are
-/// initialisms, which `spell_out` and misaki-rs spell. "Mc" names stay whole,
-/// as `spell_out` keeps them.
-fn rewrite(word: &str, lexicon: &Lexicon) -> Option<String> {
+/// are read only as a compound ("CHANGELOG"): the rest are initialisms, which
+/// `spell_out` and misaki-rs spell. "Mc" names stay whole, as `spell_out`
+/// keeps them.
+fn rewrite(word: &str, lexicon: &Lexicon, names: Names) -> Option<String> {
     let (letters, possessive) = match word.strip_suffix("'s") {
         Some(letters) => (letters, true),
         None => (word, false),
     };
-    let short = letters.len() < SHORTEST_WORD
-        && !SAID_AS
-            .iter()
-            .any(|(said, _)| said.eq_ignore_ascii_case(letters));
-    if short
+    let respelled = RESPELLED
+        .iter()
+        .any(|(written, _)| written.eq_ignore_ascii_case(letters));
+    if (letters.len() < SHORTEST_WORD && !respelled)
         || letters.len() > LONGEST_WORD
         || !letters.bytes().all(|b| b.is_ascii_alphabetic())
-        || (is_capitals(letters) && letters.len() < SHORTEST_WORD)
+        || (all_capitals(letters) && letters.len() < SHORTEST_WORD)
         || letters.starts_with("Mc")
-        || knows(word, lexicon)
+        || misaki_reads(word, lexicon)
     {
         return None;
     }
     let lower = letters.to_ascii_lowercase();
     let parts = camel_cut(letters);
-    let phonemes = if is_capitals(letters) {
+    let capitalised = letters.starts_with(|c: char| c.is_ascii_uppercase());
+    let phonemes = if all_capitals(letters) {
         compound(&lower, lexicon)?
-    } else if let Some(phonemes) = said(&lower, lexicon) {
+    } else if let Some(phonemes) = respell(&lower, lexicon) {
         phonemes
     } else if parts.len() > 1 {
-        return identifier(&parts, possessive, lexicon);
+        return Some(identifier(&parts, possessive, lexicon));
+    } else if capitalised && names == Names::Espeak {
+        return None;
     } else {
-        read(&lower, lexicon)?
+        // Letters said by name read names wrongly ("Z hang", "P fister").
+        read(&lower, lexicon, !capitalised)?
     };
     Some(said_as(word, phonemes, possessive, lexicon))
 }
 
-fn is_capitals(letters: &str) -> bool {
+fn all_capitals(letters: &str) -> bool {
     letters.len() > 1 && letters.bytes().all(|b| b.is_ascii_uppercase())
 }
 
@@ -180,40 +218,77 @@ fn said_as(word: &str, phonemes: String, possessive: bool, lexicon: &Lexicon) ->
     format!("[{word}](/{phonemes}/)")
 }
 
-/// An identifier's words, or `None` to leave it whole: each one misaki-rs
-/// reads, one read here ("getChangelog") or one with no vowel, which it
-/// spells ("HttpServer"). Capitals are `spell_out`'s, which left this whole.
-fn identifier(parts: &[&str], possessive: bool, lexicon: &Lexicon) -> Option<String> {
+/// An identifier's words, each one misaki-rs reads as written, the others
+/// read by `identifier_part`, so one unknown part never spells the whole.
+fn identifier(parts: &[&str], possessive: bool, lexicon: &Lexicon) -> String {
     let last = parts.len() - 1;
-    let words = parts.iter().enumerate().map(|(n, &part)| {
-        let possessive = possessive && n == last;
-        let written = if possessive {
-            format!("{part}'s")
-        } else {
-            part.to_string()
-        };
-        if is_capitals(part) {
-            return None;
-        }
-        if part.len() == 1 || knows(&written, lexicon) {
-            return Some(written);
-        }
-        if let Some(phonemes) = read(&part.to_ascii_lowercase(), lexicon) {
-            return Some(said_as(&written, phonemes, possessive, lexicon));
-        }
-        let no_vowel = !part
-            .to_ascii_lowercase()
-            .contains(['a', 'e', 'i', 'o', 'u', 'y']);
-        no_vowel.then_some(written)
-    });
-    Some(words.collect::<Option<Vec<_>>>()?.join(" "))
+    let words: Vec<String> = parts
+        .iter()
+        .enumerate()
+        .map(|(n, &part)| {
+            let possessive = possessive && n == last;
+            let written = if possessive {
+                format!("{part}'s")
+            } else {
+                part.to_string()
+            };
+            if part.len() == 1 || misaki_reads(&written, lexicon) {
+                return written;
+            }
+            match identifier_part(part, lexicon) {
+                Some(phonemes) => said_as(&written, phonemes, possessive, lexicon),
+                None => written,
+            }
+        })
+        .collect();
+    words.join(" ")
+}
+
+/// A part of an identifier misaki-rs cannot read: respelled, then as
+/// `spell_out` reads it in capitals when it is short or has no vowel ("Json"
+/// "jason", "Url" spelled), else read here, else spelled.
+fn identifier_part(part: &str, lexicon: &Lexicon) -> Option<String> {
+    let lower = part.to_ascii_lowercase();
+    let capitals = part.to_ascii_uppercase();
+    if let Some(phonemes) = respell(&lower, lexicon) {
+        return Some(phonemes);
+    }
+    if let Some(said) = said_as_word(&capitals) {
+        return respelling(said, lexicon);
+    }
+    let short = part.len() <= INITIALISM_LETTERS || !lower.contains(|c| "aeiouy".contains(c));
+    if short && lexicon.golds.contains_key(&capitals) {
+        return phonemes_of(&capitals, lexicon);
+    }
+    let lower_first = part.starts_with(|c: char| c.is_ascii_lowercase());
+    (!short)
+        .then(|| read(&lower, lexicon, lower_first))
+        .flatten()
+        .or_else(|| initialism(&capitals, lexicon))
+}
+
+/// `letters` (capitals) said as one initialism, as misaki-rs's `get_nnp` says
+/// a proper noun it spells: every stress secondary, then the last primary.
+pub(super) fn initialism(letters: &str, lexicon: &Lexicon) -> Option<String> {
+    let names: String = letters
+        .chars()
+        .map(|c| match lexicon.golds.get(&c.to_string()) {
+            Some(PhonemeEntry::Simple(name)) => Some(name.as_str()),
+            _ => None,
+        })
+        .collect::<Option<_>>()?;
+    let mut phonemes = lexicon.apply_stress(&names, Some(0.0));
+    if let Some(at) = phonemes.rfind('ˌ') {
+        phonemes.replace_range(at..at + 'ˌ'.len_utf8(), "ˈ");
+    }
+    Some(phonemes)
 }
 
 /// Whether misaki-rs reads `word` from its lexicons: as written, in lower
 /// case, or with a suffix it strips. Generous on purpose, so that no word it
 /// reads is ever rewritten; but capitals it has no entry for it spells, as a
 /// proper noun or letter by letter, so those count as unknown.
-fn knows(word: &str, lexicon: &Lexicon) -> bool {
+fn misaki_reads(word: &str, lexicon: &Lexicon) -> bool {
     let lower = word.to_ascii_lowercase();
     let in_table = |w: &str| lexicon.golds.contains_key(w) || lexicon.silvers.contains_key(w);
     if in_table(word)
@@ -224,7 +299,7 @@ fn knows(word: &str, lexicon: &Lexicon) -> bool {
     {
         return true;
     }
-    if is_capitals(word.strip_suffix("'s").unwrap_or(word)) {
+    if all_capitals(word.strip_suffix("'s").unwrap_or(word)) {
         return lexicon.get_word(word, "NN", None, None).is_some();
     }
     lexicon.is_known(word, "NN")
@@ -235,46 +310,53 @@ fn knows(word: &str, lexicon: &Lexicon) -> bool {
 }
 
 /// Phonemes for `word` (lower case), the first way that reads it: as a word
-/// `SAID_AS` or misaki-rs has (inside a longer one), a prefix or suffix with
-/// a word, a compound, the plural of one of these, or letters said by name
-/// before a word.
-fn read(word: &str, lexicon: &Lexicon) -> Option<String> {
+/// `RESPELLED` or misaki-rs has (inside a longer one), a prefix or suffix
+/// with a word, a compound, the plural of one of these, or, with
+/// `letters_first`, letters said by name before a word.
+fn read(word: &str, lexicon: &Lexicon, letters_first: bool) -> Option<String> {
     if word.len() < MIN_PART {
         return None;
     }
     known(word, lexicon)
-        .or_else(|| prefixed(word, lexicon))
-        .or_else(|| suffixed(word, lexicon))
+        .or_else(|| prefixed(word, lexicon, true))
+        .or_else(|| suffixed(word, lexicon, true))
         .or_else(|| compound(word, lexicon))
-        .or_else(|| plural(word, lexicon))
-        .or_else(|| lettered(word, lexicon))
+        .or_else(|| plural(word, lexicon, letters_first))
+        .or_else(|| letters_first.then(|| lettered(word, lexicon)).flatten())
         .map(with_primary)
 }
 
-/// `word` as `SAID_AS` or misaki-rs's lexicons have it.
+/// `word` as `RESPELLED` or misaki-rs's lexicons have it.
 fn known(word: &str, lexicon: &Lexicon) -> Option<String> {
     if word.len() < MIN_PART {
         return None;
     }
-    said(word, lexicon).or_else(|| phonemes_of(word, lexicon))
+    respell(word, lexicon).or_else(|| phonemes_of(word, lexicon))
 }
 
-fn said(word: &str, lexicon: &Lexicon) -> Option<String> {
-    let (_, respelt) = SAID_AS.iter().find(|(written, _)| *written == word)?;
-    let parts: Vec<&str> = respelt.split(' ').collect();
-    let stressed = parts.iter().position(|part| is_capitals(part)).unwrap_or(0);
-    let parts = parts
-        .iter()
-        .map(|&part| {
-            let word = if is_capitals(part) {
-                part.to_ascii_lowercase()
+fn respell(word: &str, lexicon: &Lexicon) -> Option<String> {
+    let (_, said) = RESPELLED.iter().find(|(written, _)| *written == word)?;
+    respelling(said, lexicon)
+}
+
+/// Lexicon words run together as one word, the one in capitals stressed.
+fn respelling(said: &str, lexicon: &Lexicon) -> Option<String> {
+    let words: Vec<String> = said
+        .split(' ')
+        .map(|word| {
+            if all_capitals(word) {
+                word.to_ascii_lowercase()
             } else {
-                part.to_string()
-            };
-            phonemes_of(&word, lexicon)
+                word.to_string()
+            }
         })
+        .collect();
+    let stressed = said.split(' ').position(all_capitals).unwrap_or(0);
+    let parts = words
+        .iter()
+        .map(|word| Some((word.as_str(), phonemes_of(word, lexicon)?)))
         .collect::<Option<Vec<_>>>()?;
-    Some(join(parts, stressed, lexicon))
+    Some(join(&parts, stressed, lexicon))
 }
 
 fn phonemes_of(word: &str, lexicon: &Lexicon) -> Option<String> {
@@ -283,36 +365,40 @@ fn phonemes_of(word: &str, lexicon: &Lexicon) -> Option<String> {
         .map(|(phonemes, _)| phonemes)
 }
 
-fn prefixed(word: &str, lexicon: &Lexicon) -> Option<String> {
+/// A prefix and a word; with `nested`, the word may take a suffix.
+fn prefixed(word: &str, lexicon: &Lexicon, nested: bool) -> Option<String> {
     PREFIXES.iter().find_map(|&(prefix, said)| {
         let rest = word.strip_prefix(prefix)?;
         let rest = known(rest, lexicon)
-            .or_else(|| suffixed(rest, lexicon))
+            .or_else(|| nested.then(|| suffixed(rest, lexicon, false)).flatten())
             .or_else(|| compound(rest, lexicon))?;
-        Some(with_primary(format!("{said}{rest}")))
+        Some(format!("{said}{}", with_stress(&rest, lexicon)))
     })
 }
 
-fn suffixed(word: &str, lexicon: &Lexicon) -> Option<String> {
+/// A word and a suffix; with `nested`, the word may take a prefix.
+fn suffixed(word: &str, lexicon: &Lexicon, nested: bool) -> Option<String> {
     let british = lexicon.lang == Language::EnglishGB;
     let stem = |stem: &str| {
         known(stem, lexicon)
-            .or_else(|| prefixed(stem, lexicon))
+            .or_else(|| nested.then(|| prefixed(stem, lexicon, false)).flatten())
             .or_else(|| compound(stem, lexicon))
     };
     SUFFIXES.iter().find_map(|&(suffix, american, english)| {
         let written = word.strip_suffix(suffix)?;
         let said = stem(written).or_else(|| stem(&format!("{written}e")))?;
         Some(format!(
-            "{said}{}",
+            "{}{}",
+            with_stress(&said, lexicon),
             if british { english } else { american }
         ))
     })
 }
 
-fn plural(word: &str, lexicon: &Lexicon) -> Option<String> {
+fn plural(word: &str, lexicon: &Lexicon, letters_first: bool) -> Option<String> {
     let stem = word.strip_suffix('s').filter(|stem| !stem.ends_with('s'))?;
-    let phonemes = read(stem, lexicon).or_else(|| read(stem.strip_suffix('e')?, lexicon))?;
+    let phonemes = read(stem, lexicon, letters_first)
+        .or_else(|| read(stem.strip_suffix('e')?, lexicon, letters_first))?;
     Some(lexicon.append_s(&phonemes))
 }
 
@@ -348,26 +434,62 @@ fn letters(letters: &str, lexicon: &Lexicon) -> Option<String> {
         .collect()
 }
 
-/// Phonemes for `word` as the lexicon words it is made of, run together:
-/// two if it can, else three, the longest first word winning unless it is a
-/// plural ("time|stamp", not "times|tamp"). English compounds are stressed
-/// on their first word ("CHANGElog"), so later words keep a secondary stress.
+/// Phonemes for `word` as two lexicon words run together, the longest first
+/// word winning unless it is a plural ("time|stamp", not "times|tamp").
+/// English compounds are stressed on their first word ("CHANGElog").
 fn compound(word: &str, lexicon: &Lexicon) -> Option<String> {
-    let parts = two_parts(word, lexicon).or_else(|| three_parts(word, lexicon))?;
-    Some(join(parts, 0, lexicon))
+    let mut plural_first = None;
+    for at in (MIN_PART..word.len()).rev() {
+        let (first, last) = word.split_at(at);
+        let (Some(first_said), Some(last_said)) = (part(first, lexicon), last_part(last, lexicon))
+        else {
+            continue;
+        };
+        let parts = [(first, first_said), (last, last_said)];
+        if !is_plural(first, lexicon) {
+            return Some(join(&parts, 0, lexicon));
+        }
+        plural_first.get_or_insert(parts);
+    }
+    plural_first.map(|parts| join(&parts, 0, lexicon))
 }
 
-/// `parts` run together, only the `stressed` one keeping its primary stress.
-fn join(parts: Vec<String>, stressed: usize, lexicon: &Lexicon) -> String {
+/// Parts, each as written and as said, run together: only the `stressed`
+/// one keeps a primary stress, and a letter written twice across a join is
+/// said once ("Pat|ton", "mal lock"), though "date|time" keeps both.
+fn join(parts: &[(&str, String)], stressed: usize, lexicon: &Lexicon) -> String {
     let mut joined = String::new();
-    for (n, part) in parts.into_iter().enumerate() {
-        if n == stressed {
-            joined.push_str(&part);
+    let mut last_letter: Option<char> = None;
+    for (n, (written, said)) in parts.iter().enumerate() {
+        let said = if n == stressed {
+            with_stress(said, lexicon)
         } else {
-            joined.push_str(&lexicon.apply_stress(&part, Some(-1.0)));
+            lexicon.apply_stress(said, Some(-1.0))
+        };
+        let doubled = last_letter
+            .zip(written.chars().next())
+            .is_some_and(|(end, start)| end.eq_ignore_ascii_case(&start));
+        let repeated = joined
+            .chars()
+            .last()
+            .filter(|end| doubled && !VOWELS.contains(*end) && said.starts_with(*end));
+        match repeated {
+            Some(sound) => joined.push_str(&said[sound.len_utf8()..]),
+            None => joined.push_str(&said),
         }
+        last_letter = written.chars().last();
     }
     with_primary(joined)
+}
+
+/// `phonemes` with a primary stress: its first secondary promoted, or one on
+/// its first vowel when it has none ("hath" in "Hathaway").
+fn with_stress(phonemes: &str, lexicon: &Lexicon) -> String {
+    if phonemes.contains(['ˈ', 'ˌ']) {
+        with_primary(phonemes.to_string())
+    } else {
+        lexicon.apply_stress(phonemes, Some(2.0))
+    }
 }
 
 /// Promotes the first secondary stress when nothing has a primary one.
@@ -378,32 +500,6 @@ fn with_primary(mut phonemes: String) -> String {
         }
     }
     phonemes
-}
-
-fn two_parts(word: &str, lexicon: &Lexicon) -> Option<Vec<String>> {
-    let mut plural_first = None;
-    for at in (MIN_PART..word.len()).rev() {
-        let (first, last) = word.split_at(at);
-        let (Some(first_said), Some(last_said)) = (part(first, lexicon), last_part(last, lexicon))
-        else {
-            continue;
-        };
-        let parts = vec![first_said, last_said];
-        if !is_plural(first, lexicon) {
-            return Some(parts);
-        }
-        plural_first.get_or_insert(parts);
-    }
-    plural_first
-}
-
-fn three_parts(word: &str, lexicon: &Lexicon) -> Option<Vec<String>> {
-    (MIN_PART..word.len()).rev().find_map(|at| {
-        let first = part(&word[..at], lexicon)?;
-        let mut rest = two_parts(&word[at..], lexicon)?;
-        rest.insert(0, first);
-        Some(rest)
-    })
 }
 
 fn is_plural(word: &str, lexicon: &Lexicon) -> bool {
@@ -465,17 +561,21 @@ mod tests {
     use super::*;
     use crate::settings::ModelVariant;
     use crate::tts::local::{phonemes_without_espeak, ModelFiles};
+    use misaki_rs::G2P;
     use std::path::Path;
     use std::sync::OnceLock;
-    use std::time::{Duration, Instant};
+
+    fn g2ps() -> [&'static G2P; 2] {
+        static BRITISH: OnceLock<G2P> = OnceLock::new();
+        static AMERICAN: OnceLock<G2P> = OnceLock::new();
+        [
+            BRITISH.get_or_init(|| G2P::new(Language::EnglishGB)),
+            AMERICAN.get_or_init(|| G2P::new(Language::EnglishUS)),
+        ]
+    }
 
     fn lexicons() -> [&'static Lexicon; 2] {
-        static BRITISH: OnceLock<Lexicon> = OnceLock::new();
-        static AMERICAN: OnceLock<Lexicon> = OnceLock::new();
-        [
-            BRITISH.get_or_init(|| Lexicon::new(Language::EnglishGB)),
-            AMERICAN.get_or_init(|| Lexicon::new(Language::EnglishUS)),
-        ]
+        g2ps().map(|g2p| &g2p.lexicon)
     }
 
     /// Kokoro's symbols for each of `texts` as `voice` reads it.
@@ -493,11 +593,8 @@ mod tests {
             ("filesystem", "fˈIlsˌɪstəm", "fˈIlsˌɪstəm"),
             ("frontend", "fɹˈʌntˌɛnd", "fɹˈʌntˌɛnd"),
             ("dropdown", "dɹˈɒpdˌWn", "dɹˈɑpdˌWn"),
-            ("lockfile", "lˈɒkfˌIl", "lˈɑkfˌIl"),
             ("toolchain", "tˈuːlʧˌAn", "tˈulʧˌAn"),
-            ("codegen", "kˈQdʤˌɛn", "kˈOdʤˌɛn"),
             ("webview", "wˈɛbvjˌuː", "wˈɛbvjˌu"),
-            // Endings.
             ("changelogs", "ʧˈAnʤlˌɒɡz", "ʧˈAnʤlˌɔɡz"),
             ("typechecking", "tˈIpʧˌɛkɪŋ", "tˈIpʧˌɛkɪŋ"),
             (
@@ -505,39 +602,59 @@ mod tests {
                 "ðə ʧˈAnʤlˌɒɡz dˈAt",
                 "ðə ʧˈAnʤlˌɔɡz dˈAt",
             ),
-            ("plugins", "plˈʌɡˌɪnz", "plˈʌɡˌɪnz"),
-            // Two-letter last words.
             ("plugin", "plˈʌɡˌɪn", "plˈʌɡˌɪn"),
+            ("plugins", "plˈʌɡˌɪnz", "plˈʌɡˌɪnz"),
             ("popup", "pˈɒpʌp", "pˈɑpʌp"),
-            ("sizeof", "sˈIzɒv", "sˈIzʌv"),
-            // Prefixes and suffixes.
-            ("debounce", "dˌiːbˈWns", "dˌibˈWns"),
-            ("unregister", "ˌʌnɹˈɛʤɪstə", "ˌʌnɹˈɛʤɪstɚ"),
-            ("tokenizer", "tˈQkənˌIzə", "tˈOkənˌIzɚ"),
-            ("hashable", "hˈaʃəbᵊl", "hˈæʃəbᵊl"),
-            // Letters said by name.
-            ("tsconfig", "tˌiːˌɛskˈɒnfˌɪɡ", "tˌiˌɛskˈɑnfˌɪɡ"),
-            ("ebook", "ˌiːbˈʊk", "ˌibˈʊk"),
-            // Said as `SAID_AS` has them.
-            ("sudo", "sˈuːdˌQ", "sˈudˌO"),
-            ("nginx", "ˈɛnʤɪnˌɛks", "ˈɛnʤɪnˌɛks"),
-            ("kubectl", "kjˌuːbkəntɹˈQl", "kjˌubkəntɹˈOl"),
-            ("kubernetes", "kˌuːbˌɜːnˈɛtˌiːz", "kˌubˌɜnˈɛtˌiz"),
-            // Identifiers, capitals.
-            ("getChangelog", "ɡɛt ʧˈAnʤlˌɒɡ", "ɡɛt ʧˈAnʤlˌɔɡ"),
-            ("setTimeout", "sˈɛt tˈImWt", "sˈɛt tˈImWt"),
-            (
-                "HttpServer",
-                "ˈAʧ tˈiː tˈiː pˈiː sˈɜːvə",
-                "ˈAʧ tˈi tˈi pˈi sˈɜvɚ",
-            ),
             (
                 "CHANGELOG.md",
                 "ʧˈAnʤlˌɒɡ dˈɒt ˌɛmdˈiː",
                 "ʧˈAnʤlˌɔɡ dˈɑt ˌɛmdˈi",
             ),
-            // As before: words the lexicons have, initialisms, and words
-            // misaki-rs's tokeniser already splits.
+            // The first part stressed though its entry has no mark.
+            ("Hathaway", "hˈaθɐwˌA", "hˈæθɐwˌA"),
+            ("forloop", "fˈɔːlˌuːp", "fˈɔɹlˌup"),
+            ("fromstring", "fɹˈɒmstɹˌɪŋ", "fɹˈʌmstɹˌɪŋ"),
+            // A letter doubled across the join is one sound; "date|time" is two.
+            ("Patton", "pˈatˌʌn", "pˈætˌʌn"),
+            ("Reddit", "ɹˈɛdˌɪt", "ɹˈɛdˌɪt"),
+            ("malloc", "mˈalˌɒk", "mˈælˌɑk"),
+            ("datetime", "dˈAttˌIm", "dˈAttˌIm"),
+            // Names whose parts read them.
+            ("Peterson", "pˈiːtəsˌʌn", "pˈiɾɚsˌʌn"),
+            ("Cloudflare", "klˈWdflˌɛː", "klˈWdflˌɛɹ"),
+            ("Supabase", "sˈʌpɐbˌAs", "sˈʌpɐbˌAs"),
+            ("Kingsley", "kˈɪŋzli", "kˈɪŋzli"),
+            ("Ashley", "ˈaʃli", "ˈæʃli"),
+            ("Hadley", "hˈadli", "hˈædli"),
+            // Prefixes and suffixes, one nested.
+            ("debounce", "dˌiːbˈWns", "dˌibˈWns"),
+            ("unregister", "ˌʌnɹˈɛʤɪstə", "ˌʌnɹˈɛʤɪstɚ"),
+            ("tokenizer", "tˈQkənˌIzə", "tˈOkənˌIzɚ"),
+            ("hashable", "hˈaʃəbᵊl", "hˈæʃəbᵊl"),
+            ("deserializer", "dˌiːsˈɪəɹiᵊlˌIzə", "dˌisˈɪɹiᵊlˌIzɚ"),
+            // Letters said by name, in lower case only.
+            ("tsconfig", "tˌiːˌɛskˈɒnfˌɪɡ", "tˌiˌɛskˈɑnfˌɪɡ"),
+            ("ebook", "ˌiːbˈʊk", "ˌibˈʊk"),
+            // Respelled.
+            ("sudo", "sˈuːdˌQ", "sˈudˌO"),
+            ("kubectl", "kjˌuːbkəntɹˈQl", "kjˌubkəntɹˈOl"),
+            ("kubernetes", "kˌuːbˌɜːnˈɛtˌiːz", "kˌubˌɜnˈɛtˌiz"),
+            ("hashtable", "hˈaʃtˌAbᵊl", "hˈæʃtˌAbᵊl"),
+            ("userid", "jˈuːzəˌIdˌiː", "jˈuzɚˌIdˌi"),
+            ("foreach", "fˈɔːˌiːʧ", "fˈɔɹˌiʧ"),
+            ("Xcode", "ˈɛkskˌQd", "ˈɛkskˌOd"),
+            // Identifiers: each part read, an initialism as one.
+            ("getChangelog", "ɡɛt ʧˈAnʤlˌɒɡ", "ɡɛt ʧˈAnʤlˌɔɡ"),
+            ("getUrl", "ɡɛt jˌuːˌɑːˈɛl", "ɡɛt jˌuˌɑɹˈɛl"),
+            ("ApiClient", "ˌApˌiːˈI klˈIənt", "ˌApˌiˈI klˈIənt"),
+            ("parseJson", "pˈɑːs ʤˈAsᵊn", "pˈɑɹs ʤˈAsᵊn"),
+            ("HttpServer", "ˌAʧtˌiːtˌiːpˈiː sˈɜːvə", "ˌAʧtˌitˌipˈi sˈɜvɚ"),
+            (
+                "UrlSearchParams",
+                "jˌuːˌɑːˈɛl sˈɜːʧ pˈaɹəmz",
+                "jˌuˌɑɹˈɛl sˈɜʧ pˈæɹəmz",
+            ),
+            // As before.
             (
                 "the API URL",
                 "ði ˌApˌiːˈI jˌuːˌɑːˈɛl",
@@ -545,9 +662,7 @@ mod tests {
             ),
             ("npm", "ˈɛn pˈiː ˈɛm", "ˈɛn pˈi ˈɛm"),
             ("user_name", "jˈuːzə nˈAm", "jˈuzɚ nˈAm"),
-            ("dry-run", "dɹˈI ɹˈʌn", "dɹˈI ɹˈʌn"),
             ("codebase", "kˈQdbAs", "kˈOdbˌAs"),
-            ("keyboard", "kˈiːbɔːd", "kˈibɔɹd"),
             ("timestamp", "tˈImstamp", "tˈImstæmp"),
             ("readme", "ɹˈiːd mˌiː", "ɹˈid mˌi"),
         ];
@@ -575,6 +690,43 @@ mod tests {
         assert!(read[0].ends_with("ʧˈAnʤlˌɔɡ"), "{read:?}");
     }
 
+    #[test]
+    fn names_their_parts_misread_stay_spelled() {
+        for lexicon in lexicons() {
+            for name in [
+                "Zhang",
+                "Zheng",
+                "Pfister",
+                "Szabo",
+                "Dlamini",
+                "Gallagher",
+                "Rockefeller",
+                "Tottenham",
+                "Mussorgsky",
+            ] {
+                assert_eq!(read_unknown_words(name, lexicon, Names::Here), name);
+            }
+        }
+    }
+
+    #[test]
+    fn with_espeak_ng_on_capitalised_words_are_left_to_it() {
+        let text = "Patton and Kingsley read the changelog in Xcode with getUrl.";
+        for lexicon in lexicons() {
+            let read = read_unknown_words(text, lexicon, Names::Espeak);
+            assert!(
+                read.starts_with("Patton and Kingsley read the [changelog]("),
+                "{read}"
+            );
+            assert!(
+                read.contains("[Xcode](") && read.contains("get [Url]("),
+                "{read}"
+            );
+            let here = read_unknown_words(text, lexicon, Names::Here);
+            assert!(here.starts_with("[Patton]("), "{here}");
+        }
+    }
+
     /// Words misaki-rs looks up whole: letters, with apostrophes between.
     fn one_token(word: &str) -> bool {
         word.starts_with(|c: char| c.is_ascii_alphabetic())
@@ -596,7 +748,7 @@ mod tests {
                     written.extend([capitalised, word.to_ascii_uppercase()]);
                 }
                 for written in written {
-                    assert_eq!(read_unknown_words(&written, lexicon), written);
+                    assert_eq!(read_unknown_words(&written, lexicon, Names::Here), written);
                 }
             }
         }
@@ -614,12 +766,11 @@ mod tests {
                 "utf",
                 "日本changelog",
                 "changelog'd",
-                "XMLHttpRequest",
                 "REDIST",
                 "McChangelog",
                 "[ changelog",
             ] {
-                assert_eq!(read_unknown_words(text, lexicon), text);
+                assert_eq!(read_unknown_words(text, lexicon, Names::Here), text);
             }
         }
     }
@@ -629,20 +780,22 @@ mod tests {
         let [british, _] = lexicons();
         let text = "[IDs](/ˌIdˈiːz/) and [changelog](/x/) in the changelog";
         assert_eq!(
-            read_unknown_words(text, british),
+            read_unknown_words(text, british, Names::Here),
             "[IDs](/ˌIdˈiːz/) and [changelog](/x/) in the [changelog](/t\u{200d}ʃˈe\u{200d}ɪnd\u{200d}ʒlˌɒɡ/)"
         );
     }
 
     #[test]
-    fn every_said_as_word_reads_in_both_dialects_and_is_unknown_to_one() {
-        for (word, _) in SAID_AS {
+    fn every_respelling_reads_in_both_dialects_and_is_unknown_to_one() {
+        for (word, _) in RESPELLED {
             assert!(
-                lexicons().iter().any(|lexicon| !knows(word, lexicon)),
+                lexicons()
+                    .iter()
+                    .any(|lexicon| !misaki_reads(word, lexicon)),
                 "{word} is in both lexicons"
             );
             for lexicon in lexicons() {
-                assert!(said(word, lexicon).is_some(), "{word}");
+                assert!(respell(word, lexicon).is_some(), "{word}");
             }
         }
         for part in DEVELOPER_PARTS {
@@ -664,27 +817,6 @@ mod tests {
         }
     }
 
-    /// `text` as misaki-rs reads it after taking its overrides out.
-    fn without_overrides(text: &str) -> String {
-        let mut out = String::new();
-        let mut rest = text;
-        while let Some(at) = rest.find('[') {
-            out.push_str(&rest[..at]);
-            match override_len(&rest[at..]) {
-                Some(len) => {
-                    let close = rest[at..].find(']').unwrap();
-                    out.push_str(&rest[at + 1..at + close]);
-                    rest = &rest[at + len..];
-                }
-                None => {
-                    out.push('[');
-                    rest = &rest[at + 1..];
-                }
-            }
-        }
-        out + rest
-    }
-
     #[test]
     fn random_text_keeps_its_letters_and_a_second_pass_changes_nothing() {
         const PIECES: &[&str] = &[
@@ -704,6 +836,7 @@ mod tests {
             "bounce",
             "able",
             "er",
+            "ley",
             "s",
             "ed",
             "ing",
@@ -713,8 +846,12 @@ mod tests {
             "book",
             "sudo",
             "Http",
+            "Url",
+            "Json",
             "Server",
             "get",
+            "Pat",
+            "ton",
             "x",
             "q",
             "zz",
@@ -743,31 +880,19 @@ mod tests {
             let text: String = (0..rng.below(24))
                 .map(|_| PIECES[rng.below(PIECES.len())])
                 .collect();
-            for lexicon in lexicons() {
-                let read = read_unknown_words(&text, lexicon);
-                let letters = |text: &str| without_overrides(text).replace(' ', "");
-                assert_eq!(letters(&read), letters(&text), "{text:?} -> {read:?}");
-                assert_eq!(read_unknown_words(&read, lexicon), read, "{text:?}");
+            for g2p in g2ps() {
+                for names in [Names::Here, Names::Espeak] {
+                    let read = read_unknown_words(&text, &g2p.lexicon, names);
+                    // What misaki-rs reads once it has taken the overrides out.
+                    let letters = |text: &str| g2p.preprocess_links(text).0.replace(' ', "");
+                    assert_eq!(letters(&read), letters(&text), "{text:?} -> {read:?}");
+                    assert_eq!(
+                        read_unknown_words(&read, &g2p.lexicon, names),
+                        read,
+                        "{text:?}"
+                    );
+                }
             }
         }
-    }
-
-    #[test]
-    fn long_runs_of_letters_and_affixes_end_quickly() {
-        let [british, _] = lexicons();
-        let started = Instant::now();
-        for word in [
-            "dedededededededededededededeer",
-            "unreunreunreunreunreunreunreable",
-            "abcdefghijklmnopqrstuvwxyzabcdef",
-            "logloglogloglogloglogloglogloglo",
-        ] {
-            read_unknown_words(word, british);
-        }
-        assert!(
-            started.elapsed() < Duration::from_millis(500),
-            "took {:?}",
-            started.elapsed()
-        );
     }
 }

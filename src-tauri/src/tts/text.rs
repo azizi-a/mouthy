@@ -1979,6 +1979,15 @@ fn with_suffix(word: &str, possessive: bool) -> String {
     }
 }
 
+/// What capitals said as a word are written as for the phonemiser ("JSON" is
+/// "jason").
+pub(super) fn said_as_word(capitals: &str) -> Option<&'static str> {
+    SAID_AS_WORDS
+        .iter()
+        .find(|(word, _)| *word == capitals)
+        .map(|(_, said)| *said)
+}
+
 /// An all-capital word: spelled unless it is said as a word. `plural` covers
 /// an "s" or "'s" after it.
 fn say_capitals(
@@ -1987,7 +1996,7 @@ fn say_capitals(
     shouted: bool,
     lexicon: &impl Lexicon,
 ) -> Option<String> {
-    if let Some((_, said)) = SAID_AS_WORDS.iter().find(|(word, _)| *word == capitals) {
+    if let Some(said) = said_as_word(capitals) {
         return Some(if plural {
             format!("{said}s")
         } else {

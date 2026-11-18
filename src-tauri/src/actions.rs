@@ -2491,12 +2491,13 @@ mod tests {
         }
     }
 
-    /// Writes words the lexicon lacks for a listener:
-    /// `MOUTHY_KOKORO_MODELS=<models dir> cargo test -- --ignored unknown_words_aloud --nocapture`.
+    /// Writes words the lexicon lacks for a listener, into `MOUTHY_WAV_DIR`:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> MOUTHY_WAV_DIR=<dir> cargo test -- --ignored unknown_words_aloud --nocapture`.
     #[test]
     #[ignore = "needs Kokoro model files, af_alloy and bm_lewis"]
     fn english_voices_read_unknown_words_aloud() {
         let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let out = PathBuf::from(std::env::var("MOUTHY_WAV_DIR").unwrap());
         let text = "The changelog says the backend now checks the filesystem timestamp, \
                     and getUserName was refactored.";
         for voice in ["af_alloy", "bm_lewis"] {
@@ -2519,7 +2520,7 @@ mod tests {
                 audio.extend(samples);
             }
             drop(loaded);
-            let path = std::env::temp_dir().join(format!("mouthy-unknown-words-{voice}.wav"));
+            let path = out.join(format!("mouthy-unknown-words-{voice}.wav"));
             write_wav(&path, &audio);
             println!("{}", path.display());
         }
