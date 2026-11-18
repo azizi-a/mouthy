@@ -2,8 +2,11 @@
 
 pub mod catalog;
 pub mod download;
+mod english_words;
 pub mod espeak;
 pub mod http;
+#[cfg(test)]
+mod hyphen_line_end_tests;
 mod ja;
 pub mod ja_dictionary;
 pub mod local;

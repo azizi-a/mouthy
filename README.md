@@ -78,7 +78,7 @@ Mouthy uses about 350 MB of memory once the voice has loaded, and up to about 1.
 
 ### Better pronunciation of unknown words
 
-Words an English voice's dictionary lacks, such as many names and product terms, are spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say them instead. Each new unknown word delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
+Mouthy reads many words an English voice's dictionary lacks from the words they are made of, such as changelog, getUserName or tsconfig, and says a few developer words such as sudo and kubectl the way developers do. What it cannot read that way, including most unfamiliar names, is spelled out letter by letter. If you install [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng`) and turn on Settings → General → **Pronounce unknown words with espeak-ng**, Mouthy asks it how to say those words, and any unfamiliar name, instead. Each new word it asks about delays speech a little (20–50 ms on an M4 Pro, never more than half a second). espeak-ng is GPL-3 software: Mouthy does not bundle or download it, and only runs your installed copy as a separate program.
 
 ## Languages
 

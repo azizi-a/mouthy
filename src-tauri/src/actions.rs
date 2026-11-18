@@ -2491,6 +2491,41 @@ mod tests {
         }
     }
 
+    /// Writes words the lexicon lacks for a listener, into `MOUTHY_WAV_DIR`:
+    /// `MOUTHY_KOKORO_MODELS=<models dir> MOUTHY_WAV_DIR=<dir> cargo test -- --ignored unknown_words_aloud --nocapture`.
+    #[test]
+    #[ignore = "needs Kokoro model files, af_alloy and bm_lewis"]
+    fn english_voices_read_unknown_words_aloud() {
+        let models = PathBuf::from(std::env::var("MOUTHY_KOKORO_MODELS").unwrap());
+        let out = PathBuf::from(std::env::var("MOUTHY_WAV_DIR").unwrap());
+        let text = "The changelog says the backend now checks the filesystem timestamp, \
+                    and getUserName was refactored.";
+        for voice in ["af_alloy", "bm_lewis"] {
+            let files = tts::local::ModelFiles::new(&models, settings::ModelVariant::Int8, voice);
+            let backend = tts::Backend::Local(files);
+            let sentences = sentences_for(&tts::text::normalize(text), &backend);
+            let stop = Arc::new(AtomicBool::new(false));
+            let tts::Synth::Local(mut loaded) = backend.open(&stop).unwrap() else {
+                unreachable!()
+            };
+            let mut audio = Vec::new();
+            for sentence in &sentences {
+                let samples = loaded
+                    .synthesize(&sentence.text, 1.0, sentence.ends_sentence)
+                    .unwrap();
+                assert!(
+                    samples.len() > tts::SAMPLE_RATE as usize / 2,
+                    "{sentence:?}"
+                );
+                audio.extend(samples);
+            }
+            drop(loaded);
+            let path = out.join(format!("mouthy-unknown-words-{voice}.wav"));
+            write_wav(&path, &audio);
+            println!("{}", path.display());
+        }
+    }
+
     #[test]
     fn the_server_gets_the_voice_asked_for_not_the_settings_voice() {
         let settings = AppSettings {

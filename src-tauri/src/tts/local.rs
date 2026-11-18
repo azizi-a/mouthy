@@ -6,6 +6,7 @@
 //! sessions; one session at a time holds it.
 
 use super::catalog::VoiceLanguage;
+use super::english_words::{self, Names};
 use super::espeak;
 use super::ja;
 use super::ja_dictionary::{self, Tagger};
@@ -15,7 +16,7 @@ use super::zh;
 use super::SAMPLE_RATE;
 use crate::settings::ModelVariant;
 use log::{debug, error, info, trace, warn};
-use misaki_rs::lexicon::{Lexicon, PhonemeEntry};
+use misaki_rs::lexicon::Lexicon;
 use misaki_rs::{Language, G2P};
 use ort::environment::Environment;
 use ort::logging::LogLevel;
@@ -564,8 +565,9 @@ impl Reading {
 
 /// How text becomes Kokoro's symbols in the language being read.
 enum Phonemizer {
-    /// English, from misaki's lexicons.
-    Misaki(Box<G2P>),
+    /// English, from misaki's lexicons; `names` says who reads the
+    /// capitalised words they lack.
+    Misaki { g2p: Box<G2P>, names: Names },
     /// A whole sentence at a time from espeak-ng.
     Espeak(espeak::Sentences),
 }
@@ -577,7 +579,12 @@ impl Phonemizer {
                 // Here, off the main thread, so the first sentence does not wait.
                 zh::load();
             }
-            return Ok(Self::Misaki(Box::new(build_g2p(reading))));
+            let names = match reading.english_espeak() {
+                Some(_) => Names::Espeak,
+                None => Names::Here,
+            };
+            let g2p = Box::new(build_g2p(reading));
+            return Ok(Self::Misaki { g2p, names });
         };
         let program = reading
             .espeak
@@ -605,7 +612,7 @@ impl Phonemizer {
         text: &str,
     ) -> Result<(Vec<i64>, usize), String> {
         match self {
-            Self::Misaki(g2p) => text_to_ids(g2p, tagger, language, text),
+            Self::Misaki { g2p, names } => text_to_ids(g2p, *names, tagger, language, text),
             Self::Espeak(sentences) => {
                 let (phonemes, unread) = sentences.read(&plain_text(text, language))?;
                 let (ids, dropped) = token_ids(&phonemes);
@@ -951,17 +958,21 @@ fn style_row(rows: &[f32], tokens: usize) -> &[f32] {
 /// Kokoro ids for `text`, and how many symbols had no id.
 fn text_to_ids(
     g2p: &G2P,
+    names: Names,
     tagger: Option<&Tagger>,
     language: VoiceLanguage,
     text: &str,
 ) -> Result<(Vec<i64>, usize), String> {
-    Ok(token_ids(&text_to_phonemes(g2p, tagger, language, text)?))
+    Ok(token_ids(&text_to_phonemes(
+        g2p, names, tagger, language, text,
+    )?))
 }
 
 /// Kokoro's symbols for `text`, before they become ids. Japanese is read with
 /// `tagger` when there is one, and from its kana alone when not.
 fn text_to_phonemes(
     g2p: &G2P,
+    names: Names,
     tagger: Option<&Tagger>,
     language: VoiceLanguage,
     text: &str,
@@ -970,7 +981,7 @@ fn text_to_phonemes(
     if language == VoiceLanguage::Japanese {
         // English inside Japanese text is read as American English.
         let english =
-            |latin: &str| text_to_phonemes(g2p, None, VoiceLanguage::AmericanEnglish, latin);
+            |latin: &str| text_to_phonemes(g2p, names, None, VoiceLanguage::AmericanEnglish, latin);
         let (phonemes, skipped) = ja::phonemes(&plain_text(text, language), tagger, english)?;
         if skipped > 0 {
             debug!("Skipped {skipped} kanji with no reading");
@@ -979,7 +990,7 @@ fn text_to_phonemes(
     }
     if language == VoiceLanguage::Mandarin {
         let english =
-            |latin: &str| text_to_phonemes(g2p, None, VoiceLanguage::AmericanEnglish, latin);
+            |latin: &str| text_to_phonemes(g2p, names, None, VoiceLanguage::AmericanEnglish, latin);
         let (phonemes, skipped) = zh::phonemes(&plain_text(text, language), english)?;
         if skipped > 0 {
             debug!("Skipped {skipped} Chinese characters with no reading");
@@ -987,7 +998,7 @@ fn text_to_phonemes(
         return Ok(phonemes);
     }
     let (raw, _) = g2p
-        .g2p(&reading(g2p, text, language))
+        .g2p(&reading(g2p, names, text, language))
         .map_err(|e| format!("Cannot phonemise the text: {e}"))?;
     Ok(to_kokoro_phonemes(&raw, Dialect::of(language)))
 }
@@ -1018,19 +1029,20 @@ fn phonemes_with(files: &ModelFiles, texts: &[String], tagger: Option<&Tagger>) 
     let g2p = build_g2p(&reading);
     texts
         .iter()
-        .map(|text| text_to_phonemes(&g2p, tagger, reading.language, text).unwrap())
+        .map(|text| text_to_phonemes(&g2p, Names::Here, tagger, reading.language, text).unwrap())
         .collect()
 }
 
 /// `text` as misaki-rs should get it: plain characters and, in English,
-/// abbreviations and numbers in words and initialisms spelled.
-fn reading(g2p: &G2P, text: &str, language: VoiceLanguage) -> String {
+/// abbreviations and numbers in words, initialisms spelled, and words its
+/// lexicons lack read from the words they are made of.
+fn reading(g2p: &G2P, names: Names, text: &str, language: VoiceLanguage) -> String {
     let plain = plain_text(text, language);
     if !is_english(language) {
         return plain;
     }
     let words = expand_numbers(&expand_abbreviations(&plain));
-    spell_out(&words, &g2p.lexicon)
+    english_words::read_unknown_words(&spell_out(&words, &g2p.lexicon), &g2p.lexicon, names)
 }
 
 fn is_english(language: VoiceLanguage) -> bool {
@@ -1050,25 +1062,13 @@ impl text::Lexicon for Lexicon {
     }
 
     fn spell(&self, letters: &str, plural: bool) -> String {
-        let names: Option<String> = letters
-            .chars()
-            .map(|c| match self.golds.get(&c.to_string()) {
-                Some(PhonemeEntry::Simple(name)) => Some(name.as_str()),
-                _ => None,
-            })
-            .collect();
-        let Some(names) = names else {
+        let Some(mut phonemes) = english_words::initialism(letters, self) else {
             return letters
                 .chars()
                 .map(String::from)
                 .collect::<Vec<_>>()
                 .join(" ");
         };
-        // misaki's `get_nnp`: every stress secondary, then the last primary.
-        let mut phonemes = self.apply_stress(&names, Some(0.0));
-        if let Some(at) = phonemes.rfind('ˌ') {
-            phonemes.replace_range(at..at + 'ˌ'.len_utf8(), "ˈ");
-        }
         let s = if plural {
             phonemes = self.append_s(&phonemes);
             "s"
@@ -1152,6 +1152,8 @@ fn plain_text(text: &str, language: VoiceLanguage) -> String {
             '“' | '”' | '„' => out.push('"'),
             // Minus sign.
             '\u{2212}' => out.push('-'),
+            // Hyphen and non-breaking hyphen, which misaki-rs cannot read.
+            '\u{2010}' | '\u{2011}' if fold => out.push('-'),
             // Accents typed as a separate mark after the letter ("e" + U+0301).
             '\u{300}'..='\u{36f}' if fold && out.ends_with(|c: char| c.is_ascii_alphabetic()) => {}
             // Soft hyphen, zero-width space, byte order mark.
@@ -1288,6 +1290,7 @@ mod tests {
     use super::*;
     use crate::tts::text::split_sentences;
     use misaki_rs::fallback::FallbackError;
+    use misaki_rs::lexicon::PhonemeEntry;
     use misaki_rs::Fallback;
     use std::collections::{BTreeSet, HashMap};
 
@@ -1444,8 +1447,11 @@ mod tests {
     fn only_english_has_numbers_abbreviations_and_initialisms_rewritten() {
         let g2p = G2P::new(Language::EnglishUS);
         let text = "Dr. Smith paid $5 for the API.";
-        assert_eq!(reading(&g2p, text, VoiceLanguage::Spanish), text);
-        let english = reading(&g2p, text, VoiceLanguage::AmericanEnglish);
+        assert_eq!(
+            reading(&g2p, Names::Here, text, VoiceLanguage::Spanish),
+            text
+        );
+        let english = reading(&g2p, Names::Here, text, VoiceLanguage::AmericanEnglish);
         assert!(
             english.starts_with("Doctor Smith paid five dollars for the [API]("),
             "{english}"
@@ -1490,7 +1496,7 @@ mod tests {
 
     /// Kokoro symbols for `text` as the local voice reads it.
     fn read(g2p: &G2P, language: VoiceLanguage, text: &str) -> String {
-        text_to_phonemes(g2p, None, language, text).unwrap()
+        text_to_phonemes(g2p, Names::Here, None, language, text).unwrap()
     }
 
     #[test]
@@ -1571,7 +1577,7 @@ mod tests {
         let g2p = G2P::new(Language::EnglishGB);
         let sentence = "Dr. Smith met Mr. Jones at 7.30pm.";
         assert_eq!(
-            reading(&g2p, sentence, VoiceLanguage::BritishEnglish),
+            reading(&g2p, Names::Here, sentence, VoiceLanguage::BritishEnglish),
             "Doctor Smith met Mister Jones at seven thirty PM."
         );
         let read_gb = |text| read(&g2p, VoiceLanguage::BritishEnglish, text);
@@ -1635,14 +1641,35 @@ mod tests {
     #[test]
     fn a_minus_sign_reads_as_minus() {
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let ids = |text| text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text).unwrap();
+        let ids = |text| {
+            text_to_ids(&g2p, Names::Here, None, VoiceLanguage::BritishEnglish, text).unwrap()
+        };
         assert_eq!(ids("\u{2212}5 degrees"), ids("minus five degrees"));
+    }
+
+    #[test]
+    fn unicode_hyphens_read_as_hyphens_in_english() {
+        let (g2p, unknown) = recording_g2p(Language::EnglishGB);
+        let ids = |text| {
+            text_to_ids(&g2p, Names::Here, None, VoiceLanguage::BritishEnglish, text).unwrap()
+        };
+        assert_eq!(
+            ids("non\u{2011}zero and x\u{2010}ray"),
+            ids("non-zero and x-ray")
+        );
+        assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
+        assert_eq!(
+            plain_text("non\u{2011}zero", VoiceLanguage::Spanish),
+            "non\u{2011}zero"
+        );
     }
 
     #[test]
     fn curly_double_quotes_read_as_straight_ones() {
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let ids = |text| text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text).unwrap();
+        let ids = |text| {
+            text_to_ids(&g2p, Names::Here, None, VoiceLanguage::BritishEnglish, text).unwrap()
+        };
         let (curly, dropped) = ids("She said “no” twice.");
         assert_eq!(dropped, 0);
         assert_eq!((curly.clone(), dropped), ids("She said \"no\" twice."));
@@ -1657,7 +1684,8 @@ mod tests {
     fn a_sentence_with_curly_apostrophes_loses_no_symbol() {
         let (g2p, unknown) = recording_g2p(Language::EnglishGB);
         let text = "I don’t think it’s the user’s fault that the naïve café shuts at nine o’clock.";
-        let (ids, dropped) = text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text).unwrap();
+        let (ids, dropped) =
+            text_to_ids(&g2p, Names::Here, None, VoiceLanguage::BritishEnglish, text).unwrap();
         assert_eq!(dropped, 0);
         assert!(has_phonemes(&ids));
         assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
@@ -1684,8 +1712,14 @@ mod tests {
             assert_eq!(plain_english(kept), kept);
         }
         let (g2p, _) = recording_g2p(Language::EnglishGB);
-        let (ids, _) =
-            text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, "Tea — or coffee").unwrap();
+        let (ids, _) = text_to_ids(
+            &g2p,
+            Names::Here,
+            None,
+            VoiceLanguage::BritishEnglish,
+            "Tea — or coffee",
+        )
+        .unwrap();
         assert!(ids.contains(&3), "a comma id: {ids:?}");
     }
 
@@ -1804,7 +1838,7 @@ mod tests {
         };
         assert!(matches!(
             Phonemizer::new(&english),
-            Ok(Phonemizer::Misaki(_))
+            Ok(Phonemizer::Misaki { .. })
         ));
     }
 
@@ -1846,7 +1880,7 @@ mod tests {
     fn japanese_with(tagger: Option<&Tagger>, text: &str) -> String {
         let g2p =
             build_g2p(&ModelFiles::new(Path::new("/m"), ModelVariant::Int8, "jm_kumo").reading());
-        text_to_phonemes(&g2p, tagger, VoiceLanguage::Japanese, text).unwrap()
+        text_to_phonemes(&g2p, Names::Here, tagger, VoiceLanguage::Japanese, text).unwrap()
     }
 
     fn japanese(text: &str) -> String {
@@ -1893,8 +1927,14 @@ mod tests {
                 text::split_sentences_with(&text, files.max_chunk_chars(&text), files.marks(&text));
             assert!(chunks.iter().any(|chunk| chunk.text.chars().count() > 120));
             for chunk in &chunks {
-                let (ids, dropped) =
-                    text_to_ids(&g2p, tagger, VoiceLanguage::Japanese, &chunk.text).unwrap();
+                let (ids, dropped) = text_to_ids(
+                    &g2p,
+                    Names::Here,
+                    tagger,
+                    VoiceLanguage::Japanese,
+                    &chunk.text,
+                )
+                .unwrap();
                 assert_eq!(dropped, 0, "{}", chunk.text);
                 assert!(
                     ids.len() <= PIECE_TOKENS,
@@ -1961,8 +2001,14 @@ mod tests {
                 "{}",
                 chunk.text
             );
-            let (ids, dropped) =
-                text_to_ids(&g2p, None, VoiceLanguage::Mandarin, &chunk.text).unwrap();
+            let (ids, dropped) = text_to_ids(
+                &g2p,
+                Names::Here,
+                None,
+                VoiceLanguage::Mandarin,
+                &chunk.text,
+            )
+            .unwrap();
             assert_eq!(dropped, 0, "{}", chunk.text);
             assert!(
                 ids.len() <= PIECE_TOKENS,
@@ -1989,7 +2035,7 @@ mod tests {
             .filter(|line| !line.starts_with('#'))
             .filter_map(|line| line.split_once('\t'))
         {
-            let read = text_to_phonemes(&g2p, None, files.language(), text).unwrap();
+            let read = text_to_phonemes(&g2p, Names::Here, None, files.language(), text).unwrap();
             assert_eq!(read, expected, "{text}");
         }
     }
@@ -1998,10 +2044,18 @@ mod tests {
     fn english_inside_mandarin_reads_as_an_american_voice_reads_it() {
         let g2p = G2P::new(Language::EnglishUS);
         let american = |text: &str| {
-            text_to_phonemes(&g2p, None, VoiceLanguage::AmericanEnglish, text).unwrap()
+            text_to_phonemes(
+                &g2p,
+                Names::Here,
+                None,
+                VoiceLanguage::AmericanEnglish,
+                text,
+            )
+            .unwrap()
         };
-        let mandarin =
-            |text: &str| text_to_phonemes(&g2p, None, VoiceLanguage::Mandarin, text).unwrap();
+        let mandarin = |text: &str| {
+            text_to_phonemes(&g2p, Names::Here, None, VoiceLanguage::Mandarin, text).unwrap()
+        };
         for english in [
             "OK",
             "iPhone",
@@ -2044,13 +2098,22 @@ mod tests {
     fn english_inside_japanese_reads_as_an_american_voice_reads_it() {
         let g2p = G2P::new(Language::EnglishUS);
         let american = |text: &str| {
-            text_to_phonemes(&g2p, None, VoiceLanguage::AmericanEnglish, text).unwrap()
+            text_to_phonemes(
+                &g2p,
+                Names::Here,
+                None,
+                VoiceLanguage::AmericanEnglish,
+                text,
+            )
+            .unwrap()
         };
-        let japanese =
-            |text: &str| text_to_phonemes(&g2p, None, VoiceLanguage::Japanese, text).unwrap();
+        let japanese = |text: &str| {
+            text_to_phonemes(&g2p, Names::Here, None, VoiceLanguage::Japanese, text).unwrap()
+        };
         let tagger = ja_dictionary::tagger_for_test();
-        let tagged =
-            |text: &str| text_to_phonemes(&g2p, tagger, VoiceLanguage::Japanese, text).unwrap();
+        let tagged = |text: &str| {
+            text_to_phonemes(&g2p, Names::Here, tagger, VoiceLanguage::Japanese, text).unwrap()
+        };
         for english in [
             "£4.99",
             "10:30 a.m.",
@@ -2357,7 +2420,7 @@ mod tests {
     fn a_long_sentence_is_read_in_one_inference() {
         let g2p = G2P::new(Language::EnglishGB);
         let ids = |text: &str| {
-            text_to_ids(&g2p, None, VoiceLanguage::BritishEnglish, text)
+            text_to_ids(&g2p, Names::Here, None, VoiceLanguage::BritishEnglish, text)
                 .unwrap()
                 .0
         };
@@ -2622,7 +2685,12 @@ mod tests {
         let (mut oov, mut read_by_espeak) = (0, 0);
         for text in CORPUS {
             let (raw, _) = g2p
-                .g2p(&reading(&g2p, text, VoiceLanguage::BritishEnglish))
+                .g2p(&reading(
+                    &g2p,
+                    Names::Here,
+                    text,
+                    VoiceLanguage::BritishEnglish,
+                ))
                 .unwrap();
             let phonemes = to_kokoro_phonemes(&raw, Dialect::British);
             let words = std::mem::take(&mut *unknown.lock().unwrap());
@@ -2630,8 +2698,14 @@ mod tests {
             assert_eq!(token_ids(&phonemes).1, 0, "{text}");
             oov += words.len();
             let Some(espeak) = &espeak else { continue };
-            let (ids, dropped) =
-                text_to_ids(espeak, None, VoiceLanguage::BritishEnglish, text).unwrap();
+            let (ids, dropped) = text_to_ids(
+                espeak,
+                Names::Here,
+                None,
+                VoiceLanguage::BritishEnglish,
+                text,
+            )
+            .unwrap();
             assert_eq!(dropped, 0, "{text}");
             assert!(has_phonemes(&ids));
             for word in &words {
