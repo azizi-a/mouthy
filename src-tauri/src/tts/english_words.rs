@@ -118,8 +118,9 @@ pub(super) fn read_unknown_words(text: &str, lexicon: &Lexicon, names: Names) ->
                 lone_bracket = true;
                 1
             }),
+            // A "](" nothing closes would take in the first override written after it.
+            ']' if text[i + 1..].starts_with('(') && !text[i + 1..].contains(')') => break,
             ']' => {
-                // "](" with no ")" after it: any ")" written later would close it.
                 lone_bracket = lone_bracket && text[i + 1..].starts_with('(');
                 1
             }
@@ -887,6 +888,8 @@ mod tests {
             }
         }
     }
+                "[x](]changelog",
+                "sign[x](/zx]sdesCHANGE",
 
     #[test]
     fn overrides_already_in_the_text_are_kept() {
@@ -979,6 +982,7 @@ mod tests {
             "1",
             "8",
             "-",
+            "](",
             "_",
             ".",
             " ",
