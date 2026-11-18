@@ -1,4 +1,4 @@
-# Assembled by hand from: the repository LICENSE and NOTICE; each crate's licence file as published on crates.io; hexgrad/misaki's LICENSE; polm/cutlet's and Greatdane/Convert-Numbers-to-Japanese's LICENSE; jpreprocess/jpreprocess's, jpreprocess/jlabel's and lindera/lindera's LICENSE and jpreprocess's NOTICE; the jpreprocess-naist-jdic crate's NOTICE.txt; the LICENSE of cedarwood 0.4.6, facebook/zstd 1.5.7, gyscos/zstd-rs, fxsjy/jieba, mozillazg/pinyin-data, mozillazg/phrase-pinyin-data 0.19.0, pypinyin 0.55.0, stefantaubert/pinyin-to-ipa and cn2an 0.5.24; the Kokoro-82M model cards; microsoft/onnxruntime's LICENSE and ThirdPartyNotices.txt at tag v1.31.0.
+# Assembled by hand from: the repository LICENSE and NOTICE; each crate's licence file as published on crates.io; hexgrad/misaki's LICENSE; polm/cutlet's and Greatdane/Convert-Numbers-to-Japanese's LICENSE; jpreprocess/jpreprocess's, jpreprocess/jlabel's and lindera/lindera's LICENSE and jpreprocess's NOTICE; the jpreprocess-naist-jdic crate's NOTICE.txt; the LICENSE of cedarwood 0.4.6, facebook/zstd 1.5.7, gyscos/zstd-rs, fxsjy/jieba, mozillazg/pinyin-data, mozillazg/phrase-pinyin-data 0.19.0, pypinyin 0.55.0, stefantaubert/pinyin-to-ipa and cn2an 0.5.24; the Kokoro-82M model cards; microsoft/onnxruntime's LICENSE and ThirdPartyNotices.txt at tag v1.31.0; Debian's copyright files for the Ubuntu 24.04 libraries in the Linux AppImage.
 
 MOUTHY: LICENCE AND THIRD-PARTY NOTICES
 
@@ -632,6 +632,46 @@ Unpacks the downloaded Japanese dictionary.
 ------------------------------------------------------------------------------
 
 Copyright (c) 2014-2026 Alex Crichton
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+==============================================================================
+unicode-normalization
+==============================================================================
+
+Version: 0.1.25
+Licence: MIT OR Apache-2.0 (used under MIT)
+Copyright: (c) 2015 The Rust Project Developers
+Source: https://github.com/unicode-rs/unicode-normalization
+
+Composes accented letters before espeak-ng reads them, and normalises
+Japanese text.
+
+------------------------------------------------------------------------------
+
+Copyright (c) 2015 The Rust Project Developers
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
@@ -7688,6 +7728,61 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+==============================================================================
+Linux AppImage: system libraries
+==============================================================================
+
+The Linux AppImage, unlike the deb and rpm, carries shared libraries from
+Ubuntu 24.04, unmodified, in its usr/lib folder; Mouthy loads them at run
+time. Each library's copyright holders and licence text are in its package's
+copyright file (/usr/share/doc/<package>/copyright on Ubuntu), and its source
+is in Ubuntu's archive (apt-get source <package>, or
+https://launchpad.net/ubuntu/+source/<package>). You may replace any of them:
+run the AppImage with --appimage-extract, change the file in
+squashfs-root/usr/lib and start squashfs-root/AppRun.
+
+Licences of the libraries it carries (source package in brackets where its
+name differs), as Debian's copyright files give them:
+
+- GTK 3 [gtk+3.0], Pango [pango1.0], GDK-Pixbuf [gdk-pixbuf]: LGPL-2+ and
+  LGPL-2.1+
+- WebKitGTK and JavaScriptCore [webkit2gtk]: BSD-2-Clause, LGPL-2+ and
+  LGPL-2.1+, by file
+- GLib, GIO and GObject [glib2.0]: LGPL-2.1+
+- ATK, AT-SPI and the ATK bridge [at-spi2-core]: LGPL-2+
+- librsvg, libsoup 3 [libsoup3], libgudev, GStreamer [gstreamer1.0] and its
+  base libraries [gst-plugins-base1.0]: LGPL-2+
+- libsecret, libmanette, Enchant [enchant-2], libthai, libdatrie, libsystemd
+  and libudev [systemd], libmount and libblkid [util-linux], GnuTLS
+  [gnutls28], libgcrypt [libgcrypt20], libtasn1 [libtasn1-6], libcolord
+  [colord]: LGPL-2.1+
+- libkeyutils [keyutils], the Avahi client libraries [avahi]: LGPL-2+
+- libseccomp: LGPL-2.1
+- cairo: LGPL-2.1 or MPL-1.1
+- Graphite [graphite2]: LGPL-2.1+ or MPL-1.1 or GPL-2+
+- Hyphen: GPL-2+ or LGPL-2.1+ or MPL-1.1+
+- Nettle and Hogweed [nettle], libidn2, libelf and libdw [elfutils]:
+  LGPL-3+ or GPL-2+
+- libunistring: LGPL-3+
+- libayatana-appindicator: LGPL-2.1 or LGPL-3
+- libayatana-indicator: GPL-3
+- ayatana-ido and libdbusmenu: LGPL-2.1 or LGPL-3, and GPL-3, by file
+- libjbig [jbigkit]: GPL-2+
+- libatomic [gcc-14]: GPL-3+ with the GCC Runtime Library Exception
+- gtk-layer-shell: MIT, with some files LGPL-3+
+- D-Bus: AFL-2.1 or GPL-2+
+- CUPS: Apache-2.0 with an exception for linking with GPL-2 and
+  LGPL-2 software
+- OpenSSL, Lerc: Apache-2.0
+- The X11 client libraries, libxkbcommon, pixman, HarfBuzz, libepoxy,
+  libxml2, libxslt, Little CMS [lcms2], ICU, libpsl, libevdev, libffi,
+  libdeflate, libunwind, nghttp2, Brotli: MIT and similar
+- p11-kit, libwebp, libbsd, libmd, PCRE2, libcap [libcap2], Zstandard
+  [libzstd], LZ4, ORC, libjpeg-turbo, libpng, libtiff, bzip2, Kerberos
+  [krb5]: BSD-style or similar permissive licences (libcap and Zstandard
+  offer GPL-2 too)
+- XZ [xz-utils]: 0BSD; SQLite [sqlite3], libselinux: public domain
 
 ==============================================================================
 Other dependencies
