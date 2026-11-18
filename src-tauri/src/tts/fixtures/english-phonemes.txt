@@ -42,7 +42,7 @@ bm_lewis	true	ɐ wˈɒn bˈiː tˈuː sˈiː θɹˈiː dˈiː fˈɪks: ɹɪflˈQ
 bm_lewis	true	nˈIn ˈɛf ˈAt ˈiː sˈɛvən dˈiː sˈɪks fˈiːt: dɪfˈɒlt vˈYs ˈalY fɔː fɹˈɛʃ ɪnstˈɔːlz
 bm_lewis	true	ˈiː fˈɔː ˈɛf fˈIv ɐ sˈɪks bˈiː ʧˈɔː: bˈʌmp vˈɜːʃən tə zˈɪəɹQ pˈYnt tˈuː pˈYnt zˈɪəɹQ fɔː ðə ɹɪlˈiːs
 bm_lewis	true	lˈɛt wˈɜːdz tˈɛkst dˈɒt splˈɪt wˈItspAs;
-bm_lewis	true	pˈiː ˈɑː ˈI ˈɛn tˈiː ˈɛl ˈɛn!, wˈɜːdz dˈɒt kˈWnt;
+bm_lewis	true	pɹˈɪntlˌIn!, wˈɜːdz dˈɒt kˈWnt;
 bm_lewis	true	jˌuː ʃˌʊd hˈɪə: ðə sɐfˈɑːɹi pˈaɹəɡɹˌaf az wˈɒn sˈɛntəns, wɪð nˈQ stˈɒp bɪfˌɔː vˈɪʒuːᵊl stjˈuːdɪˌQ kˈQd ɔːɹ klˈɔːd kˈQd; ˈiːʧ bˈʊlɪt az wˈɒn sˈɛntəns; ðə θɹˈiː hˈɛdɪŋz, ðə θɹˈiː ʧˈat lˈInz, ðə θɹˈiː tˈAbᵊl ɹˈQz, ðə θɹˈiː lˈɒɡ lˈInz and ðə tˈuː kəmpˈIlə lˈInz ˈiːʧ az ðɛː ˈQn sˈɛntəns; ðə klˈɔːd kˈQd pˈaɹəɡɹˌaf az tˈuː hˈQl sˈɛntənsɪz; ðə kəmˈand and ˈiːʧ kəmˈɪt lˈIn ˌɒn ɪts ˈQn.
 bm_lewis	true	ðə kˈQd blˈɒk ɪz ɹˈiːd az ɹˈɪtən, wˈɒn sˈɛntəns pɜː lˈIn; ɪts fˈɛnsɪz ɑːɹ sˈIlənt.
 bm_lewis	true	pˈɑːt θɹˈiː: pˈɔːzɪz and sˈɛntənsɪz
@@ -69,7 +69,7 @@ bm_lewis	true	dˈɒktə smˈɪθ and mˈɪsəs ʤˈQnz mˈɛt pɹəfˈɛsə bɹ�
 bm_lewis	true	kˈats vˈɜːsɪz dˈɒɡz, ɐpɹˈɒksɪmətli fˈɔːti ɒv ˈiːʧ, ˈɛt sˈɛtəɹə.
 bm_lewis	true	sˈiː nˈʌmbə fˈIv, kˈaptɪn hˈʊk and smˈɪθ ʤˈuːnjə at sˈAnt pˈɔːlz.
 bm_lewis	true	mˈɪz smˈɪθ mˈɛt dˈɒktə hˌuː,
-bm_lewis	true	ʤˈɛn zˈiː and ʤˈɛnəɹᵊl pˈattˌʌn.
+bm_lewis	true	ʤˈɛn zˈiː and ʤˈɛnəɹᵊl pˈatˌʌn.
 bm_lewis	true	tˈuːlz, ˌiːʤˈiː hˈaməz,
 bm_lewis	true	ˌIˈiː ðə hˈɛvi wˈɒnz, at sˈɛvən ˌAˈɛm ɔːɹ fˈIv pˌiːˈɛm.
 bm_lewis	true	ði ˌApˌiːˈI, jˌuːˌɑːˈɛl and ˌAʧtˌiːtˌiːpˈiː spˈɛks ɑːɹ ˌɒn ɡˈɪt hˈʌb.
@@ -139,7 +139,7 @@ af_alloy	true	ɐ wˈʌn bˈi tˈu sˈi θɹˈi dˈi fˈɪks: ɹᵻflˈO ɹˈæpt
 af_alloy	true	nˈIn ˈɛf ˈAt ˈi sˈɛvən dˈi sˈɪks fˈit: dᵻfˈɔlt vˈYs ˈælY fɔɹ fɹˈɛʃ ɪnstˈɔlz
 af_alloy	true	ˈi fˈɔɹ ˈɛf fˈIv ɐ sˈɪks bˈi ʧˈɔɹ: bˈʌmp vˈɜʒən tə zˈiəɹO pˈYnt tˈu pˈYnt zˈiəɹO fɔɹ ðə ɹᵻlˈis
 af_alloy	true	lˈɛt wˈɜdz tˈɛkst dˈɑt splˈɪt wˈItspAs;
-af_alloy	true	pˈi ˈɑɹ ˈI ˈɛn tˈi ˈɛl ˈɛn!, wˈɜdz dˈɑt kˈWnt;
+af_alloy	true	pɹˈɪntlˌIn!, wˈɜdz dˈɑt kˈWnt;
 af_alloy	true	jˌu ʃˌʊd hˈɪɹ: ðə sɐfˈɑɹɹi pˈæɹəɡɹˌæf æz wˈʌn sˈɛntəns, wɪð nˈO stˈɑp bᵻfˌɔɹ vˈɪʒuᵊl stˈudɪˌO kˈOd ɔɹ klˈɔd kˈOd; ˈiʧ bˈʊlɪt æz wˈʌn sˈɛntəns; ðə θɹˈi hˈɛdɪŋz, ðə θɹˈi ʧˈæt lˈInz, ðə θɹˈi tˈAbᵊl ɹˈOz, ðə θɹˈi lˈɔɡ lˈInz ænd ðə tˈu kəmpˈIlɚ lˈInz ˈiʧ æz ðɛɹ ˈOn sˈɛntəns; ðə klˈɔd kˈOd pˈæɹəɡɹˌæf æz tˈu hˈOl sˈɛntənsᵻz; ðə kəmˈænd ænd ˈiʧ kəmˈɪt lˈIn ˌɔn ɪts ˈOn.
 af_alloy	true	ðə kˈOd blˈɑk ɪz ɹˈid æz ɹˈɪʔᵊn, wˈʌn sˈɛntəns pɜ lˈIn; ɪts fˈɛnsᵻz ɑɹ sˈIlənt.
 af_alloy	true	pˈɑɹt θɹˈi: pˈɔzᵻz ænd sˈɛntənsᵻz
@@ -166,7 +166,7 @@ af_alloy	true	dˈɑktɚ smˈɪθ ænd mˈɪsəs ʤˈOnz mˈɛt pɹəfˈɛsɚ bɹ
 af_alloy	true	kˈæts vˈɜsᵻz dˈɑɡz, ɐpɹˈɑksɪmətli fˈɔɹɾi ʌv ˈiʧ, ˈɛt sˈɛɾɚɹə.
 af_alloy	true	sˈi nˈʌmbɚ fˈIv, kˈæptɪn hˈʊk ænd smˈɪθ ʤˈunjɚ æɾ sˈAnt pˈɔlz.
 af_alloy	true	mˈɪz smˈɪθ mˈɛt dˈɑktɚ hˌu,
-af_alloy	true	ʤˈɛn zˈi ænd ʤˈɛnɚɹᵊl pˈættˌʌn.
+af_alloy	true	ʤˈɛn zˈi ænd ʤˈɛnɚɹᵊl pˈætˌʌn.
 af_alloy	true	tˈulz, ˌiʤˈi hˈæmɚz,
 af_alloy	true	ˌIˈi ðə hˈɛvi wˈʌnz, æɾ sˈɛvən ˌAˈɛm ɔɹ fˈIv pˌiˈɛm.
 af_alloy	true	ði ˌApˌiˈI, jˌuˌɑɹˈɛl ænd ˌAʧtˌitˌipˈi spˈɛks ɑɹ ˌɔn ɡˈɪt hˈʌb.
