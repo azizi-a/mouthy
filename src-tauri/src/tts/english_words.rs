@@ -776,6 +776,11 @@ mod tests {
         // Text, then `bm_lewis` and `af_alloy`.
         let cases = [
             ("imple-mentation", "ˌɪmplɪməntˈAʃən", "ˌɪmplɪməntˈAʃən"),
+            (
+                "imple\u{2010}mentation",
+                "ˌɪmplɪməntˈAʃən",
+                "ˌɪmplɪməntˈAʃən",
+            ),
             ("chan-gelog", "ʧˈAnʤlˌɒɡ", "ʧˈAnʤlˌɔɡ"),
         ];
         let texts: Vec<&str> = cases.iter().map(|&(text, _, _)| text).collect();
@@ -883,13 +888,13 @@ mod tests {
                 "REDIST",
                 "McChangelog",
                 "[ changelog",
+                "[x](]changelog",
+                "sign[x](/zx]sdesCHANGE",
             ] {
                 assert_eq!(read_unknown_words(text, lexicon, Names::Here), text);
             }
         }
     }
-                "[x](]changelog",
-                "sign[x](/zx]sdesCHANGE",
 
     #[test]
     fn overrides_already_in_the_text_are_kept() {
@@ -977,12 +982,12 @@ mod tests {
             "]",
             "(",
             ")",
+            "](",
             "/",
             "[ID](/ˌIdˈiː/)",
             "1",
             "8",
             "-",
-            "](",
             "_",
             ".",
             " ",

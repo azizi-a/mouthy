@@ -716,7 +716,8 @@ fn ends_sentence(body: &str) -> bool {
 /// compound such as "well-known".
 fn wrapped_hyphen(body: &str) -> bool {
     let mut end = body.chars().rev();
-    end.next() == Some('-') && end.next().is_some_and(char::is_alphabetic)
+    matches!(end.next(), Some('-' | '\u{2010}' | '\u{2011}'))
+        && end.next().is_some_and(char::is_alphabetic)
 }
 
 /// A first sentence longer than this many words is cut at a clause break, so
@@ -2642,6 +2643,10 @@ mod tests {
                 "- Turn the imple-\nmentation on again before the release goes out to everyone"
             ),
             vec!["- Turn the imple-mentation on again before the release goes out to everyone"]
+        );
+        assert_eq!(
+            reflowed("We must re\u{2010}\nenable the non\u{2011}\nblocking cache."),
+            vec!["We must re\u{2010}enable the non\u{2011}blocking cache."]
         );
         assert_eq!(
             normalize("Read the change-\n    log first."),
