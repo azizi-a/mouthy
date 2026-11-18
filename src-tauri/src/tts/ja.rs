@@ -360,14 +360,22 @@ fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, St
             )
         })
         .collect();
-    // The dictionary tags numbers 名詞,数: digits, and kanji such as 一, 十 or 百.
+    // The dictionary tags numbers 名詞,数: digits, kanji such as 一, 十 or 百,
+    // and a ・ or comma between digits, which here joins two numbers instead.
     let numerals: Vec<bool> = nodes
         .iter()
-        .map(|node| node.get_pos().to_string().starts_with("名詞,数"))
+        .zip(&spans)
+        .map(|(node, &span)| {
+            node.get_pos().to_string().starts_with("名詞,数") && !joins_numbers(run, span)
+        })
         .collect();
     let numbers = number_spans(run);
     let mut skipped = 0;
     let mut done = 0;
+    // Where the last word this call read ends: a split-off う joins only a word
+    // ending where it starts. Words a nested `tag` reads leave it behind them,
+    // so a う after those never joins.
+    let mut last_end = None;
     // Where the last month named ends: 1日 right after it is ついたち.
     let mut month_end = None;
     let after_month = |month_end: Option<usize>, at: usize| {
@@ -375,6 +383,19 @@ fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, St
             run.get(month..at)
                 .is_some_and(|gap| gap.iter().all(|c| c.is_whitespace()))
         })
+    };
+    // What comes before the number starting at `at`, in node `k`.
+    let context = |k: usize, at: usize, month_end: Option<usize>| {
+        let range = (spans[k].0 == at)
+            .then(|| range_start(run, &spans, &numerals, k))
+            .flatten();
+        match range {
+            // Days of the month named before the first number: 5月3、4日.
+            Some(first) if after_month(month_end, first) => Before::Other,
+            Some(_) => Before::Number,
+            None if after_month(month_end, at) => Before::Month,
+            None => Before::Other,
+        }
     };
     for (k, &(from, to)) in spans.iter().enumerate() {
         if to <= done || from == to {
@@ -390,8 +411,8 @@ fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, St
                     .then(|| kanji_count(run, &spans, &numerals, k))
                     .flatten()
                     .and_then(|(end, value)| {
-                        let after_month = after_month(month_end, from);
-                        let word = counted_word(run, &spans, &readings, end, &value, after_month);
+                        let before = context(k, from, month_end);
+                        let word = counted_word(run, &spans, &readings, end, &value, before);
                         Some((end, word?))
                     });
                 if let Some((end, (counted_end, reading))) = counted {
@@ -402,14 +423,27 @@ fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, St
                         surface: run[from..counted_end].iter().collect(),
                         kind: Kind::Kana(reading),
                     });
+                    last_end = Some(counted_end);
                     done = counted_end;
                     continue;
                 }
-                let joins = from > 0 && !run[from - 1].is_whitespace();
                 if names_month(&run[from..to], readings[k].as_deref()) {
                     month_end = Some(to);
                 }
-                skipped += read(&run[from..to], readings[k].clone(), joins, words);
+                // The dictionary makes the end of ましょう, 行こう, でしょう or
+                // だろう a word う of its own; it lengthens the word read just
+                // before it.
+                let joined = run[from..to] == ['う']
+                    && readings[k].is_some()
+                    && last_end == Some(from)
+                    && lengthen(words.last_mut());
+                let count = words.len();
+                if !joined {
+                    skipped += read(&run[from..to], readings[k].clone(), words);
+                }
+                if joined || words.len() > count {
+                    last_end = Some(to);
+                }
             }
             // What is left of a word that ran on from a number.
             None => skipped += tag(&run[start..to], tagger, words)?,
@@ -430,13 +464,14 @@ fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, St
                         surface: run[from..to].iter().collect(),
                         kind: Kind::Kana(reading.clone()),
                     });
+                    last_end = Some(to);
                     done = to;
                     continue;
                 }
                 let digits: String = run[number..end].iter().collect();
-                let after_month = after_month(month_end, number);
+                let before = context(k, number, month_end);
                 if let Some((counted_end, reading)) =
-                    counted_word(run, &spans, &readings, end, &digits, after_month)
+                    counted_word(run, &spans, &readings, end, &digits, before)
                 {
                     if run[end] == '月' {
                         month_end = Some(counted_end);
@@ -445,6 +480,7 @@ fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, St
                         surface: run[number..counted_end].iter().collect(),
                         kind: Kind::Kana(reading),
                     });
+                    last_end = Some(counted_end);
                     done = counted_end;
                     continue;
                 }
@@ -455,6 +491,7 @@ fn tag(run: &[char], tagger: &Tagger, words: &mut Vec<Word>) -> Result<usize, St
                     kind: Kind::Kana(reading.chars().map(to_hiragana).collect()),
                     surface: reading,
                 });
+                last_end = Some(end);
                 if end < to {
                     skipped += tag(&run[end..to], tagger, words)?;
                 }
@@ -492,6 +529,32 @@ fn kanji_count(
     Some((end, value.to_string()))
 }
 
+/// Where the first number of a range such as 二、三 or 2〜3 starts, when node
+/// `k` starts its last number.
+fn range_start(
+    run: &[char],
+    spans: &[(usize, usize)],
+    numerals: &[bool],
+    k: usize,
+) -> Option<usize> {
+    let mut first = k;
+    while first >= 2 && numerals[first - 2] && joins_numbers(run, spans[first - 1]) {
+        first -= 2;
+        while first > 0 && numerals[first - 1] {
+            first -= 1;
+        }
+    }
+    (first < k).then(|| spans[first].0)
+}
+
+/// Whether the word at `span` joins the numbers either side of it into a
+/// range: 、, ・, a comma, 〜 or ～ (NFKC's ~), or から, which `normalize`
+/// makes of a wave dash before a digit.
+fn joins_numbers(run: &[char], (from, to): (usize, usize)) -> bool {
+    let mark: String = run[from..to].iter().collect();
+    matches!(mark.trim(), "、" | "・" | "," | "〜" | "~" | "から")
+}
+
 /// Words that name a month, so 1日 after them is a day of it: ４月, 十二月,
 /// 毎月. 1ヶ月, a length of time, is not one.
 fn names_month(surface: &[char], reading: Option<&str>) -> bool {
@@ -511,10 +574,10 @@ fn counted_word(
     readings: &[Option<String>],
     end: usize,
     value: &str,
-    after_month: bool,
+    before: Before,
 ) -> Option<(usize, String)> {
     let counter = *run.get(end)?;
-    let mut reading: String = counted(value, counter, after_month)?
+    let mut reading: String = counted(value, counter, before)?
         .chars()
         .map(to_hiragana)
         .collect::<String>()
@@ -544,37 +607,29 @@ fn counted_word(
     Some((to, reading))
 }
 
+/// What comes right before a count, which can change how it reads.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Before {
+    /// A word naming a month: 1日 is ついたち.
+    Month,
+    /// Another number and a mark such as 、 or 〜: 二、三日 is にさんにち.
+    Number,
+    Other,
+}
+
 /// How a whole number reads before 月, 日, 人 or つ, or `None` when the
 /// counter leaves it as it is.
-fn counted(number: &str, counter: char, after_month: bool) -> Option<String> {
+fn counted(number: &str, counter: char, before: Before) -> Option<String> {
     let n: u32 = number.parse().ok()?;
     let reading = match (counter, n) {
         ('月', 4) => "しがつ",
         ('月', 7) => "しちがつ",
         ('月', 9) => "くがつ",
         ('月', 1..=12) => return Some(number_kana(number) + "がつ"),
-        ('日', 1) if after_month => "ついたち",
-        ('日', 1) => "いちにち",
-        ('日', 2) => "ふつか",
-        ('日', 3) => "みっか",
-        ('日', 4) => "よっか",
-        ('日', 5) => "いつか",
-        ('日', 6) => "むいか",
-        ('日', 7) => "なのか",
-        // Long with ー, as the dictionary says them: the kana table reads ようか
-        // with a separate う.
-        ('日', 8) => "よーか",
-        ('日', 9) => "ここのか",
-        ('日', 10) => "とーか",
-        ('日', 14) => "じゅうよっか",
-        ('日', 20) => "はつか",
-        ('日', 24) => "にじゅうよっか",
-        // A day of the month says 7 しち and 9 く.
-        ('日', 17 | 27) => return Some(number_kana(&(n - 7).to_string()) + "しちにち"),
-        ('日', 19 | 29) => return Some(number_kana(&(n - 9).to_string()) + "くにち"),
-        ('日', _) => return Some(number_kana(number) + "にち"),
-        ('人', 1) => "ひとり",
-        ('人', 2) => "ふたり",
+        ('日', _) => return Some(days(n, &number_kana(number), before)),
+        // A range has いちにん and ににん: 一、二人.
+        ('人', 1) if before != Before::Number => "ひとり",
+        ('人', 2) if before != Before::Number => "ふたり",
         // よにん, and so じゅうよにん, but よんじゅうにん.
         ('人', _) => {
             let kana = number_kana(number);
@@ -599,6 +654,44 @@ fn counted(number: &str, counter: char, after_month: bool) -> Option<String> {
     Some(reading.to_string())
 }
 
+/// `n` days, or day `n` of a month, where `n` reads `kana` on its own.
+fn days(n: u32, kana: &str, before: Before) -> String {
+    // よっか, じゅうよっか, ひゃくよっか, in a range too: よんにち is not said.
+    if let Some(rest) = kana.strip_suffix("よん") {
+        return format!("{rest}よっか");
+    }
+    let word = match n {
+        1 if before == Before::Month => "ついたち",
+        2 => "ふつか",
+        3 => "みっか",
+        5 => "いつか",
+        6 => "むいか",
+        7 => "なのか",
+        // Long with ー, as the dictionary says them: the kana table reads ようか
+        // with a separate う.
+        8 => "よーか",
+        9 => "ここのか",
+        10 => "とーか",
+        20 => "はつか",
+        _ => "",
+    };
+    // The second number of a range keeps the plain number: 二、三日 is
+    // にさんにち.
+    if !word.is_empty() && before != Before::Number {
+        return word.to_string();
+    }
+    // A day of the month says 7 しち and 9 く, and so does a range: 六、七日.
+    let tens = || match n / 10 {
+        0 => String::new(),
+        tens => number_kana(&(tens * 10).to_string()),
+    };
+    match n {
+        7 | 17 | 27 => tens() + "しちにち",
+        9 | 19 | 29 => tens() + "くにち",
+        _ => format!("{kana}にち"),
+    }
+}
+
 /// What the dictionary reads a counter as after a number.
 fn counter_kana(counter: char) -> &'static str {
     match counter {
@@ -609,35 +702,30 @@ fn counter_kana(counter: char) -> &'static str {
     }
 }
 
-/// Whether a word ending this way takes the う after it as a long vowel.
-fn lengthens(reading: &str) -> bool {
-    reading.ends_with(|c| {
+/// Takes a split-off う into `word` as a long vowel, when it ends in one that
+/// takes it.
+fn lengthen(word: Option<&mut Word>) -> bool {
+    let Some(Word {
+        surface,
+        kind: Kind::Kana(reading),
+    }) = word
+    else {
+        return false;
+    };
+    let lengthens = reading.ends_with(|c| {
         "おこごそぞとどのほぼぽもよょろをぉうくぐすずつづぬふぶぷむゆゅるぅゔ".contains(c)
-    })
+    });
+    if lengthens {
+        reading.push('ー');
+        surface.push('う');
+    }
+    lengthens
 }
 
 /// One dictionary word written `surface`: read from `reading`; with none,
-/// skipped when it has kanji, and as its symbols otherwise. `joins` when it
-/// follows the word before with no space between.
-fn read(surface: &[char], reading: Option<String>, joins: bool, words: &mut Vec<Word>) -> usize {
+/// skipped when it has kanji, and as its symbols otherwise.
+fn read(surface: &[char], reading: Option<String>, words: &mut Vec<Word>) -> usize {
     if let Some(reading) = reading {
-        // The dictionary makes the end of ましょう, 行こう, でしょう or だろう
-        // a word う of its own; it lengthens the vowel before.
-        if let (
-            true,
-            ['う'],
-            Some(Word {
-                surface: last,
-                kind: Kind::Kana(before),
-            }),
-        ) = (joins, surface, words.last_mut())
-        {
-            if lengthens(before) {
-                before.push('ー');
-                last.extend(surface);
-                return 0;
-            }
-        }
         words.push(Word {
             surface: surface.iter().collect(),
             kind: Kind::Kana(reading),
@@ -1404,6 +1492,11 @@ mod tests {
         assert_eq!(reads_tagged("24人"), "ɲiʥɨːjoɲiɴ");
         assert_eq!(reads_tagged("104人"), "çakɯjoɲiɴ");
         assert_eq!(reads_tagged("40人"), "joɲʥɨːɲiɴ");
+        // さんじゅうよっか, ひゃくよっか, よんじゅうよっか, but よんじゅうにち
+        assert_eq!(reads_tagged("34日"), "saɲʥɨːjoʔka");
+        assert_eq!(reads_tagged("104日"), "çakɯjoʔka");
+        assert_eq!(reads_tagged("44日"), "joɲʥɨːjoʔka");
+        assert_eq!(reads_tagged("40日"), "joɲʥɨːɲiʨi");
         // ぜろにん, ぜろにち
         assert_eq!(reads_tagged("0人"), "ʣeɾoɲiɴ");
         assert_eq!(reads_tagged("0日"), "ʣeɾoɲiʨi");
@@ -1462,6 +1555,10 @@ mod tests {
         assert_eq!(reads_tagged("二十日"), "haʦɨka");
         assert_eq!(reads_tagged("十四日"), "ʥɨːjoʔka");
         assert_eq!(reads_tagged("二十九日"), "ɲiʥɨːkɯɲiʨi");
+        // さんじゅうよっか, よんじゅうよっか, but よんじゅうにち
+        assert_eq!(reads_tagged("三十四日"), "saɲʥɨːjoʔka");
+        assert_eq!(reads_tagged("四十四日"), "joɲʥɨːjoʔka");
+        assert_eq!(reads_tagged("四十日"), "joɲʥɨːɲiʨi");
         // いちがつ ついたち, but いちにち on its own
         assert_eq!(reads_tagged("一月一日"), "iʨiɡaʦɨ ʦɨitaʨi");
         assert_eq!(reads_tagged("一日"), "iʨiɲiʨi");
@@ -1481,6 +1578,119 @@ mod tests {
         assert_eq!(reads_tagged("二つ"), "ɸɯtaʦɨ");
         // ひゃくいちにん: a count with 百 in it stays as the dictionary reads it.
         assert_eq!(reads_tagged("百一人"), "çakɯ iʨi ɲiɴ");
+        // Numerals inside words: いちばん, いっしょ, じゅうぶん, きゅうしゅう, いちろう.
+        assert_eq!(reads_tagged("一番"), "iʨibaɴ");
+        assert_eq!(reads_tagged("一緒"), "iʔɕo");
+        assert_eq!(reads_tagged("十分"), "ʥɨːbɯɴ");
+        assert_eq!(reads_tagged("九州"), "kʲɨːɕɨː");
+        assert_eq!(reads_tagged("一郎"), "iʨiɾoː");
+    }
+
+    #[test]
+    fn every_count_to_ninety_nine_reads_alike_in_kanji_and_digits() {
+        let Some(tagger) = tagger_for_test() else {
+            return;
+        };
+        let reads_tagged = |text: String| reads_with(tagger, &text);
+        let kanji = |n: usize| {
+            let digit = |d: usize| "一二三四五六七八九".chars().nth(d - 1);
+            let mut kanji = String::new();
+            if n >= 20 {
+                kanji.extend(digit(n / 10));
+            }
+            if n >= 10 {
+                kanji.push('十');
+            }
+            if !n.is_multiple_of(10) {
+                kanji.extend(digit(n % 10));
+            }
+            kanji
+        };
+        for n in 1..=99 {
+            for counter in ["日", "人"] {
+                assert_eq!(
+                    reads_tagged(format!("{}{counter}", kanji(n))),
+                    reads_tagged(format!("{n}{counter}")),
+                    "{n}{counter}"
+                );
+                // The dictionary keeps 二日 as a word of its own, ふつか.
+                if (n, counter) != (2, "日") {
+                    assert_eq!(
+                        reads_tagged(format!("三、{}{counter}", kanji(n))),
+                        reads_tagged(format!("3、{n}{counter}")),
+                        "3、{n}{counter}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_second_number_of_a_range_counts_plainly() {
+        let Some(tagger) = tagger_for_test() else {
+            return;
+        };
+        let reads_tagged = |text: &str| reads_with(tagger, text);
+        // に、さんにち: a range of days is not みっか.
+        for text in ["二、三日", "2、3日", "二，三日", "2,3日", "2, 3日"] {
+            assert_eq!(reads_tagged(text), "ɲi, saɲɲiʨi", "{text}");
+        }
+        assert_eq!(reads_tagged("二・三日"), "ɲi saɲɲiʨi");
+        assert_eq!(reads_tagged("2・3日"), "ɲi saɲɲiʨi");
+        assert_eq!(reads_tagged("二〜三日"), "ɲi — saɲɲiʨi");
+        assert_eq!(reads_tagged("二～三日"), "ɲi ~ saɲɲiʨi");
+        // 〜 before a digit reads から.
+        assert_eq!(reads_tagged("2〜3日"), "ɲi kaɾa saɲɲiʨi");
+        assert_eq!(reads_tagged("2～3日"), "ɲi kaɾa saɲɲiʨi");
+        assert_eq!(reads_tagged("2から3日"), "ɲi kaɾa saɲɲiʨi");
+        // に、さんにちじゅう に; に、さんにちかん
+        assert_eq!(reads_tagged("二、三日中に"), "ɲi, saɲɲiʨiʥɨː ɲi");
+        assert_eq!(reads_tagged("2、3日中に"), "ɲi, saɲɲiʨiʥɨː ɲi");
+        assert_eq!(reads_tagged("2、3日間"), "ɲi, saɲɲiʨikaɴ");
+        // よん、ごにち; ご、ろくにち; なな、はちにち
+        assert_eq!(reads_tagged("四、五日"), "joɴ, ɡoɲiʨi");
+        assert_eq!(reads_tagged("4、5日"), "joɴ, ɡoɲiʨi");
+        assert_eq!(reads_tagged("五、六日"), "ɡo, ɾokɯɲiʨi");
+        assert_eq!(reads_tagged("5、6日"), "ɡo, ɾokɯɲiʨi");
+        assert_eq!(reads_tagged("七、八日"), "nana, haʨiɲiʨi");
+        assert_eq!(reads_tagged("7、8日"), "nana, haʨiɲiʨi");
+        // ろく、しちにち and はち、くにち, as a day of the month says them
+        assert_eq!(reads_tagged("六、七日"), "ɾokɯ, ɕiʨiɲiʨi");
+        assert_eq!(reads_tagged("8、9日"), "haʨi, kɯɲiʨi");
+        // いち — ににん: no ひとり or ふたり in a range
+        assert_eq!(reads_tagged("一〜二人"), "iʨi — ɲiɲiɴ");
+        assert_eq!(reads_tagged("1〜2人"), "iʨi kaɾa ɲiɲiɴ");
+        assert_eq!(reads_tagged("1、2人"), "iʨi, ɲiɲiɴ");
+        // よっか and よにん have no plainer form: さん、よっか.
+        assert_eq!(reads_tagged("三、四日"), "saɴ, joʔka");
+        assert_eq!(reads_tagged("3、4日"), "saɴ, joʔka");
+        assert_eq!(reads_tagged("3、4人"), "saɴ, joɲiɴ");
+        assert_eq!(reads_tagged("五〜六人"), "ɡo — ɾokɯɲiɴ");
+        assert_eq!(reads_tagged("5〜6人"), "ɡo kaɾa ɾokɯɲiɴ");
+        assert_eq!(reads_tagged("2、3人"), "ɲi, saɲɲiɴ");
+        assert_eq!(reads_tagged("二、三人"), "ɲi, saɲɲiɴ");
+        // Months and things keep their words: さん、しがつ; に、みっつ.
+        assert_eq!(reads_tagged("3、4月"), "saɴ, ɕiɡaʦɨ");
+        assert_eq!(reads_tagged("2、3つ"), "ɲi, mʲiʔʦɨ");
+    }
+
+    #[test]
+    fn days_of_a_month_named_before_them_stay_days() {
+        let Some(tagger) = tagger_for_test() else {
+            return;
+        };
+        let reads_tagged = |text: &str| reads_with(tagger, text);
+        // ついたち から みっか
+        assert_eq!(reads_tagged("1月1日〜3日"), "iʨiɡaʦɨ ʦɨitaʨi kaɾa mʲiʔka");
+        assert_eq!(reads_tagged("4月1日〜3日"), "ɕiɡaʦɨ ʦɨitaʨi kaɾa mʲiʔka");
+        assert_eq!(reads_tagged("一月一日〜三日"), "iʨiɡaʦɨ ʦɨitaʨi — mʲiʔka");
+        assert_eq!(reads_tagged("1日から3日まで"), "iʨiɲiʨi kaɾa mʲiʔka made");
+        assert_eq!(reads_tagged("2日、3日"), "ɸɯʦɨka, mʲiʔka");
+        // A month before the first number makes them its days.
+        assert_eq!(reads_tagged("4月1〜3日"), "ɕiɡaʦɨ iʨi kaɾa mʲiʔka");
+        assert_eq!(reads_tagged("四月一〜三日"), "ɕiɡaʦɨ iʨi — mʲiʔka");
+        assert_eq!(reads_tagged("4月2、3日"), "ɕiɡaʦɨ ɲi, mʲiʔka");
+        assert_eq!(reads_tagged("5月3、4、5日"), "ɡoɡaʦɨ saɴ, joɴ, iʦɨka");
     }
 
     #[test]
@@ -1497,6 +1707,13 @@ mod tests {
         assert_eq!(reads_tagged("思う"), "omoɯ");
         assert_eq!(reads_tagged("そこ う"), "soko ɯ");
         assert_eq!(reads_tagged("その鵜"), "sono ɯ");
+        assert_eq!(reads_tagged("あ、い、う"), "a, i, ɯ");
+        // So does one after a line break or a character that is not read.
+        assert_eq!(reads_tagged("行こ\nう"), "iko ɯ");
+        assert_eq!(tagged_with(tagger, "行こ\n龘う"), ("iko ɯ".into(), 1));
+        assert_eq!(tagged_with(tagger, "行こ龘う"), ("iko ɯ".into(), 1));
+        assert_eq!(tagged_with(tagger, "そ〇う"), ("so ɯ".into(), 1));
+        assert_eq!(tagged_with(tagger, "も\n〇う"), ("mo ɯ".into(), 1));
     }
 
     #[test]
@@ -1582,7 +1799,7 @@ mod tests {
         let Some(tagger) = tagger_for_test() else {
             return;
         };
-        let pool: Vec<char> = "あかがはへをんっゃーゝゞうアカガハヲンッャヴヵヶ東京行日本人年分月中組一二四十百毎龘々〆〇0123456789,.、。！？「」（）・〜ー—%$¥\\-~`\"' 　abcＡｱｶﾞﾟ\u{3099}\u{309a}\u{309b}\u{309c}🎉\u{200d}\u{301}é\u{200b}\u{feff}"
+        let pool: Vec<char> = "あかがはへをんっゃーゝゞうらこアカガハヲンッャヴヵヶ東京行日本人年分月中組一二三四十百毎龘々〆〇0123456789,.、。！？「」（）・〜～，ー—%$¥\\-~`\"' 　abcＡｱｶﾞﾟ\u{3099}\u{309a}\u{309b}\u{309c}🎉\u{200d}\u{301}é\u{200b}\u{feff}"
             .chars()
             .collect();
         let mut seed: u64 = 0x2545_f491_4f6c_dd1d;
