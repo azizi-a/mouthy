@@ -635,6 +635,15 @@ enum Join {
 /// and fills every line but a paragraph's last, so a break that left room for
 /// the next word, or before a line that itself left room, was made by hand.
 fn join(a: &Line, b: &Line, c: Option<&Line>, first_pair: bool, widest: usize) -> Join {
+    // A word broken at a hyphen is one word, however short or indented the
+    // lines: kept apart, each half would end a sentence.
+    if a.start != Start::Fixed
+        && b.start == Start::Text
+        && wrapped_hyphen(a.body)
+        && starts_lowercase(b.body)
+    {
+        return Join::Hyphen;
+    }
     // The text's first line may be the tail of a line the selection began in,
     // so neither its indent nor its width is known.
     let cut = first_pair && a.indent == 0 && b.indent > 0;
@@ -2620,6 +2629,31 @@ mod tests {
             reflowed("The fox runs off into the neighbouring field, where the Anglo-\nSaxon farmer keeps his sheep."),
             vec!["The fox runs off into the neighbouring field, where the Anglo-Saxon farmer keeps his sheep."]
         );
+    }
+
+    #[test]
+    fn a_word_broken_at_a_hyphen_joins_however_short_or_indented_the_lines() {
+        assert_eq!(
+            reflowed("We must re-\nenable the cache."),
+            vec!["We must re-enable the cache."]
+        );
+        assert_eq!(
+            reflowed(
+                "- Turn the imple-\nmentation on again before the release goes out to everyone"
+            ),
+            vec!["- Turn the imple-mentation on again before the release goes out to everyone"]
+        );
+        assert_eq!(
+            normalize("Read the change-\n    log first."),
+            "Read the change-log first."
+        );
+        // A list item, a capital or a dash alone still breaks.
+        assert_eq!(
+            reflowed("Steps to re-\n- enable it"),
+            vec!["Steps to re-", "- enable it"]
+        );
+        assert_eq!(reflowed("Dear Anglo-\nSaxon"), vec!["Dear Anglo-", "Saxon"]);
+        assert_eq!(reflowed("Wait -\nnow"), vec!["Wait -", "now"]);
     }
 
     #[test]
