@@ -635,6 +635,15 @@ enum Join {
 /// and fills every line but a paragraph's last, so a break that left room for
 /// the next word, or before a line that itself left room, was made by hand.
 fn join(a: &Line, b: &Line, c: Option<&Line>, first_pair: bool, widest: usize) -> Join {
+    // A word broken at a hyphen is one word, however short or indented the
+    // lines: kept apart, each half would end a sentence.
+    if a.start != Start::Fixed
+        && b.start == Start::Text
+        && wrapped_hyphen(a.body)
+        && starts_lowercase(b.body)
+    {
+        return Join::Hyphen;
+    }
     // The text's first line may be the tail of a line the selection began in,
     // so neither its indent nor its width is known.
     let cut = first_pair && a.indent == 0 && b.indent > 0;
@@ -707,7 +716,8 @@ fn ends_sentence(body: &str) -> bool {
 /// compound such as "well-known".
 fn wrapped_hyphen(body: &str) -> bool {
     let mut end = body.chars().rev();
-    end.next() == Some('-') && end.next().is_some_and(char::is_alphabetic)
+    matches!(end.next(), Some('-' | '\u{2010}' | '\u{2011}'))
+        && end.next().is_some_and(char::is_alphabetic)
 }
 
 /// A first sentence longer than this many words is cut at a clause break, so
@@ -1979,6 +1989,15 @@ fn with_suffix(word: &str, possessive: bool) -> String {
     }
 }
 
+/// What capitals said as a word are written as for the phonemiser ("JSON" is
+/// "jason").
+pub(super) fn said_as_word(capitals: &str) -> Option<&'static str> {
+    SAID_AS_WORDS
+        .iter()
+        .find(|(word, _)| *word == capitals)
+        .map(|(_, said)| *said)
+}
+
 /// An all-capital word: spelled unless it is said as a word. `plural` covers
 /// an "s" or "'s" after it.
 fn say_capitals(
@@ -1987,7 +2006,7 @@ fn say_capitals(
     shouted: bool,
     lexicon: &impl Lexicon,
 ) -> Option<String> {
-    if let Some((_, said)) = SAID_AS_WORDS.iter().find(|(word, _)| *word == capitals) {
+    if let Some(said) = said_as_word(capitals) {
         return Some(if plural {
             format!("{said}s")
         } else {
@@ -2004,16 +2023,27 @@ fn say_capitals(
     spell.then(|| lexicon.spell(capitals, plural))
 }
 
-/// A word in camel case cut where a lower-case letter meets a capital
-/// ("Git|Hub") and before the last capital of a run followed by two lower-case
-/// letters ("HTML|Parser", but not "IPv6" or "IDs"). It stays whole when the
-/// lexicon has it as written ("iOS", "YouTube"), for "Mc" names, and when a
-/// part is no word the lexicon has ("PostgreSQL"), since a fragment reads
-/// worse than the whole word spelled or read by espeak-ng.
+/// A word in camel case cut into its words. It stays whole when the lexicon
+/// has it as written ("iOS", "YouTube"), for "Mc" names, and when a part is no
+/// word the lexicon has ("PostgreSQL"), since a fragment reads worse than the
+/// whole word spelled or read by espeak-ng.
 fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
     if lexicon.has(word) || word.starts_with("Mc") {
         return vec![word];
     }
+    let parts = camel_cut(word);
+    let readable = |part: &str| part.len() == 1 || is_capitals(part) || knows(part, lexicon);
+    if parts.iter().all(|part| readable(part)) {
+        parts
+    } else {
+        vec![word]
+    }
+}
+
+/// `word` cut where a lower-case letter meets a capital ("Git|Hub") and before
+/// the last capital of a run followed by two lower-case letters
+/// ("HTML|Parser", but not "IPv6" or "IDs").
+pub(super) fn camel_cut(word: &str) -> Vec<&str> {
     let b = word.as_bytes();
     let mut parts = Vec::new();
     let mut start = 0;
@@ -2029,12 +2059,7 @@ fn camel_parts<'a>(word: &'a str, lexicon: &impl Lexicon) -> Vec<&'a str> {
         }
     }
     parts.push(&word[start..]);
-    let readable = |part: &str| part.len() == 1 || is_capitals(part) || knows(part, lexicon);
-    if parts.iter().all(|part| readable(part)) {
-        parts
-    } else {
-        vec![word]
-    }
+    parts
 }
 
 #[cfg(test)]
@@ -2605,6 +2630,35 @@ mod tests {
             reflowed("The fox runs off into the neighbouring field, where the Anglo-\nSaxon farmer keeps his sheep."),
             vec!["The fox runs off into the neighbouring field, where the Anglo-Saxon farmer keeps his sheep."]
         );
+    }
+
+    #[test]
+    fn a_word_broken_at_a_hyphen_joins_however_short_or_indented_the_lines() {
+        assert_eq!(
+            reflowed("We must re-\nenable the cache."),
+            vec!["We must re-enable the cache."]
+        );
+        assert_eq!(
+            reflowed(
+                "- Turn the imple-\nmentation on again before the release goes out to everyone"
+            ),
+            vec!["- Turn the imple-mentation on again before the release goes out to everyone"]
+        );
+        assert_eq!(
+            reflowed("We must re\u{2010}\nenable the non\u{2011}\nblocking cache."),
+            vec!["We must re\u{2010}enable the non\u{2011}blocking cache."]
+        );
+        assert_eq!(
+            normalize("Read the change-\n    log first."),
+            "Read the change-log first."
+        );
+        // A list item, a capital or a dash alone still breaks.
+        assert_eq!(
+            reflowed("Steps to re-\n- enable it"),
+            vec!["Steps to re-", "- enable it"]
+        );
+        assert_eq!(reflowed("Dear Anglo-\nSaxon"), vec!["Dear Anglo-", "Saxon"]);
+        assert_eq!(reflowed("Wait -\nnow"), vec!["Wait -", "now"]);
     }
 
     #[test]
