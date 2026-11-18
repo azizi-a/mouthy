@@ -29,6 +29,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 
 - The offline English voices read words their dictionary lacks, such as changelog, filesystem, getUserName, tsconfig or CHANGELOG, from the words they are made of instead of spelling them letter by letter; a few developer words (sudo, nginx, kubectl, Kubernetes) are read as developers say them. With **Pronounce unknown words with espeak-ng** on, unfamiliar names are left to espeak-ng.
+- A word broken across two lines at a hyphen is read as one word, with no pause at the line break and no half spelled letter by letter.
 - A command such as `mouthy --stop` no longer opens, or rotates away, the running app's log file.
 - On Linux, Mouthy runs without a tray icon when no appindicator library is installed, instead of failing to start.
 - On Linux and Windows, closing Settings quits Mouthy whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), since there is no other way to quit.
