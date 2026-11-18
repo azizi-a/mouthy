@@ -119,20 +119,24 @@ pub(super) fn read_unknown_words(text: &str, lexicon: &Lexicon, names: Names) ->
                 1
             }),
             ']' => {
-                lone_bracket = false;
+                // "](" with no ")" after it: any ")" written later would close it.
+                lone_bracket = lone_bracket && text[i + 1..].starts_with('(');
                 1
             }
             c if c.is_alphabetic() => {
                 let len = word_len(&text[i..]);
                 let said = (!lone_bracket)
-                    .then(|| rewrite(&text[i..i + len], lexicon, names))
+                    .then(|| said_at(text, i, len, lexicon, names))
                     .flatten();
-                if let Some(said) = said {
-                    out.push_str(&text[copied..i]);
-                    out.push_str(&said);
-                    copied = i + len;
+                match said {
+                    Some((end, said)) => {
+                        out.push_str(&text[copied..i]);
+                        out.push_str(&said);
+                        copied = end;
+                        end - i
+                    }
+                    None => len,
                 }
-                len
             }
             c => c.len_utf8(),
         };
@@ -165,10 +169,78 @@ fn word_len(text: &str) -> usize {
     len
 }
 
-/// What to write for `word`, or `None` to leave it to misaki-rs. Capitals
-/// are read only as a compound ("CHANGELOG"): the rest are initialisms, which
-/// `spell_out` and misaki-rs spell. "Mc" names stay whole, as `spell_out`
-/// keeps them.
+/// What to write for the word `len` long at `i` of `text`, and where the text
+/// it replaces ends.
+fn said_at(
+    text: &str,
+    i: usize,
+    len: usize,
+    lexicon: &Lexicon,
+    names: Names,
+) -> Option<(usize, String)> {
+    let word = &text[i..i + len];
+    if let Some(end) = broken_word(text, i, len) {
+        if let Some(said) = rejoin(word, &text[i + len + 1..end], lexicon, names) {
+            return Some((end, said));
+        }
+    }
+    // Cut into words, it would leave a new word beside the hyphen to rejoin.
+    let hyphened = hyphen_before(&text[..i]) || hyphen_after(&text[i + len..]);
+    if hyphened && camel_cut(word).len() > 1 {
+        return None;
+    }
+    Some((i + len, rewrite(word, lexicon, names)?))
+}
+
+/// Whether `before` ends with a hyphen after a word: a letter, or the end of
+/// an override.
+fn hyphen_before(before: &str) -> bool {
+    let mut chars = before.chars().rev();
+    chars.next() == Some('-') && chars.next().is_some_and(|c| c.is_alphabetic() || c == ')')
+}
+
+/// Whether `after` starts with a hyphen before a word: a letter, or an
+/// override.
+fn hyphen_after(after: &str) -> bool {
+    after
+        .strip_prefix('-')
+        .is_some_and(|rest| rest.starts_with(|c: char| c.is_alphabetic() || c == '['))
+}
+
+/// Where a word `len` long at `i` and the one after a hyphen end, when they
+/// are two words joined by one hyphen ("imple-mentation", not "of" in
+/// "state-of-the-art").
+fn broken_word(text: &str, i: usize, len: usize) -> Option<usize> {
+    if hyphen_before(&text[..i]) {
+        return None;
+    }
+    let second = word_len(text[i + len..].strip_prefix('-')?);
+    let end = i + len + 1 + second;
+    (second > 0 && !hyphen_after(&text[end..])).then_some(end)
+}
+
+/// A word broken across lines at a hyphen ("imple-mentation", "change-log"),
+/// read whole when a half is no word misaki-rs has; a compound of words it
+/// has ("well-known") stays as written.
+fn rejoin(first: &str, second: &str, lexicon: &Lexicon, names: Names) -> Option<String> {
+    let whole = format!("{first}{second}");
+    if !whole.bytes().all(|b| b.is_ascii_alphabetic())
+        || !(SHORTEST_WORD..=LONGEST_WORD).contains(&whole.len())
+        || (misaki_reads(first, lexicon) && misaki_reads(second, lexicon))
+        || camel_cut(&whole).len() > 1
+    {
+        return None;
+    }
+    let phonemes = if misaki_reads(&whole, lexicon) {
+        phonemes_of(&whole, lexicon)?
+    } else {
+        word_phonemes(&whole, lexicon, names)?
+    };
+    Some(format!("[{first}-{second}](/{phonemes}/)"))
+}
+
+/// What to write for `word`, or `None` to leave it to misaki-rs. "Mc" names
+/// stay whole, as `spell_out` keeps them.
 fn rewrite(word: &str, lexicon: &Lexicon, names: Names) -> Option<String> {
     let (letters, possessive) = match word.strip_suffix("'s") {
         Some(letters) => (letters, true),
@@ -186,22 +258,30 @@ fn rewrite(word: &str, lexicon: &Lexicon, names: Names) -> Option<String> {
     {
         return None;
     }
-    let lower = letters.to_ascii_lowercase();
     let parts = camel_cut(letters);
-    let capitalised = letters.starts_with(|c: char| c.is_ascii_uppercase());
-    let phonemes = if all_capitals(letters) {
-        compound(&lower, lexicon)?
-    } else if let Some(phonemes) = respell(&lower, lexicon) {
-        phonemes
-    } else if parts.len() > 1 {
+    if parts.len() > 1 && !respelled && !all_capitals(letters) {
         return Some(identifier(&parts, possessive, lexicon));
+    }
+    let phonemes = word_phonemes(letters, lexicon, names)?;
+    Some(said_as(word, phonemes, possessive, lexicon))
+}
+
+/// Phonemes for one word misaki-rs lacks. Capitals are read only as a
+/// compound ("CHANGELOG"): the rest are initialisms, which `spell_out` and
+/// misaki-rs spell.
+fn word_phonemes(letters: &str, lexicon: &Lexicon, names: Names) -> Option<String> {
+    let lower = letters.to_ascii_lowercase();
+    let capitalised = letters.starts_with(|c: char| c.is_ascii_uppercase());
+    if all_capitals(letters) {
+        compound(&lower, lexicon)
+    } else if let Some(phonemes) = respell(&lower, lexicon) {
+        Some(phonemes)
     } else if capitalised && names == Names::Espeak {
-        return None;
+        None
     } else {
         // Letters said by name read names wrongly ("Z hang", "P fister").
-        read(&lower, lexicon, !capitalised)?
-    };
-    Some(said_as(word, phonemes, possessive, lexicon))
+        read(&lower, lexicon, !capitalised)
+    }
 }
 
 fn all_capitals(letters: &str) -> bool {
@@ -688,6 +768,39 @@ mod tests {
         assert!(read[0].starts_with("ʧˈAnʤlˌɔɡ"), "{read:?}");
         let read = read_by("zf_xiaobei", &["看changelog"]);
         assert!(read[0].ends_with("ʧˈAnʤlˌɔɡ"), "{read:?}");
+    }
+
+    #[test]
+    fn a_word_broken_at_a_hyphen_reads_whole() {
+        // Text, then `bm_lewis` and `af_alloy`.
+        let cases = [
+            ("imple-mentation", "ˌɪmplɪməntˈAʃən", "ˌɪmplɪməntˈAʃən"),
+            ("chan-gelog", "ʧˈAnʤlˌɒɡ", "ʧˈAnʤlˌɔɡ"),
+        ];
+        let texts: Vec<&str> = cases.iter().map(|&(text, _, _)| text).collect();
+        let british = read_by("bm_lewis", &texts);
+        let american = read_by("af_alloy", &texts);
+        for (i, &(text, gb, us)) in cases.iter().enumerate() {
+            assert_eq!(
+                (british[i].as_str(), american[i].as_str()),
+                (gb, us),
+                "{text}"
+            );
+        }
+        // Halves that are both words stay apart, as "re-sign" must.
+        for lexicon in lexicons() {
+            for text in [
+                "well-known",
+                "state-of-the-art",
+                "end-of-life",
+                "re-sign",
+                "con-figuration",
+                "change-log",
+                "co-op",
+            ] {
+                assert_eq!(read_unknown_words(text, lexicon, Names::Here), text);
+            }
+        }
     }
 
     #[test]

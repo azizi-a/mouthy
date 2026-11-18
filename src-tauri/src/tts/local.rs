@@ -1152,6 +1152,8 @@ fn plain_text(text: &str, language: VoiceLanguage) -> String {
             '“' | '”' | '„' => out.push('"'),
             // Minus sign.
             '\u{2212}' => out.push('-'),
+            // Hyphen and non-breaking hyphen, which misaki-rs cannot read.
+            '\u{2010}' | '\u{2011}' if fold => out.push('-'),
             // Accents typed as a separate mark after the letter ("e" + U+0301).
             '\u{300}'..='\u{36f}' if fold && out.ends_with(|c: char| c.is_ascii_alphabetic()) => {}
             // Soft hyphen, zero-width space, byte order mark.
@@ -1643,6 +1645,23 @@ mod tests {
             text_to_ids(&g2p, Names::Here, None, VoiceLanguage::BritishEnglish, text).unwrap()
         };
         assert_eq!(ids("\u{2212}5 degrees"), ids("minus five degrees"));
+    }
+
+    #[test]
+    fn unicode_hyphens_read_as_hyphens_in_english() {
+        let (g2p, unknown) = recording_g2p(Language::EnglishGB);
+        let ids = |text| {
+            text_to_ids(&g2p, Names::Here, None, VoiceLanguage::BritishEnglish, text).unwrap()
+        };
+        assert_eq!(
+            ids("non\u{2011}zero and x\u{2010}ray"),
+            ids("non-zero and x-ray")
+        );
+        assert!(unknown.lock().unwrap().is_empty(), "{unknown:?}");
+        assert_eq!(
+            plain_text("non\u{2011}zero", VoiceLanguage::Spanish),
+            "non\u{2011}zero"
+        );
     }
 
     #[test]
