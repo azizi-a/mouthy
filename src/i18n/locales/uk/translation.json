@@ -172,7 +172,7 @@
       },
       "voices": {
         "title": "Voices",
-        "description": "English voices read English (British voices with British pronunciation, the rest American); Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language and need espeak-ng; Japanese voices read Japanese kana but not kanji yet; Chinese voices read Mandarin.",
+        "description": "English voices read English (British voices with British pronunciation, the rest American); Spanish, French, Italian, Brazilian Portuguese and Hindi voices read their own language and need espeak-ng; Japanese voices read Japanese, and kanji once the Japanese dictionary below is downloaded; Chinese voices read Mandarin.",
         "female": "Female",
         "male": "Male",
         "language": {
@@ -188,6 +188,13 @@
         },
         "installed": "Installed",
         "notInstalled": "Not installed · {{size}}"
+      },
+      "dictionary": {
+        "title": "Japanese Dictionary",
+        "description": "Lets Japanese voices read kanji: without it they read kana only, and text that is mostly kanji is not read. It takes 80 MB once unpacked.",
+        "name": "NAIST Japanese Dictionary",
+        "source": "From jpreprocess on GitHub, BSD licence",
+        "mismatch": "The dictionary download does not match what Mouthy expects; a newer Mouthy may be needed."
       },
       "files": {
         "title": "Files",
@@ -215,6 +222,7 @@
       "selectedShare": "Selected · {{percent}}%",
       "downloading": "Downloading… {{percent}}%",
       "checking": "Checking…",
+      "unpacking": "Unpacking…",
       "paused": "Paused at {{percent}}%",
       "failed": "Download failed: {{error}}",
       "left": "{{size}} left"

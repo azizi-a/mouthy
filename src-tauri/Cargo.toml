@@ -59,6 +59,11 @@ ort = { version = "=2.0.0-rc.14", default-features = false, features = [
 ] }
 # English G2P with embedded lexicons; no espeak-ng, which is GPL.
 misaki-rs = { version = "0.6", default-features = false }
+# Japanese words and their readings, from a dictionary downloaded at run time.
+# Exact: the dictionary archive is built for this version's reader.
+jpreprocess = "=0.15.0"
+# Unpacks that dictionary's .tar.gz; already linked through png.
+flate2 = "1"
 # Mandarin: word segmentation with jieba's dictionary, and each character's pinyin.
 # Pinned exactly: their data decides the readings the misaki fixtures pin.
 jieba-rs = "=0.7.4"

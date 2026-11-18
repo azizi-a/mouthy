@@ -1,6 +1,6 @@
 //! Resumable, sha256-checked download of one model file.
 
-use log::info;
+use log::{info, warn};
 use reqwest::header::{CONTENT_RANGE, RANGE};
 use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
@@ -165,6 +165,9 @@ async fn fetch(
     Ok(())
 }
 
+/// What a download fails with when its bytes do not match the pinned sha256.
+pub const MISMATCH: &str = "The downloaded file is damaged; try again";
+
 /// Checks `part` against `expected`, deleting it on a mismatch so the next
 /// attempt starts clean.
 async fn verify(part: &Path, expected: &str) -> Result<(), String> {
@@ -174,13 +177,17 @@ async fn verify(part: &Path, expected: &str) -> Result<(), String> {
         .map_err(|e| format!("Checking the download failed: {e}"))?
         .map_err(|e| format!("Cannot read the download: {e}"))?;
     if actual != expected {
+        warn!(
+            "{} has sha256 {actual}, expected {expected}",
+            part.display()
+        );
         remove_if_present(part)?;
-        return Err("The downloaded file is damaged; try again".into());
+        return Err(MISMATCH.into());
     }
     Ok(())
 }
 
-fn sha256_file(path: &Path) -> io::Result<String> {
+pub(super) fn sha256_file(path: &Path) -> io::Result<String> {
     let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0u8; 1 << 16];
@@ -442,7 +449,7 @@ mod tests {
 
         let error = run(&url, &dest, &sha_hex(BODY)).unwrap_err();
 
-        assert!(error.contains("damaged"), "{error}");
+        assert_eq!(error, MISMATCH);
         assert!(!dest.exists());
         assert!(!part_path(&dest).exists());
     }

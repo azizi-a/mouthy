@@ -28,6 +28,8 @@ interface FileRowProps {
   highlighted?: boolean;
   /** A line under the row, such as why a preview failed. */
   notice?: React.ReactNode;
+  /** Said instead of the download's own error when it failed. */
+  failure?: string;
   onUse?: () => void;
   onDownload?: () => void;
   onCancel?: () => void;
@@ -45,6 +47,7 @@ export const FileRow: React.FC<FileRowProps> = ({
   actions,
   highlighted = false,
   notice,
+  failure,
   onUse,
   onDownload,
   onCancel,
@@ -58,7 +61,9 @@ export const FileRow: React.FC<FileRowProps> = ({
     ? Math.min(100, Math.floor((downloaded * 100) / file.size))
     : 0;
   let progress: string | null = null;
-  if (file?.downloading) {
+  if (file?.unpacking) {
+    progress = t("settings.models.unpacking");
+  } else if (file?.downloading) {
     progress =
       downloaded >= file.size
         ? t("settings.models.checking")
@@ -115,19 +120,20 @@ export const FileRow: React.FC<FileRowProps> = ({
               </Button>
             )}
           {file &&
-            (file.downloading ? (
-              <Button variant="secondary" size="sm" onClick={onCancel}>
-                {t("settings.models.cancel")}
-              </Button>
-            ) : (
-              !file.installed && (
-                <Button variant="primary-soft" size="sm" onClick={onDownload}>
-                  {file.partial > 0
-                    ? t("settings.models.resume")
-                    : t("settings.models.download")}
-                </Button>
-              )
-            ))}
+            (file.downloading
+              ? // Too late to cancel once the download is unpacking.
+                !file.unpacking && (
+                  <Button variant="secondary" size="sm" onClick={onCancel}>
+                    {t("settings.models.cancel")}
+                  </Button>
+                )
+              : !file.installed && (
+                  <Button variant="primary-soft" size="sm" onClick={onDownload}>
+                    {file.partial > 0
+                      ? t("settings.models.resume")
+                      : t("settings.models.download")}
+                  </Button>
+                ))}
           {onDelete &&
             file &&
             !file.downloading &&
@@ -149,7 +155,7 @@ export const FileRow: React.FC<FileRowProps> = ({
       )}
       {file?.error && !file.downloading && (
         <p className="text-xs text-red-500">
-          {t("settings.models.failed", { error: file.error })}
+          {failure ?? t("settings.models.failed", { error: file.error })}
         </p>
       )}
       {notice}

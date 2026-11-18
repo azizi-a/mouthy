@@ -121,11 +121,13 @@ You should hear each paragraph in its own language, with nothing spelled letter 
 
 ## Part 6: Japanese
 
-Select only this part's paragraph, with a Japanese voice such as `jf_alpha` or `jm_kumo`.
+Select one paragraph at a time, with a Japanese voice such as `jf_alpha` or `jm_kumo`; first without the Japanese dictionary (Settings → Models), then with it.
 
 きょうも、いいてんきですね。あさごはんをたべてから、こうえんまでさんぽにいきました。ベンチにすわって、コーヒーをのみながら、ちょっとだけほんをよみました。ラジオからきこえてくるおんがくが、とてもきもちよかったです。あしたもまた、いっしょにいきませんか？
 
-You should hear five Japanese sentences, the last one a question: the small っ in ちょっと and いっしょ as a short catch, ー in コーヒー as a long vowel, ん in さんぽ as "m". Words run together a little, since Mouthy has no dictionary to find word boundaries. A paragraph that is mostly kanji shows "Japanese text with kanji is not supported yet" instead.
+私は毎朝、駅前の店でコーヒーを買います。今日は天気がいいので、3人で公園へ行きました。昨日、新しいiPhoneで写真を撮りました。
+
+You should hear the kana paragraph as five Japanese sentences, the last one a question: the small っ in ちょっと and いっしょ as a short catch, ー in コーヒー as a long vowel, ん in さんぽ as "m". Without the dictionary its words run together a little and the kanji paragraph shows "Kanji need the dictionary in Settings → Models" instead. With the dictionary, words come apart, きょう and こうえん have long vowels, and the kanji paragraph is read whole: 私は and 今日は with "wa", 公園へ with "e", 3人 as "san nin", and "iPhone" in English.
 
 ## Part 7: Mandarin
 

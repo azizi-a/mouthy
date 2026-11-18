@@ -6,6 +6,7 @@ mod english_words;
 pub mod espeak;
 pub mod http;
 mod ja;
+pub mod ja_dictionary;
 pub mod local;
 pub mod text;
 #[cfg(test)]
