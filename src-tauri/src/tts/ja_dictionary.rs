@@ -301,22 +301,41 @@ pub(crate) fn tagger_for_test() -> Option<&'static Tagger> {
             // only once and a new archive unpacks afresh.
             let cache = root.join(pinned);
             if !installed(&cache) {
-                let actual = download::sha256_file(&downloaded).unwrap();
-                assert_eq!(actual, pinned, "{}", downloaded.display());
-                // Unpacked apart from any other test run, then moved in whole.
-                let models = root.join(format!("{pinned}.{}", std::process::id()));
-                remove_dir(&models).unwrap();
-                fs::create_dir_all(&models).unwrap();
-                fs::copy(&downloaded, archive(&models)).unwrap();
-                unpack(&models).unwrap();
-                if fs::rename(dir(&models), &cache).is_err() {
-                    assert!(
-                        installed(&cache),
-                        "{} is damaged: delete it",
-                        cache.display()
-                    );
+                fs::create_dir_all(&root).unwrap();
+                // Runs unpack one at a time, so any other `<sha256>.*` folder
+                // is a killed run's. The lock file stays: deleting it would
+                // let two runs each lock a file of their own.
+                let lock = File::create(root.join(format!("{pinned}.lock"))).unwrap();
+                lock.lock().unwrap();
+                if !installed(&cache) {
+                    let actual = download::sha256_file(&downloaded).unwrap();
+                    assert_eq!(actual, pinned, "{}", downloaded.display());
+                    // Unpacked beside the cache, then moved in whole.
+                    let models = root.join(format!("{pinned}.{}", std::process::id()));
+                    remove_dir(&models).unwrap();
+                    fs::create_dir_all(&models).unwrap();
+                    fs::copy(&downloaded, archive(&models)).unwrap();
+                    unpack(&models).unwrap();
+                    if let Err(e) = fs::rename(dir(&models), &cache) {
+                        if !installed(&cache) {
+                            let _ = remove_dir(&models);
+                            panic!(
+                                "Cannot move the dictionary to {}: {e}. If it is there, delete it",
+                                cache.display()
+                            );
+                        }
+                    }
+                    // This run's folder and any killed run's.
+                    let prefix = format!("{pinned}.");
+                    for entry in fs::read_dir(&root).unwrap().flatten() {
+                        let name = entry.file_name();
+                        if name.to_string_lossy().starts_with(&prefix)
+                            && entry.file_type().is_ok_and(|kind| kind.is_dir())
+                        {
+                            let _ = remove_dir(&entry.path());
+                        }
+                    }
                 }
-                remove_dir(&models).unwrap();
             }
             Some(load(&cache).unwrap())
         })
