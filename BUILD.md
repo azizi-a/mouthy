@@ -1,6 +1,6 @@
 # Build Instructions
 
-Mouthy targets Apple-Silicon macOS first. Linux (x86_64) is built and unit-tested by CI on every pull request but not yet tried on a desktop; Windows is kept compiling where cheap.
+Mouthy targets Apple-Silicon macOS first. Linux (x86_64) is built and unit-tested by CI on every pull request, and its AppImage has run on KDE Plasma on Wayland (Bazzite); no other desktop has been tried. Windows is kept compiling where cheap.
 
 Intel and universal macOS builds fail to link: ONNX Runtime's prebuilt archive exists only for Apple Silicon (macOS 13.4+).
 

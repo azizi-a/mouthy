@@ -1,8 +1,8 @@
 # Mouthy
 
-Mouthy is a free, open-source text-to-speech app for macOS that works offline. Select text in any app, press a hotkey, and the Kokoro neural voice reads it aloud on your Mac; press the hotkey again to stop. Playback starts as soon as the first sentence is ready, and your clipboard is put back the way it was. A local OpenAI-compatible speech server can be used instead.
+Mouthy is a free, open-source text-to-speech app for macOS and Linux that works offline. Select text in any app, press a hotkey, and the Kokoro neural voice reads it aloud on your computer; press the hotkey again to stop. Playback starts as soon as the first sentence is ready, and your clipboard is put back the way it was. A local OpenAI-compatible speech server can be used instead.
 
-**Status:** 0.5.0, for Apple Silicon Macs with macOS 13.4 or later. Mouthy is not signed with an Apple Developer ID or notarised, and does not update itself. Intel Macs are not supported, because ONNX Runtime, which runs the voice, has no prebuilt library for them. Windows and Linux builds compile but are untested.
+**Status:** 0.6.0, for Apple Silicon Macs with macOS 13.4 or later, and for x86_64 Linux on Wayland (see [Linux](#linux)). Mouthy is not signed with an Apple Developer ID or notarised, and does not update itself. Intel Macs are not supported, because ONNX Runtime, which runs the voice, has no prebuilt library for them. Windows builds compile but are untested.
 
 ## Install
 
@@ -14,7 +14,7 @@ brew install --cask azizi-a/mouthy/mouthy
 
 The first time, Homebrew asks you to trust the third-party tap. It may ask for an administrator password to copy Mouthy into /Applications. `brew upgrade --cask mouthy` installs new releases, and `brew uninstall --zap --cask mouthy` also deletes the voices Mouthy downloaded and its settings.
 
-Or download `Mouthy_0.5.0_aarch64.dmg` from [GitHub Releases](https://github.com/azizi-a/mouthy/releases), open it and drag Mouthy to Applications.
+Or download `Mouthy_0.6.0_aarch64.dmg` from [GitHub Releases](https://github.com/azizi-a/mouthy/releases), open it and drag Mouthy to Applications.
 
 Either way, macOS blocks the first launch because Mouthy is not notarised. Click Done, then open System Settings → Privacy & Security and click **Open Anyway** (on macOS 14 and earlier you can instead right-click Mouthy and choose Open). Or clear the download flag before launching:
 
@@ -88,6 +88,8 @@ English voices read English. The others read their own language:
 - **Japanese** (`jf_*`, `jm_*`): reads Japanese, with its numbers in Japanese. English inside Japanese text is read as English, and text with no Japanese in it is read as an American English voice reads it. Kanji need the Japanese dictionary, a 29 MB download on Settings → Models that takes 80 MB once unpacked: the [NAIST Japanese Dictionary](https://github.com/jpreprocess/naist-jdic) (BSD licence) as [jpreprocess](https://github.com/jpreprocess/jpreprocess) publishes it, from `https://github.com/jpreprocess/jpreprocess/releases/download/v0.15.0/naist-jdic-jpreprocess.tar.gz`. With it, Mouthy finds each word and how it is said, so particles such as は sound "wa" and long vowels are long, and dates and counts read as they are said, in digits or kanji (4月 しがつ, 1日 ついたち after a month, 2人 and 二人 ふたり, 三日間 みっかかん, 34日 さんじゅうよっか; in an approximate count such as 二、三日 or 8、9人 the second number reads plainly, に、さんにち). Its limits: a word it does not know written in kanji is skipped; it can choose the wrong reading where context decides (高い山 after 富士山 read with ざん, 空いた read あいた, 机の上 with nothing after it read with じょう); 1日 reads ついたち only right after a month, so on its own or in 4月の1日 it reads いちにち, as a length of time; in an approximate count the first number keeps its plain reading (四、五日 is said しごにち, 七、八日 しちはちにち, 十四、五日 じゅうしごにち), 一、二日 reads いち、ふつか while 1、2日 reads いち、ににち, a space after 、 (二、 三日) makes two numbers, two days with no month before them read as a count (5、6日の両日), a numbered list can read as one (一、二人以上で…), and a count followed by any word starting with とも keeps its own reading, as a date or "both" would (1、2人ともに ふたり); a count that runs into the next word reads as a count (2人三脚 ふたり さん きゃく, where 二人三脚 reads ににんさんきゃく), and the word after a count keeps its own reading (2人暮らし ふたり くらし); a count in kanji with 百 or more keeps the dictionary's reading (二百四人 に ひゃく よん にん); other counters keep the plain number (一冊 いち さつ, 30分 さんじゅう ふん, 二十歳 に じゅう さい rather than はたち), and 四十九日 reads as a count of days, not the memorial's しじゅうくにち; a う written in katakana is not taken as a long vowel (行こウ いこ う); a minus sign is dropped (-5度) and a fraction such as 3/4 reads as two numbers. Without it, Japanese voices read kana only: words run together, は and へ are read "ha" and "he", long vowels follow the spelling, kanji are skipped, and text where more than a fifth of the letters are kanji is not read at all.
 - **Mandarin** (`zf_*`, `zm_*`): reads Chinese characters with their tones, as Kokoro learned Mandarin. Words are found with jieba's dictionary, and a word such as 银行 or 重新 takes its reading from a phrase dictionary; other characters take their most common reading. Numbers are read in Chinese: "2024年" as 二零二四年, "3.14" as 三点一四, "50%" as 百分之五十. English inside Chinese text is read as English, and text with no Chinese in it is read as an American English voice reads it. The tone changes of 一 and 不 and of third tones in a row are read only where the phrase dictionary spells them. The dictionaries load once, in about 0.15 s, when a Chinese voice is first used, and add about 40 MB to Mouthy's memory.
 
+The non-English readings were compared with the readers Kokoro was trained with (misaki and espeak-ng), not checked by native speakers. If a language sounds wrong, please open an issue with the text.
+
 Settings → General → **Reading Language** chooses between the voice's own language (the default) and English, read with the voice's accent; British voices keep British pronunciations and all others use American ones. `--lang` overrides it for one `--speak-file` call. It does nothing with the server engine, which decides the language itself.
 
 ## Using a speech server instead
@@ -106,11 +108,11 @@ Open Settings from the tray or by launching Mouthy again. Besides the hotkeys an
 
 ## Linux
 
-x86_64 builds (AppImage, rpm and deb) are not released or tested yet. They need glibc 2.39 or newer: Ubuntu 24.04, Fedora 40 or later (Bazzite included), Debian 13 or later; not Ubuntu 22.04, Debian 12 or Fedora 39. To build one yourself, see [BUILD.md](BUILD.md#linux).
+x86_64 builds (AppImage, rpm and deb) are on [GitHub Releases](https://github.com/azizi-a/mouthy/releases). They need glibc 2.39 or newer: Ubuntu 24.04, Fedora 40 or later (Bazzite included), Debian 13 or later; not Ubuntu 22.04, Debian 12 or Fedora 39. To build one yourself, see [BUILD.md](BUILD.md#linux).
 
 On Linux, install [espeak-ng](#better-pronunciation-of-unknown-words) with your distribution's package manager, or with `brew install espeak-ng` on an immutable distribution such as Bazzite.
 
-Mouthy targets Wayland and is being tested on KDE Plasma; GNOME is untested, and X11 sessions are not supported.
+Mouthy targets Wayland. It has been run on one laptop: Bazzite with KDE Plasma on Wayland, from the AppImage. Nobody has tested it on GNOME or any other desktop, or run the rpm or deb on a desktop, and X11 sessions are not supported.
 
 ### Install on Linux
 
@@ -180,7 +182,7 @@ bun run tauri dev                    # run in development
 bun run tauri build --bundles app    # build the app
 ```
 
-The built app is `src-tauri/target/release/bundle/macos/Mouthy.app`. Under `bun run tauri dev`, macOS charges the Accessibility permission to your terminal, so test the hotkeys with the built app. See [BUILD.md](BUILD.md) for more. To test a build by hand, work through [docs/phase3-checklist.md](docs/phase3-checklist.md); [docs/listening-test.md](docs/listening-test.md) checks how text is read, by ear.
+The built app is `src-tauri/target/release/bundle/macos/Mouthy.app`. Under `bun run tauri dev`, macOS charges the Accessibility permission to your terminal, so test the hotkeys with the built app. See [BUILD.md](BUILD.md) for more. To test a build by hand, work through [docs/phase3-checklist.md](docs/phase3-checklist.md), and [docs/phase4-checklist.md](docs/phase4-checklist.md) for Linux and the languages; [docs/listening-test.md](docs/listening-test.md) checks how text is read, by ear.
 
 ## Attribution
 
