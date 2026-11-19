@@ -148,7 +148,7 @@ The highlighted text is the PRIMARY selection: whatever you last highlighted in 
 
 On Linux most password managers do not mark a password they copy. Mouthy refuses to read the clipboard only when it carries KDE's password hint, so Speak Clipboard may read a copied password aloud.
 
-**In-app hotkeys (optional).** The Event Tap shortcut backend (Settings → Advanced → Experimental Features, then Keyboard Implementation) reads the keyboard itself, which needs your user in the `input` group. Membership lets any program you run read every key you type, passwords included. Add yourself with `sudo usermod -aG input $USER`, then log out and back in. On Fedora Atomic desktops such as Bazzite, copy the group into `/etc/group` first: `grep -E '^input:' /usr/lib/group | sudo tee -a /etc/group`.
+**In-app hotkeys (optional).** The Event Tap shortcut backend (Settings → Advanced → Experimental Features, then Keyboard Implementation) reads the keyboard itself, which needs your user in the `input` group. Nobody has tested it on Linux yet. Membership lets any program you run read every key you type, passwords included. Add yourself with `sudo usermod -aG input $USER`, then log out and back in. On Fedora Atomic desktops such as Bazzite, copy the group into `/etc/group` first: `grep -E '^input:' /usr/lib/group | sudo tee -a /etc/group`.
 
 ### Overlay, tray and sound on Linux
 
