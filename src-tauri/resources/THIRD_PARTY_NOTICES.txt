@@ -7740,9 +7740,12 @@ they load from inside the AppImage: they set library search paths, may strip
 debugging symbols, and rewrite the /usr path in the WebKitGTK libraries to
 ././ so WebKit finds its helper programs inside the image. Each library's
 copyright holders and licence text are in its package's copyright file
-(/usr/share/doc/<package>/copyright on Ubuntu), and its source is in Ubuntu's
-archive (apt-get source <package>, or
-https://launchpad.net/ubuntu/+source/<package>). To use your own build of a
+(/usr/share/doc/<package>/copyright on Ubuntu). The libraries were installed
+from Ubuntu 24.04 (noble) packages on the GitHub Actions runner that built
+the AppImage, so their source is the matching Ubuntu source package:
+apt-get source <source package> on noble, or
+https://packages.ubuntu.com/source/noble/<source package> and
+https://launchpad.net/ubuntu/+source/<source package>. To use your own build of a
 library, run the AppImage with --appimage-extract, put it in
 squashfs-root/usr/lib and start squashfs-root/AppRun; a WebKitGTK library
 needs the same /usr rewrite, so a system copy does not work as it is.
@@ -7788,6 +7791,20 @@ name differs), as Debian's copyright files give them:
   [krb5]: BSD-style or similar permissive licences (libcap and Zstandard
   offer GPL-2 too)
 - XZ [xz-utils]: 0BSD; SQLite [sqlite3], libselinux: public domain
+
+Source of the GPL libraries and the tray libraries with them (the Ubuntu noble
+source package and its version as published on 2026-11-19, then upstream):
+
+- libayatana-indicator3 [libayatana-indicator 0.9.4-1build1]:
+  https://github.com/AyatanaIndicators/libayatana-indicator
+- libayatana-ido3 [ayatana-ido 0.10.1-1build2]:
+  https://github.com/AyatanaIndicators/ayatana-ido
+- libdbusmenu-glib and libdbusmenu-gtk3
+  [libdbusmenu 18.10.20180917~bzr492+repack1-3.1ubuntu5]:
+  https://launchpad.net/libdbusmenu
+- libayatana-appindicator3 [libayatana-appindicator 0.5.93-1build3]:
+  https://github.com/AyatanaIndicators/libayatana-appindicator
+- libjbig [jbigkit 2.1-6.1ubuntu2]: https://www.cl.cam.ac.uk/~mgk25/jbigkit/
 
 The AppImage's runtime, the program that mounts the image and starts Mouthy,
 is AppImage/type2-runtime (https://github.com/AppImage/type2-runtime), which
