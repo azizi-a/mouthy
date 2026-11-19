@@ -1,6 +1,6 @@
 # Build Instructions
 
-Mouthy targets Apple-Silicon macOS first. Linux (x86_64) is built and unit-tested by CI on every pull request but not yet tried on a desktop; Windows is kept compiling where cheap.
+Mouthy targets Apple-Silicon macOS first. Linux (x86_64) is built and unit-tested by CI on every pull request, and its AppImage has run on KDE Plasma on Wayland (Bazzite); no other desktop has been tried. Windows is kept compiling where cheap.
 
 Intel and universal macOS builds fail to link: ONNX Runtime's prebuilt archive exists only for Apple Silicon (macOS 13.4+).
 
@@ -71,6 +71,8 @@ shasum -a 256 Mouthy_0.4.0_aarch64.dmg > SHA256SUMS
 ```
 
 `CI=true` skips the dmg script's Finder automation, so the dmg window keeps the default layout. The dmg and `SHA256SUMS` are in `src-tauri/target/release/bundle/dmg/`.
+
+Before tagging, run the release's checklist on this dmg and on a Linux build of the same commit (`gh workflow run linux.yml -f ref=main`, above): a fault found after the tag burns the version, since tags are never reused.
 
 Tag with a signed annotated tag whose message is the version's changelog block, and push it by name, never with `--tags`. A clone that fetched Handy's tags may hold a local tag of the same name: delete it first, and fetch upstream with `--no-tags`.
 
