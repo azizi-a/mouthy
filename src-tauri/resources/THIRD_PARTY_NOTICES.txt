@@ -7733,14 +7733,19 @@ SOFTWARE.
 Linux AppImage: system libraries
 ==============================================================================
 
-The Linux AppImage, unlike the deb and rpm, carries shared libraries from
-Ubuntu 24.04, unmodified, in its usr/lib folder; Mouthy loads them at run
-time. Each library's copyright holders and licence text are in its package's
-copyright file (/usr/share/doc/<package>/copyright on Ubuntu), and its source
-is in Ubuntu's archive (apt-get source <package>, or
-https://launchpad.net/ubuntu/+source/<package>). You may replace any of them:
-run the AppImage with --appimage-extract, change the file in
-squashfs-root/usr/lib and start squashfs-root/AppRun.
+The Linux AppImage, unlike the deb and rpm, carries shared libraries built
+from Ubuntu 24.04's packages, in its usr/lib folder; Mouthy loads them at run
+time. The packaging tools (linuxdeploy and Tauri's GTK plugin) adjust them so
+they load from inside the AppImage: they set library search paths, may strip
+debugging symbols, and rewrite the /usr path in the WebKitGTK libraries to
+././ so WebKit finds its helper programs inside the image. Each library's
+copyright holders and licence text are in its package's copyright file
+(/usr/share/doc/<package>/copyright on Ubuntu), and its source is in Ubuntu's
+archive (apt-get source <package>, or
+https://launchpad.net/ubuntu/+source/<package>). To use your own build of a
+library, run the AppImage with --appimage-extract, put it in
+squashfs-root/usr/lib and start squashfs-root/AppRun; a WebKitGTK library
+needs the same /usr rewrite, so a system copy does not work as it is.
 
 Licences of the libraries it carries (source package in brackets where its
 name differs), as Debian's copyright files give them:
@@ -7783,6 +7788,23 @@ name differs), as Debian's copyright files give them:
   [krb5]: BSD-style or similar permissive licences (libcap and Zstandard
   offer GPL-2 too)
 - XZ [xz-utils]: 0BSD; SQLite [sqlite3], libselinux: public domain
+
+The AppImage's runtime, the program that mounts the image and starts Mouthy,
+is AppImage/type2-runtime (https://github.com/AppImage/type2-runtime), which
+appimagetool adds: MIT, copyright (c) 2004-23 probonopd, with statically
+linked musl libc (MIT), libfuse (LGPL-2.1), squashfuse (BSD-2-Clause),
+Zstandard (BSD-3-Clause) and zlib (Zlib), as its LICENSE file states.
+
+==============================================================================
+espeak-ng
+==============================================================================
+
+Licence: GPL-3.0-or-later
+Source: https://github.com/espeak-ng/espeak-ng
+
+Not bundled with Mouthy. Optional: when the user installs it, Mouthy runs it
+as a separate program to read some words and languages. It is never linked
+into Mouthy.
 
 ==============================================================================
 Other dependencies
