@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 0.6.0 — 2026-11-18
+## 0.6.0 — 2026-11-19
 
 Linux on Wayland, and voices that read their own language: Spanish, French, Italian, Brazilian Portuguese, Hindi, Japanese and Mandarin. Mouthy is still not signed or notarised and does not update itself.
 
@@ -15,7 +15,7 @@ Linux on Wayland, and voices that read their own language: Spanish, French, Ital
 - The overlay starts on under native Wayland with the GTK layer shell (KDE Plasma), and off elsewhere. It does not take the keyboard from the app you are typing in, except perhaps when Mouthy runs natively on a desktop without the layer shell, such as the rpm or deb on GNOME.
 - In a Wayland session the AppImage runs as a native Wayland app, except on GNOME, where it stays under XWayland for the overlay's sake; `MOUTHY_GDK_BACKEND=x11` or `=wayland` chooses.
 - From the AppImage, `--speak-file` takes a relative path from the folder it was run in.
-- The tray icon is the plain mouth glyph, as on the Mac: white, or black on a light KDE Plasma panel.
+- The tray icon is the plain mouth glyph, as on the Mac: white by default, and on KDE Plasma chosen to suit the panel theme.
 - Mouthy runs without a tray icon when no appindicator library is installed; launching it again opens Settings. Whenever no tray icon shows (none installed, Show Tray Icon off, or `--no-tray`), closing Settings quits Mouthy.
 
 ### Languages
