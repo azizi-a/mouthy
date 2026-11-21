@@ -3329,7 +3329,20 @@ mod tests {
         assert_eq!(texts(chunks), chinese);
         let japanese = ["東京に行きます。", "今日は天気がいいですね。"];
         assert_eq!(sentences_in(&japanese.concat(), &Marks::CJK), japanese);
-        // Under six characters still joins, as the preview's greeting does.
+        // Six characters, the full stop counted, stand alone; five join a
+        // neighbour, the one before when there is one.
+        assert_eq!(
+            sentences_in("你好吗朋友？我们一起去公园散步吧。", &Marks::CJK),
+            ["你好吗朋友？", "我们一起去公园散步吧。"]
+        );
+        assert_eq!(
+            sentences_in("你好朋友？我们一起去公园散步吧。", &Marks::CJK),
+            ["你好朋友？ 我们一起去公园散步吧。"]
+        );
+        assert_eq!(
+            sentences_in("我们一起去公园散步吧。你好朋友？", &Marks::CJK),
+            ["我们一起去公园散步吧。 你好朋友？"]
+        );
         assert_eq!(
             sentences_in("你好！这就是我为你朗读文字时的声音。", &Marks::CJK),
             ["你好！ 这就是我为你朗读文字时的声音。"]
