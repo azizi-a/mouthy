@@ -1,4 +1,4 @@
-# Each sentence and misaki 0.9.4's reading of it: ZHG2P() as Kokoro v1.0 runs it.
+# Each sentence and misaki 0.9.4's reading of it: ZHG2P() as Kokoro v1.0 runs it, except the lone 儿 of the last, which joins its word here.
 今天天气很好，我们去公园散步吧。	ʨi→ntʰjɛ→ntʰjɛ→nʨʰi↘ xə↓n xau↓, wo↓mən ʨʰy↘ kʊ→ŋɥɛ↗n sa↘npu↘ pa.
 我每天早上七点起床，然后吃早饭。	wo↓ mei↓tʰjɛ→n ʦau↓ʂa↘ŋ ʨʰi→tjɛ↓n ʨʰi↓ꭧʰwa↗ŋ, ɻa↗nxou↘ ꭧʰɨ→ ʦau↓fa↘n.
 这本书非常有意思，你一定要看看。	ꭧɤ↘ pə↓nʂu→ fei→ꭧʰa↗ŋ jou↓i↘sɨ, ni↓ i↗ti↘ŋ jau↘ kʰa↘nkʰa↘n.
@@ -70,4 +70,4 @@
 春天来了，公园里的花都开了。小朋友们在草地上跑来跑去，老人们坐在长椅上聊天。湖边有几个年轻人在拍照，他们笑得很开心。我喜欢在这样的日子里散步，因为空气新鲜，阳光温暖，让人觉得一切都充满了希望。	ꭧʰwə→ntʰjɛ→n lai↗ lɤ, kʊ→ŋɥɛ↗n li↓ tɤ xwa→tou→ kʰai→ lɤ. ɕjau↓pʰə↗ŋjou↓ mən ʦai↘ ʦʰau↓ti↘ ʂa↘ŋ pʰau↓lai↗pʰau↓ʨʰy↘, lau↓ ɻə↗nmən ʦwo↘ʦai↘ ꭧa↓ŋi↓ ʂa↘ŋ ljau↗tʰjɛ→n. xu↗pjɛ→n jou↓ ʨi↓kɤ↘ njɛ↗nʨʰi→ŋɻə↗n ʦai↘ pʰai→ꭧau↘, tʰa→mən ɕjau↘ tɤ↗ xə↓n kʰai→ɕi→n. wo↓ ɕi↓xwa→n ʦai↘ ꭧɤ↘ja↘ŋ tɤ ɻɨ↘ʦɨ li↓ sa↘npu↘, i→nwei↘ kʰʊ→ŋʨʰi↘ ɕi→nɕjɛ→n, ja↗ŋkwa→ŋ wə→nnwa↓n, ɻa↘ŋ ɻə↗n ʨɥe↗tɤ i→ʨʰje↘ tou→ ꭧʰʊ→ŋma↓n lɤ ɕi→wa↘ŋ.
 人工智能正在改变我们的生活方式，从手机上的语音助手到医院里的诊断系统，它无处不在。	ɻə↗nkʊ→ŋꭧɨ↘nə↗ŋ ꭧə↘ŋʦai↘ kai↓pjɛ↘n wo↓mən tɤ ʂə→ŋxwo↗ fa→ŋʂɨ↘, ʦʰʊ↗ŋ ʂou↓ʨi→ ʂa↘ŋ tɤ y↓i→n ꭧu↘ʂou↓ tau↘ i→ɥɛ↘n li↓ tɤ ꭧə↓ntwa↘nɕi↘tʰʊ↓ŋ, tʰa→ u↗ꭧʰu↓pu↘ʦai↘.
 你好！这就是我为你朗读文字时的声音。	ni↓xau↓! ꭧɤ↘ ʨjou↘ʂɨ↘ wo↓ wei↘ ni↓ la↓ŋtu↗ wə↗nʦɨ↘ ʂɨ↗ tɤ ʂə→ŋi→n.
-今天天气很好，我们一起去公园散步吧。路上，我在银行门口遇到了一位老朋友，他说他重新开始学画画儿了。我们聊了一会儿，觉得时间过得真快：上次见面还是2019年！你明天有空吗？	ʨi→ntʰjɛ→ntʰjɛ→nʨʰi↘ xə↓n xau↓, wo↓mən i↘ʨʰi↓ ʨʰy↘ kʊ→ŋɥɛ↗n sa↘npu↘ pa. lu↘ʂa↘ŋ, wo↓ ʦai↘ i↗nxa↗ŋ mə↗nkʰou↓ y↘tau↘ lɤ i→wei↘ lau↓pʰə↗ŋjou↓, tʰa→ ʂwo→ tʰa→ ꭧʰʊ↗ŋɕi→n kʰai→ʂɨ↓ ɕɥe↗ xwa↘xwa↘ ɚ↗ lɤ. wo↓mən ljau↗ lɤ i→xwei↘ɚ, ʨɥe↗tɤ ʂɨ↗ʨjɛ→n kwo↘tɤ↗ ꭧə→nkʰwai↘: ʂa↘ŋʦʰɨ↘ ʨjɛ↘nmjɛ↘n xai↗ʂɨ↘ ɚ↘li↗ŋi→ ʨjou↓njɛ↗n! ni↓ mi↗ŋtʰjɛ→n jou↓kʰʊ↘ŋ ma?
+今天天气很好，我们一起去公园散步吧。路上，我在银行门口遇到了一位老朋友，他说他重新开始学画画儿了。我们聊了一会儿，觉得时间过得真快：上次见面还是2019年！你明天有空吗？	ʨi→ntʰjɛ→ntʰjɛ→nʨʰi↘ xə↓n xau↓, wo↓mən i↘ʨʰi↓ ʨʰy↘ kʊ→ŋɥɛ↗n sa↘npu↘ pa. lu↘ʂa↘ŋ, wo↓ ʦai↘ i↗nxa↗ŋ mə↗nkʰou↓ y↘tau↘ lɤ i→wei↘ lau↓pʰə↗ŋjou↓, tʰa→ ʂwo→ tʰa→ ꭧʰʊ↗ŋɕi→n kʰai→ʂɨ↓ ɕɥe↗ xwa↘xwa↘ɚ lɤ. wo↓mən ljau↗ lɤ i→xwei↘ɚ, ʨɥe↗tɤ ʂɨ↗ʨjɛ→n kwo↘tɤ↗ ꭧə→nkʰwai↘: ʂa↘ŋʦʰɨ↘ ʨjɛ↘nmjɛ↘n xai↗ʂɨ↘ ɚ↘li↗ŋi→ ʨjou↓njɛ↗n! ni↓ mi↗ŋtʰjɛ→n jou↓kʰʊ↘ŋ ma?

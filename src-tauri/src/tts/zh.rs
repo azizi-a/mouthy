@@ -91,13 +91,24 @@ pub(super) fn phonemes(
                 out.push(' ');
                 space_before_han = false;
             }
-            let words: Vec<String> = dictionaries
-                .jieba
-                .cut(run, true)
-                .into_iter()
-                .map(|word| dictionaries.word(word, &mut skipped))
-                .filter(|word| !word.is_empty())
-                .collect();
+            let mut words: Vec<String> = Vec::new();
+            let mut after_word = false;
+            for word in dictionaries.jieba.cut(run, true) {
+                // jieba splits off the 儿 of a word its dictionary lacks (画画儿),
+                // which misaki then says as a syllable of its own.
+                if word == "儿" && after_word {
+                    if let Some(last) = words.last_mut() {
+                        last.push('ɚ');
+                    }
+                    after_word = false;
+                    continue;
+                }
+                let reading = dictionaries.word(word, &mut skipped);
+                after_word = !reading.is_empty();
+                if after_word {
+                    words.push(reading);
+                }
+            }
             out.push_str(&words.join(" "));
             continue;
         }
@@ -1162,6 +1173,36 @@ mod tests {
             reads("电话号码是13800138000。"),
             "tjɛ↘nxwa↘xau↘ma↓ ʂɨ↘ i→ sa→npa→ li↗ŋli↗ŋ i→ sa→npa→ li↗ŋli↗ŋ li↗ŋ."
         );
+    }
+
+    #[test]
+    fn a_lone_er_joins_the_word_before_it() {
+        for (text, ours, misaki) in [
+            (
+                "他学画画儿了。",
+                "tʰa→ɕɥe↗ xwa↘xwa↘ɚ lɤ.",
+                "tʰa→ɕɥe↗ xwa↘xwa↘ ɚ↗ lɤ.",
+            ),
+            ("等一下儿。", "tə↓ŋ i→ɕja↘ɚ.", "tə↓ŋ i→ɕja↘ ɚ↗."),
+            ("那边儿", "na↘pjɛ→nɚ", "na↘pjɛ→n ɚ↗"),
+            ("画画儿，儿", "xwa↘xwa↘ɚ, ɚ↗", "xwa↘xwa↘ ɚ↗, ɚ↗"),
+        ] {
+            assert_eq!(reads(text), ours, "{text}, misaki: {misaki}");
+        }
+        // Words jieba knows, and a 儿 that starts a word or follows no Chinese
+        // word, read as misaki reads them.
+        for (text, misaki) in [
+            ("我们聊了一会儿，", "wo↓mən ljau↗ lɤ i→xwei↘ɚ,"),
+            ("那儿", "na↘ɚ↗"),
+            ("女儿", "ny↓ɚ↗"),
+            ("儿子来了。", "ɚ↗ʦɨ lai↗ lɤ."),
+            ("儿童", "ɚ↗tʰʊ↗ŋ"),
+            ("儿", "ɚ↗"),
+            ("好，儿", "xau↓, ɚ↗"),
+        ] {
+            assert_eq!(reads(text), misaki, "{text}");
+        }
+        assert_eq!(marked("Hi儿"), "<Hi> ɚ↗");
     }
 
     #[test]

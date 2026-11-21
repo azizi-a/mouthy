@@ -24,6 +24,7 @@ Linux on Wayland, and voices that read their own language: Spanish, French, Ital
 - Japanese voices (`jf_*`, `jm_*`) read Japanese, with its numbers in Japanese and any English in it as English. Kanji need the Japanese dictionary, a 29 MB download on Settings → Models; with it particles and long vowels are said as spoken, and dates, counts and approximate counts such as 二、三日 read as they are said. Without it Japanese voices read kana only, and text that is mostly kanji shows a notice pointing at the download.
 - Chinese voices (`zf_*`, `zm_*`) read Mandarin, with each word's tones and numbers read in Chinese, and any English in it as English.
 - Japanese and Chinese voices read each sentence on its own, so every full stop gets its pause; only a sentence under six characters joins the next.
+- A 儿 that ends a Chinese word the dictionary lacks, as in 画画儿, joins that word as its "r" sound instead of being said as a syllable of its own.
 - Settings → General → Reading Language, and `--lang en` with `--speak-file`, let a voice of another language read English text with its own accent; by default a voice reads its own language.
 - A voice's Preview reads a sentence in its own language, and the voice picker no longer marks any voice as reading English only.
 - Accented letters typed or copied as a letter plus a separate accent, as macOS file names often are, read like ordinary accented letters in Spanish, French, Italian, Portuguese and Hindi; Japanese voices also read half-width katakana, pausing at its half-width full stops and commas.
