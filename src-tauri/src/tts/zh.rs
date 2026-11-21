@@ -91,13 +91,24 @@ pub(super) fn phonemes(
                 out.push(' ');
                 space_before_han = false;
             }
-            let words: Vec<String> = dictionaries
-                .jieba
-                .cut(run, true)
-                .into_iter()
-                .map(|word| dictionaries.word(word, &mut skipped))
-                .filter(|word| !word.is_empty())
-                .collect();
+            let mut words: Vec<String> = Vec::new();
+            let mut takes_er = false;
+            for word in dictionaries.jieba.cut(run, true) {
+                // jieba splits off the 儿 of a word its dictionary lacks (画画儿),
+                // which misaki then says as a syllable of its own.
+                if word == "儿" && takes_er {
+                    if let Some(last) = words.last_mut() {
+                        last.push('ɚ');
+                    }
+                    takes_er = false;
+                    continue;
+                }
+                let reading = dictionaries.word(word, &mut skipped);
+                takes_er = can_take_er(word, &reading);
+                if !reading.is_empty() {
+                    words.push(reading);
+                }
+            }
             out.push_str(&words.join(" "));
             continue;
         }
@@ -122,6 +133,13 @@ pub(super) fn phonemes(
         out.push_str(&run[end..]);
     }
     Ok((out.replace('\u{32f}', ""), skipped))
+}
+
+/// Whether a lone 儿 after `word` is its erhua. After a toneless particle
+/// (他的儿, 抱着儿), a measure word (三个儿) or literary 与 and 吾, 儿 is
+/// "son" or "child", a syllable of its own.
+fn can_take_er(word: &str, reading: &str) -> bool {
+    reading.contains(['→', '↗', '↘', '↓']) && !word.ends_with('个') && !matches!(word, "与" | "吾")
 }
 
 /// `text` cut into runs of Han characters and runs of anything else, in order,
@@ -1162,6 +1180,42 @@ mod tests {
             reads("电话号码是13800138000。"),
             "tjɛ↘nxwa↘xau↘ma↓ ʂɨ↘ i→ sa→npa→ li↗ŋli↗ŋ i→ sa→npa→ li↗ŋli↗ŋ li↗ŋ."
         );
+    }
+
+    #[test]
+    fn a_lone_er_joins_the_word_before_it() {
+        for (text, ours, misaki) in [
+            (
+                "他学画画儿了。",
+                "tʰa→ɕɥe↗ xwa↘xwa↘ɚ lɤ.",
+                "tʰa→ɕɥe↗ xwa↘xwa↘ ɚ↗ lɤ.",
+            ),
+            ("等一下儿。", "tə↓ŋ i→ɕja↘ɚ.", "tə↓ŋ i→ɕja↘ ɚ↗."),
+            ("那边儿", "na↘pjɛ→nɚ", "na↘pjɛ→n ɚ↗"),
+            ("唱歌儿", "ꭧʰa↘ŋkɤ→ɚ", "ꭧʰa↘ŋkɤ→ ɚ↗"),
+            ("画画儿，儿", "xwa↘xwa↘ɚ, ɚ↗", "xwa↘xwa↘ ɚ↗, ɚ↗"),
+        ] {
+            assert_eq!(reads(text), ours, "{text}, misaki: {misaki}");
+        }
+        // Words jieba knows, a 儿 meaning "son" or "child", and a 儿 that
+        // starts a word or follows no Chinese word, read as misaki reads them.
+        for (text, misaki) in [
+            ("他的儿", "tʰa→ tɤ ɚ↗"),
+            ("母亲抱着儿", "mu↓ʨʰi→n pau↘ ꭧɤ ɚ↗"),
+            ("与儿", "y↓ ɚ↗"),
+            ("吾儿", "u↗ ɚ↗"),
+            ("生了三个儿", "ʂə→ŋ lɤ sa→nkɤ↘ ɚ↗"),
+            ("我们聊了一会儿，", "wo↓mən ljau↗ lɤ i→xwei↘ɚ,"),
+            ("那儿", "na↘ɚ↗"),
+            ("女儿", "ny↓ɚ↗"),
+            ("儿子来了。", "ɚ↗ʦɨ lai↗ lɤ."),
+            ("儿童", "ɚ↗tʰʊ↗ŋ"),
+            ("儿", "ɚ↗"),
+            ("好，儿", "xau↓, ɚ↗"),
+        ] {
+            assert_eq!(reads(text), misaki, "{text}");
+        }
+        assert_eq!(marked("Hi儿"), "<Hi> ɚ↗");
     }
 
     #[test]

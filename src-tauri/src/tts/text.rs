@@ -29,6 +29,8 @@ pub struct Marks {
     unspaced: &'static [char],
     /// Quotes and brackets that stay with the sentence they close.
     closers: &'static [char],
+    /// A sentence shorter than this joins its neighbour.
+    min_sentence_chars: usize,
 }
 
 impl Marks {
@@ -37,6 +39,7 @@ impl Marks {
         clause_breaks: CLAUSE_BREAKS,
         unspaced: &[],
         closers: CLOSERS,
+        min_sentence_chars: MIN_SENTENCE_CHARS,
     };
     /// Chinese and Japanese.
     /// The half-width `｡` `､` `｣` count too: NFKC comes after the cut.
@@ -47,12 +50,16 @@ impl Marks {
         closers: &[
             '"', '\'', '”', '’', ')', ']', '»', '」', '』', '）', '】', '》', '〉', '〕', '｣',
         ],
+        // A character is a syllable or more, so 20 would join whole sentences,
+        // and Kokoro barely pauses at a 。 inside one chunk.
+        min_sentence_chars: 6,
     };
     pub const HINDI: Marks = Marks {
         terminators: &['.', '!', '?', '…', '।', '॥'],
         clause_breaks: CLAUSE_BREAKS,
         unspaced: &[],
         closers: CLOSERS,
+        min_sentence_chars: MIN_SENTENCE_CHARS,
     };
 
     /// Whether `mark` ends a clause when `after` follows it.
@@ -810,10 +817,10 @@ pub fn split_sentences_with(text: &str, max_chars: usize, marks: &Marks) -> Vec<
         .lines()
         .flat_map(|line| raw_sentences(line, marks))
         .map(collapse_whitespace);
-    merge_short(sentences)
+    merge_short(sentences, marks.min_sentence_chars)
         .iter()
         .flat_map(|sentence| {
-            let parts = merge_short(split_long(sentence, max_chars, marks));
+            let parts = merge_short(split_long(sentence, max_chars, marks), MIN_SENTENCE_CHARS);
             let last = parts.len().saturating_sub(1);
             parts.into_iter().enumerate().map(move |(i, text)| Chunk {
                 text,
@@ -823,9 +830,9 @@ pub fn split_sentences_with(text: &str, max_chars: usize, marks: &Marks) -> Vec<
         .collect()
 }
 
-/// Joins a fragment onto the previous one when either is short.
-fn merge_short(fragments: impl IntoIterator<Item = String>) -> Vec<String> {
-    let is_short = |s: &str| s.chars().count() < MIN_SENTENCE_CHARS;
+/// Joins a fragment onto the previous one when either is shorter than `min_chars`.
+fn merge_short(fragments: impl IntoIterator<Item = String>, min_chars: usize) -> Vec<String> {
+    let is_short = |s: &str| s.chars().count() < min_chars;
     let mut merged: Vec<String> = Vec::new();
     for fragment in fragments {
         match merged.last_mut() {
@@ -3311,8 +3318,50 @@ mod tests {
     }
 
     #[test]
+    fn a_short_chinese_or_japanese_sentence_stands_alone() {
+        let chinese = [
+            "我们一起去公园散步吧。",
+            "路上，我遇到了一位老朋友。",
+            "时间过得真快！",
+        ];
+        let chunks = split_sentences_with(&chinese.concat(), MAX_CHARS, &Marks::CJK);
+        assert!(chunks.iter().all(|c| c.ends_sentence));
+        assert_eq!(texts(chunks), chinese);
+        let japanese = ["東京に行きます。", "今日は天気がいいですね。"];
+        assert_eq!(sentences_in(&japanese.concat(), &Marks::CJK), japanese);
+        // Six characters, the full stop counted, stand alone; five join a
+        // neighbour, the one before when there is one.
+        assert_eq!(
+            sentences_in("你好吗朋友？我们一起去公园散步吧。", &Marks::CJK),
+            ["你好吗朋友？", "我们一起去公园散步吧。"]
+        );
+        assert_eq!(
+            sentences_in("你好朋友？我们一起去公园散步吧。", &Marks::CJK),
+            ["你好朋友？ 我们一起去公园散步吧。"]
+        );
+        assert_eq!(
+            sentences_in("我们一起去公园散步吧。你好朋友？", &Marks::CJK),
+            ["我们一起去公园散步吧。 你好朋友？"]
+        );
+        assert_eq!(
+            sentences_in("你好！这就是我为你朗读文字时的声音。", &Marks::CJK),
+            ["你好！ 这就是我为你朗读文字时的声音。"]
+        );
+        assert_eq!(
+            sentences_in("はい。わかりました。", &Marks::CJK),
+            ["はい。 わかりました。"]
+        );
+        // Other languages keep joining sentences under 20 characters.
+        let english = "I went to the park. Then it rained all day long.";
+        assert_eq!(sentences_in(english, &Marks::DEFAULT), [english]);
+        assert_eq!(sentences_in(english, &Marks::HINDI), [english]);
+    }
+
+    #[test]
     fn the_server_gets_chinese_cut_as_before() {
         let text = "今天的天气非常好，我们一起去公园散步吧。明天可能会下大雨，所以要带伞。";
+        assert_eq!(sentences(text), vec![text]);
+        let text = "我们一起去公园散步吧。路上，我遇到了一位老朋友。";
         assert_eq!(sentences(text), vec![text]);
     }
 
