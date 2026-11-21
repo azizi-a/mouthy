@@ -92,20 +92,20 @@ pub(super) fn phonemes(
                 space_before_han = false;
             }
             let mut words: Vec<String> = Vec::new();
-            let mut after_word = false;
+            let mut takes_er = false;
             for word in dictionaries.jieba.cut(run, true) {
                 // jieba splits off the 儿 of a word its dictionary lacks (画画儿),
                 // which misaki then says as a syllable of its own.
-                if word == "儿" && after_word {
+                if word == "儿" && takes_er {
                     if let Some(last) = words.last_mut() {
                         last.push('ɚ');
                     }
-                    after_word = false;
+                    takes_er = false;
                     continue;
                 }
                 let reading = dictionaries.word(word, &mut skipped);
-                after_word = !reading.is_empty();
-                if after_word {
+                takes_er = can_take_er(word, &reading);
+                if !reading.is_empty() {
                     words.push(reading);
                 }
             }
@@ -133,6 +133,13 @@ pub(super) fn phonemes(
         out.push_str(&run[end..]);
     }
     Ok((out.replace('\u{32f}', ""), skipped))
+}
+
+/// Whether a lone 儿 after `word` is its erhua. After a toneless particle
+/// (他的儿, 抱着儿), a measure word (三个儿) or literary 与 and 吾, 儿 is
+/// "son" or "child", a syllable of its own.
+fn can_take_er(word: &str, reading: &str) -> bool {
+    reading.contains(['→', '↗', '↘', '↓']) && !word.ends_with('个') && !matches!(word, "与" | "吾")
 }
 
 /// `text` cut into runs of Han characters and runs of anything else, in order,
@@ -1185,13 +1192,19 @@ mod tests {
             ),
             ("等一下儿。", "tə↓ŋ i→ɕja↘ɚ.", "tə↓ŋ i→ɕja↘ ɚ↗."),
             ("那边儿", "na↘pjɛ→nɚ", "na↘pjɛ→n ɚ↗"),
+            ("唱歌儿", "ꭧʰa↘ŋkɤ→ɚ", "ꭧʰa↘ŋkɤ→ ɚ↗"),
             ("画画儿，儿", "xwa↘xwa↘ɚ, ɚ↗", "xwa↘xwa↘ ɚ↗, ɚ↗"),
         ] {
             assert_eq!(reads(text), ours, "{text}, misaki: {misaki}");
         }
-        // Words jieba knows, and a 儿 that starts a word or follows no Chinese
-        // word, read as misaki reads them.
+        // Words jieba knows, a 儿 meaning "son" or "child", and a 儿 that
+        // starts a word or follows no Chinese word, read as misaki reads them.
         for (text, misaki) in [
+            ("他的儿", "tʰa→ tɤ ɚ↗"),
+            ("母亲抱着儿", "mu↓ʨʰi→n pau↘ ꭧɤ ɚ↗"),
+            ("与儿", "y↓ ɚ↗"),
+            ("吾儿", "u↗ ɚ↗"),
+            ("生了三个儿", "ʂə→ŋ lɤ sa→nkɤ↘ ɚ↗"),
             ("我们聊了一会儿，", "wo↓mən ljau↗ lɤ i→xwei↘ɚ,"),
             ("那儿", "na↘ɚ↗"),
             ("女儿", "ny↓ɚ↗"),
